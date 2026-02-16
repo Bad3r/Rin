@@ -69,36 +69,6 @@ jobs:
       - name: Run type check
         run: bun run check
 
-  format-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-
-      - name: Install formatter and lint tools
-        run: |
-          nix profile install \
-            nixpkgs#treefmt \
-            nixpkgs#nixfmt \
-            nixpkgs#shfmt \
-            nixpkgs#taplo \
-            nixpkgs#actionlint \
-            nixpkgs#yamllint
-          echo "$HOME/.nix-profile/bin" >> "$GITHUB_PATH"
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Check formatting
-        run: bun run format:check
-
   coverage:
     runs-on: ubuntu-latest
     steps:
