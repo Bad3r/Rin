@@ -237,7 +237,8 @@
         "success": "テスト成功",
         "failed": "テスト失敗",
         "error": "テストエラー",
-        "testing": "テスト中..."
+        "testing": "テスト中...",
+        "http_error$status": "HTTPエラー (ステータス: {{status}})"
       }
     },
     "get_config_failed$message": "設定の取得に失敗しました: {{message}}",

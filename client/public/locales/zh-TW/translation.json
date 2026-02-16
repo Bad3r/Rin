@@ -237,7 +237,8 @@
         "success": "測試成功",
         "failed": "測試失敗",
         "error": "測試出錯",
-        "testing": "正在測試..."
+        "testing": "正在測試...",
+        "http_error$status": "HTTP 錯誤 (狀態碼: {{status}})"
       }
     },
     "get_config_failed$message": "獲取配置失敗，{{message}}",

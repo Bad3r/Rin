@@ -246,7 +246,8 @@
         "success": "Test successful",
         "failed": "Test failed",
         "error": "Test error",
-        "testing": "Testing..."
+        "testing": "Testing...",
+        "http_error$status": "HTTP Error (Status: {{status}})"
       }
     },
     "get_config_failed$message": "Failed to get configuration, {{message}}",

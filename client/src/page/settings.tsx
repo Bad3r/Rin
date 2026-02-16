@@ -710,14 +710,21 @@ function AISummarySettings() {
         setTestResult(null);
         try {
             const preset = AI_PROVIDER_PRESETS.find(p => p.value === provider);
-            const { data } = await client.config.testAI({
+            const { data, error } = await client.config.testAI({
                 provider: provider,
                 model: model,
                 api_url: apiUrl || preset?.url,
                 api_key: apiKey.trim() || undefined
             });
 
-            if (data?.success) {
+            if (error) {
+                setTestStatus('error');
+                setTestResult({
+                    success: false,
+                    error: error.value || t('settings.ai_summary.test.failed'),
+                    details: t('settings.ai_summary.test.http_error$status', { status: error.status })
+                });
+            } else if (data?.success) {
                 setTestStatus('success');
                 setTestResult({
                     success: true,
