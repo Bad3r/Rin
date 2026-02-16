@@ -8,8 +8,8 @@ const AI_PROVIDER_URLS: Record<string, string> = {
     deepseek: "https://api.deepseek.com/v1",
 };
 
-// Cloudflare Worker AI models
-const WORKER_AI_MODELS: Record<string, string> = {
+// Cloudflare Worker AI models mapping (short name -> full model ID)
+export const WORKER_AI_MODELS: Record<string, string> = {
     "llama-3-8b": "@cf/meta/llama-3-8b-instruct",
     "llama-3-1-8b": "@cf/meta/llama-3.1-8b-instruct",
     "llama-2-7b": "@cf/meta/llama-2-7b-chat-int8",
@@ -22,166 +22,209 @@ const WORKER_AI_MODELS: Record<string, string> = {
 };
 
 /**
- * Generate AI summary using Cloudflare Worker AI
+ * Get full Worker AI model ID from short name
  */
-async function generateWorkerAISummary(
-    env: Env,
-    model: string,
-    content: string
-): Promise<string | null> {
-    try {
-        // Map model alias to full model name if needed
-        const fullModelName = WORKER_AI_MODELS[model] || model;
-        
-        const response = await env.AI.run(fullModelName as any, {
-            messages: [
-                {
-                    role: "system",
-                    content: "你是一个专业的文章总结助手。请用简洁的中文总结文章的主要内容，不超过200字。只输出总结内容，不要有任何前缀或解释。"
-                },
-                {
-                    role: "user",
-                    content: content
-                }
-            ],
-            max_tokens: 500,
-            temperature: 0.3,
-        });
-
-        // Worker AI returns { response: string }
-        const responseObj = response as any;
-        if (responseObj && typeof responseObj === 'object' && 'response' in responseObj) {
-            const text = responseObj.response;
-            return typeof text === 'string' ? text.trim() : null;
-        }
-        
-        // Handle text generation output format
-        if (typeof responseObj === 'string') {
-            return responseObj.trim();
-        }
-
-        console.error("[AI Summary] Unexpected Worker AI response format:", response);
-        return null;
-    } catch (error) {
-        console.error("[AI Summary] Worker AI error:", error);
-        return null;
-    }
+export function getWorkerAIModelId(shortName: string): string {
+    return WORKER_AI_MODELS[shortName] || shortName;
 }
 
 /**
- * Generate AI summary using external API (OpenAI-compatible)
+ * Execute Worker AI request
  */
-async function generateExternalAPISummary(
+async function executeWorkerAI(
+    env: Env,
+    modelId: string,
+    input: string
+): Promise<string | null> {
+    const response = await env.AI.run(modelId as any, { input } as any);
+    
+    const responseObj = response as any;
+    if (responseObj && typeof responseObj === 'object') {
+        if ('response' in responseObj) return responseObj.response;
+        if ('content' in responseObj) return responseObj.content;
+        if ('output' in responseObj) return responseObj.output;
+        if ('result' in responseObj) return responseObj.result;
+        return JSON.stringify(responseObj);
+    }
+    
+    if (typeof responseObj === 'string') {
+        return responseObj;
+    }
+    
+    return null;
+}
+
+/**
+ * Execute external AI API request
+ */
+async function executeExternalAI(
     config: {
         provider: string;
         model: string;
         api_key: string;
         api_url: string;
     },
-    content: string
+    input: string
 ): Promise<string | null> {
     const { provider, model, api_key, api_url } = config;
 
     if (!api_key) {
-        console.error("[AI Summary] API key not configured");
-        return null;
+        throw new Error("API key not configured");
     }
 
-    // Use preset URL if not custom configured
-    let finalApiUrl = api_url;
-    if (!finalApiUrl && AI_PROVIDER_URLS[provider]) {
-        finalApiUrl = AI_PROVIDER_URLS[provider];
-    }
-
+    const finalApiUrl = api_url || AI_PROVIDER_URLS[provider];
     if (!finalApiUrl) {
-        console.error("[AI Summary] API URL not configured");
-        return null;
+        throw new Error("API URL not configured");
     }
 
+    const response = await fetch(`${finalApiUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${api_key}`,
+        },
+        body: JSON.stringify({
+            model: model,
+            messages: [{ role: "user", content: input }],
+            max_tokens: 500,
+            temperature: 0.3,
+        }),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API error ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json() as any;
+    return data.choices?.[0]?.message?.content?.trim() || null;
+}
+
+/**
+ * Test AI model configuration
+ */
+export async function testAIModel(
+    env: Env,
+    config: {
+        provider: string;
+        model: string;
+        api_key?: string;
+        api_url?: string;
+    },
+    testPrompt: string
+): Promise<{ success: boolean; response?: string; error?: string; details?: string }> {
     try {
-        const response = await fetch(`${finalApiUrl}/chat/completions`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${api_key}`,
-            },
-            body: JSON.stringify({
-                model: model,
-                messages: [
-                    {
-                        role: "system",
-                        content: "你是一个专业的文章总结助手。请用简洁的中文总结文章的主要内容，不超过200字。只输出总结内容，不要有任何前缀或解释。"
-                    },
-                    {
-                        role: "user",
-                        content: content
-                    }
-                ],
-                max_tokens: 500,
-                temperature: 0.3,
-            }),
-        });
+        let result: string | null;
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[AI Summary] API error: ${response.status} - ${errorText}`);
-            return null;
+        if (config.provider === 'worker-ai') {
+            const fullModelName = getWorkerAIModelId(config.model);
+            console.log(`[Test AI] Using Worker AI model: ${fullModelName}`);
+            result = await executeWorkerAI(env, fullModelName, testPrompt);
+        } else {
+            result = await executeExternalAI({
+                provider: config.provider,
+                model: config.model,
+                api_key: config.api_key || '',
+                api_url: config.api_url || '',
+            }, testPrompt);
         }
 
-        const data = await response.json() as {
-            choices?: Array<{
-                message?: {
-                    content?: string;
-                };
-            }>;
-        };
-
-        const summary = data.choices?.[0]?.message?.content?.trim();
-        if (!summary) {
-            console.error("[AI Summary] Empty response from API");
-            return null;
+        if (result) {
+            return { 
+                success: true, 
+                response: result,
+            };
+        } else {
+            return { 
+                success: false, 
+                error: 'Empty response from AI' 
+            };
         }
-
-        return summary;
-    } catch (error) {
-        console.error("[AI Summary] External API error:", error);
-        return null;
+    } catch (error: any) {
+        return processAIError(error, config.model, config.provider);
     }
 }
 
 /**
  * Generate AI summary for article content
- * Supports both Cloudflare Worker AI and external APIs
- * Configuration is read from D1 database
  */
 export async function generateAISummary(
     env: Env, 
     db: any, 
     content: string
 ): Promise<string | null> {
-    // Get AI configuration from database
     const config = await getAIConfig(db);
 
-    // Check if AI summary is enabled
     if (!config.enabled) {
         return null;
     }
 
     const { provider, model } = config;
-
-    // Truncate content if too long (to save tokens)
     const maxContentLength = 8000;
     const truncatedContent = content.length > maxContentLength
         ? content.slice(0, maxContentLength) + "..."
         : content;
 
-    // Use Worker AI if provider is 'worker-ai'
-    if (provider === 'worker-ai') {
-        return generateWorkerAISummary(env, model, truncatedContent);
+    try {
+        let result: string | null;
+
+        if (provider === 'worker-ai') {
+            const fullModelName = getWorkerAIModelId(model);
+            result = await executeWorkerAI(
+                env, 
+                fullModelName, 
+                `请用简洁的中文总结以下内容，不超过200字：\n\n${truncatedContent}`
+            );
+        } else {
+            result = await executeExternalAI(config, truncatedContent);
+        }
+
+        return result;
+    } catch (error) {
+        console.error("[AI Summary] Failed to generate summary:", error);
+        return null;
+    }
+}
+
+/**
+ * Process AI error and return user-friendly message
+ */
+function processAIError(
+    error: any, 
+    model: string, 
+    provider: string
+): { success: false; error: string; details?: string } {
+    const originalMessage = error.message || 'Unknown error';
+    console.error('[AI] Error:', error);
+
+    let errorMessage = originalMessage;
+    let errorDetails = '';
+
+    if (originalMessage.includes('fetch failed') || originalMessage.includes('NetworkError')) {
+        errorMessage = 'Network error: Unable to connect to AI service';
+        errorDetails = 'Please check your API URL and network connection.';
+    } else if (originalMessage.includes('401') || originalMessage.includes('Unauthorized')) {
+        errorMessage = 'Authentication failed: Invalid API key';
+        errorDetails = 'Please check your API key is correct and not expired.';
+    } else if (originalMessage.includes('429')) {
+        errorMessage = 'Rate limit exceeded';
+        errorDetails = 'Too many requests. Please wait a moment.';
+    } else if (originalMessage.includes('404')) {
+        errorMessage = 'Model not found';
+        errorDetails = `Model "${model}" not found for provider "${provider}".`;
+    } else if (originalMessage.includes('500') || originalMessage.includes('503')) {
+        errorMessage = 'AI service temporarily unavailable';
+        errorDetails = 'Service is experiencing issues. Please try again later.';
+    } else if (originalMessage.includes('Invalid')) {
+        errorMessage = `AI model error: ${originalMessage}`;
+        errorDetails = `Model "${model}" may not be supported. Please verify the model ID.`;
     }
 
-    // Otherwise use external API
-    return generateExternalAPISummary(config, truncatedContent);
+    return { 
+        success: false, 
+        error: errorMessage,
+        details: errorDetails || `Original: ${originalMessage}`
+    };
 }
 
 /**
@@ -191,13 +234,11 @@ export function getAvailableModels(provider: string): string[] {
     if (provider === 'worker-ai') {
         return Object.keys(WORKER_AI_MODELS);
     }
-    
-    // Return empty array for external providers (user can input any model)
     return [];
 }
 
 /**
- * Check if a provider requires API key
+ * Check if provider requires API key
  */
 export function requiresApiKey(provider: string): boolean {
     return provider !== 'worker-ai';

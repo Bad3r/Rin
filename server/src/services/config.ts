@@ -1,23 +1,10 @@
 import { Router } from "../core/router";
 import type { Context } from "../core/types";
 import { getAIConfigForFrontend, setAIConfig, getAIConfig } from "../utils/db-config";
-import { generateAISummary } from "../utils/ai";
+import { testAIModel, generateAISummary } from "../utils/ai";
 
 // Sensitive fields that should not be exposed to frontend
 const SENSITIVE_FIELDS = ['ai_summary.api_key'];
-
-// Cloudflare Worker AI models mapping (short name -> full model ID)
-const WORKER_AI_MODELS: Record<string, string> = {
-    "llama-3-8b": "@cf/meta/llama-3-8b-instruct",
-    "llama-3-1-8b": "@cf/meta/llama-3.1-8b-instruct",
-    "llama-2-7b": "@cf/meta/llama-2-7b-chat-int8",
-    "mistral-7b": "@cf/mistral/mistral-7b-instruct-v0.1",
-    "mistral-7b-v2": "@cf/mistral/mistral-7b-instruct-v0.2-lora",
-    "gemma-2b": "@cf/google/gemma-2b-it-lora",
-    "gemma-7b": "@cf/google/gemma-7b-it-lora",
-    "deepseek-coder": "@cf/deepseek-ai/deepseek-coder-6.7b-base-awq",
-    "qwen-7b": "@cf/qwen/qwen1.5-7b-chat-awq",
-};
 
 // AI config keys mapping (flat key -> nested structure)
 const AI_CONFIG_KEYS = ['ai_summary.enabled', 'ai_summary.provider', 'ai_summary.model', 'ai_summary.api_key', 'ai_summary.api_url'];
@@ -46,19 +33,6 @@ function maskSensitiveFields(config: Record<string, any>): Record<string, any> {
 // Check if key is an AI config key
 function isAIConfigKey(key: string): boolean {
     return AI_CONFIG_KEYS.includes(key) || key.startsWith('ai_summary.');
-}
-
-// Extract AI config from flat config object
-function extractAIConfig(config: Record<string, any>): Record<string, any> {
-    const aiConfig: Record<string, any> = {};
-    for (const key of AI_CONFIG_KEYS) {
-        if (config[key] !== undefined) {
-            // Convert flat key to nested structure (e.g., ai_summary.enabled -> enabled)
-            const nestedKey = key.replace('ai_summary.', '');
-            aiConfig[nestedKey] = config[key];
-        }
-    }
-    return aiConfig;
 }
 
 // Get client config with environment variable defaults
@@ -201,10 +175,8 @@ export function ConfigService(router: Router): void {
             // Get current AI config from database
             const config = await getAIConfig(db);
             
-            // Override with test parameters if provided
+            // Build test config with overrides
             const testConfig = {
-                ...config,
-                enabled: true, // Force enable for testing
                 provider: body.provider || config.provider,
                 model: body.model || config.model,
                 api_url: body.api_url !== undefined ? body.api_url : config.api_url,
@@ -214,105 +186,8 @@ export function ConfigService(router: Router): void {
             // Test prompt
             const testPrompt = body.testPrompt || "Hello! This is a test message. Please respond with a simple greeting.";
 
-            try {
-                // Temporarily override config for testing
-                let result: string | null = null;
-                
-                if (testConfig.provider === 'worker-ai') {
-                    // Use Worker AI directly
-                    // Map short model name to full model ID if needed
-                    const fullModelName = WORKER_AI_MODELS[testConfig.model] || testConfig.model;
-                    console.log(`[Test AI] Using Worker AI model: ${fullModelName} (from ${testConfig.model})`);
-                    const response = await env.AI.run(fullModelName as any, {
-                        messages: [
-                            { role: "user", content: testPrompt }
-                        ],
-                        max_tokens: 100,
-                    });
-                    
-                    const responseObj = response as any;
-                    if (responseObj && typeof responseObj === 'object' && 'response' in responseObj) {
-                        result = responseObj.response;
-                    } else if (typeof responseObj === 'string') {
-                        result = responseObj;
-                    }
-                } else {
-                    // Use external API
-                    const response = await fetch(`${testConfig.api_url}/chat/completions`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${testConfig.api_key}`,
-                        },
-                        body: JSON.stringify({
-                            model: testConfig.model,
-                            messages: [{ role: "user", content: testPrompt }],
-                            max_tokens: 100,
-                        }),
-                    });
-
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        return { 
-                            success: false, 
-                            error: `API error: ${response.status}`, 
-                            details: errorText 
-                        };
-                    }
-
-                    const data = await response.json() as any;
-                    result = data.choices?.[0]?.message?.content;
-                }
-
-                if (result) {
-                    return { 
-                        success: true, 
-                        response: result,
-                        provider: testConfig.provider,
-                        model: testConfig.model
-                    };
-                } else {
-                    return { 
-                        success: false, 
-                        error: 'Empty response from AI' 
-                    };
-                }
-            } catch (error: any) {
-                let errorMessage = error.message || 'Unknown error';
-                let errorDetails = '';
-                
-                console.error('[Test AI] Error caught:', error);
-                
-                // Always include the original error message
-                const originalError = errorMessage;
-                
-                // Provide more detailed error messages for common issues
-                if (errorMessage.includes('fetch failed') || errorMessage.includes('NetworkError')) {
-                    errorMessage = 'Network error: Unable to connect to AI service';
-                    errorDetails = 'Please check your API URL and network connection. If using a custom API, ensure the URL is correct and accessible.';
-                } else if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
-                    errorMessage = 'Authentication failed: Invalid API key';
-                    errorDetails = 'Please check your API key. Make sure it is correct and has not expired.';
-                } else if (errorMessage.includes('429') || errorMessage.includes('Too Many Requests')) {
-                    errorMessage = 'Rate limit exceeded';
-                    errorDetails = 'You have made too many requests. Please wait a moment and try again.';
-                } else if (errorMessage.includes('404')) {
-                    errorMessage = 'Model not found';
-                    errorDetails = `The model "${testConfig.model}" was not found. Please verify the model name is correct for provider "${testConfig.provider}".`;
-                } else if (errorMessage.includes('500') || errorMessage.includes('503')) {
-                    errorMessage = 'AI service temporarily unavailable';
-                    errorDetails = 'The AI service is experiencing issues. Please try again later.';
-                } else if (errorMessage.includes('Invalid') || errorMessage.includes('type')) {
-                    errorMessage = `AI model error: ${errorMessage}`;
-                    errorDetails = `The AI service returned an error. Please check that the model "${testConfig.model}" is correct and supported by your provider.`;
-                }
-                
-                return { 
-                    success: false, 
-                    error: errorMessage,
-                    details: errorDetails || `Original error: ${originalError}`
-                };
-            }
+            // Use unified test function
+            return await testAIModel(env, testConfig, testPrompt);
         }, {
             type: 'object',
             properties: {
