@@ -138,10 +138,16 @@ jobs:
           REPO_WORKER_NAME: ${{ vars.WORKER_NAME }}
           REPO_DB_NAME: ${{ vars.DB_NAME }}
         run: |
+          PR_NUMBER="${{ needs.prepare.outputs.pr_number }}"
           if [[ "${{ needs.prepare.outputs.is_production }}" == "true" ]]; then
             echo "worker_name=${REPO_WORKER_NAME:-rin-server}" >> $GITHUB_OUTPUT
             echo "db_name=${REPO_DB_NAME:-rin}" >> $GITHUB_OUTPUT
             echo "name=${REPO_NAME:-Rin}" >> $GITHUB_OUTPUT
+          elif [[ "$PR_NUMBER" != "0" ]]; then
+            # PR Preview uses -pr-<number> suffix
+            echo "worker_name=${REPO_WORKER_NAME:-rin-server}-pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
+            echo "db_name=${REPO_DB_NAME:-rin-preview}" >> $GITHUB_OUTPUT
+            echo "name=${REPO_NAME:-Rin} (PR #${PR_NUMBER})" >> $GITHUB_OUTPUT
           else
             echo "worker_name=${REPO_WORKER_NAME:-rin-server}-preview" >> $GITHUB_OUTPUT
             echo "db_name=${REPO_DB_NAME:-rin-preview}" >> $GITHUB_OUTPUT
@@ -185,8 +191,9 @@ jobs:
           RSS_DESCRIPTION: ${{ vars.RSS_DESCRIPTION || '' }}
           CACHE_STORAGE_MODE: ${{ vars.CACHE_STORAGE_MODE || 's3' }}
         run: |
-          bun run deploy
-          echo "url=https://${WORKER_NAME}.${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.workers.dev" >> $GITHUB_OUTPUT
+          bun run deploy | tee deploy_output.log
+          URL=$(grep -oP 'App URL: \Khttps://[^\s]+' deploy_output.log || echo "https://${WORKER_NAME}.${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.workers.dev")
+          echo "url=${URL}" >> $GITHUB_OUTPUT
 
       - name: Comment on PR
         if: needs.prepare.outputs.pr_number != '0'
