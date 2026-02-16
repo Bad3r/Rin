@@ -33,18 +33,8 @@ jobs:
           prompt: |
             Analyze this newly opened issue in Rin and determine whether it is a duplicate of an existing OPEN issue.
 
-        env:
-          REPO_NAME: ${{ github.repository }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          prompt: |
-            Analyze this newly opened issue in Rin and determine whether it is a duplicate of an existing OPEN issue.
-
-            Repository: {{ env.REPO_NAME }}
-            New issue number: #{{ env.ISSUE_NUMBER }}
             New issue number: #${{ github.event.issue.number }}
+            Repository: ${{ github.repository }}
 
             Context for this project:
             - Monorepo with client/, server/, cli/, packages/api/, docs/
@@ -54,6 +44,7 @@ jobs:
             1. Use mcp__github__get_issue to fetch the new issue.
             2. Use mcp__github__search_issues (and mcp__github__list_issues if needed) to find similar OPEN issues.
             3. Compare scope, symptoms, root cause, and impacted area.
+            4. If the issue references specific files/modules/errors, use Read/Glob/Grep to inspect code context and improve duplicate confidence.
 
             Duplicate handling rules:
             - Only mark as duplicate when confidence is high and an OPEN canonical issue exists.
@@ -66,4 +57,4 @@ jobs:
 
             Keep actions conservative. Avoid false-positive duplicate marking.
           claude_args: |
-            --allowedTools "mcp__github__get_issue,mcp__github__search_issues,mcp__github__list_issues,mcp__github__create_issue_comment,mcp__github__update_issue,mcp__github__get_issue_comments"
+            --allowedTools "Read,Glob,Grep,mcp__github__get_issue,mcp__github__search_issues,mcp__github__list_issues,mcp__github__create_issue_comment,mcp__github__update_issue,mcp__github__get_issue_comments"
