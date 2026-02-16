@@ -6,6 +6,19 @@ import { generateAISummary } from "../utils/ai";
 // Sensitive fields that should not be exposed to frontend
 const SENSITIVE_FIELDS = ['ai_summary.api_key'];
 
+// Cloudflare Worker AI models mapping (short name -> full model ID)
+const WORKER_AI_MODELS: Record<string, string> = {
+    "llama-3-8b": "@cf/meta/llama-3-8b-instruct",
+    "llama-3-1-8b": "@cf/meta/llama-3.1-8b-instruct",
+    "llama-2-7b": "@cf/meta/llama-2-7b-chat-int8",
+    "mistral-7b": "@cf/mistral/mistral-7b-instruct-v0.1",
+    "mistral-7b-v2": "@cf/mistral/mistral-7b-instruct-v0.2-lora",
+    "gemma-2b": "@cf/google/gemma-2b-it-lora",
+    "gemma-7b": "@cf/google/gemma-7b-it-lora",
+    "deepseek-coder": "@cf/deepseek-ai/deepseek-coder-6.7b-base-awq",
+    "qwen-7b": "@cf/qwen/qwen1.5-7b-chat-awq",
+};
+
 // AI config keys mapping (flat key -> nested structure)
 const AI_CONFIG_KEYS = ['ai_summary.enabled', 'ai_summary.provider', 'ai_summary.model', 'ai_summary.api_key', 'ai_summary.api_url'];
 
@@ -207,7 +220,10 @@ export function ConfigService(router: Router): void {
                 
                 if (testConfig.provider === 'worker-ai') {
                     // Use Worker AI directly
-                    const response = await env.AI.run(testConfig.model as any, {
+                    // Map short model name to full model ID if needed
+                    const fullModelName = WORKER_AI_MODELS[testConfig.model] || testConfig.model;
+                    console.log(`[Test AI] Using Worker AI model: ${fullModelName} (from ${testConfig.model})`);
+                    const response = await env.AI.run(fullModelName as any, {
                         messages: [
                             { role: "user", content: testPrompt }
                         ],
