@@ -283,6 +283,9 @@ export function ConfigService(router: Router): void {
                 
                 console.error('[Test AI] Error caught:', error);
                 
+                // Always include the original error message
+                const originalError = errorMessage;
+                
                 // Provide more detailed error messages for common issues
                 if (errorMessage.includes('fetch failed') || errorMessage.includes('NetworkError')) {
                     errorMessage = 'Network error: Unable to connect to AI service';
@@ -307,7 +310,7 @@ export function ConfigService(router: Router): void {
                 return { 
                     success: false, 
                     error: errorMessage,
-                    details: errorDetails || undefined
+                    details: errorDetails || `Original error: ${originalError}`
                 };
             }
         }, {
