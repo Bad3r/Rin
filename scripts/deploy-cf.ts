@@ -207,6 +207,15 @@ mode = "smart"
         console.log(`Appended to wrangler.toml`)
     }
 
+    // Add AI binding for Cloudflare Worker AI
+    console.log(`----------------------------`)
+    console.log(`Adding AI binding`)
+    const aiConfigText = stripIndent(`
+    [ai]
+    binding = "AI"`)
+    await $`echo ${aiConfigText} >> wrangler.toml`.quiet()
+    console.log(`AI binding appended to wrangler.toml`)
+
     // Run migrations
     console.log(`----------------------------`)
     console.log(`Migrating D1 "${DB_NAME}"`)
