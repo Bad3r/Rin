@@ -34,15 +34,15 @@ jobs:
         run: |
           TAG_VERSION=${GITHUB_REF#refs/tags/v}
           PKG_VERSION=$(cat package.json | grep '"version"' | head -1 | awk -F: '{ print $2 }' | sed 's/[",]//g' | tr -d '[[:space:]]')
-          
+
           echo "Tag version: $TAG_VERSION"
           echo "Package version: $PKG_VERSION"
-          
+
           if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
             echo "❌ Version mismatch: tag is v$TAG_VERSION but package.json is $PKG_VERSION"
             exit 1
           fi
-          
+
           echo "✅ Version consistency check passed"
 
       - name: Run typecheck
@@ -123,10 +123,10 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
-          
+
           echo "## What's Changed" > release_notes.md
           echo "" >> release_notes.md
-          
+
           if [ -z "$PREVIOUS_TAG" ]; then
             echo "This is the first release! 🎉" >> release_notes.md
             COMMIT_RANGE="HEAD"
@@ -135,7 +135,7 @@ jobs:
             echo "" >> release_notes.md
             COMMIT_RANGE="${PREVIOUS_TAG}..HEAD"
           fi
-          
+
           # Categorize commits
           FEATURES=$(git log $COMMIT_RANGE --pretty=format:"- %s (%h)" --grep="^feat" 2>/dev/null || true)
           FIXES=$(git log $COMMIT_RANGE --pretty=format:"- %s (%h)" --grep="^fix" 2>/dev/null || true)
@@ -143,43 +143,43 @@ jobs:
           REFACTOR=$(git log $COMMIT_RANGE --pretty=format:"- %s (%h)" --grep="^refactor" 2>/dev/null || true)
           PERF=$(git log $COMMIT_RANGE --pretty=format:"- %s (%h)" --grep="^perf" 2>/dev/null || true)
           OTHER=$(git log $COMMIT_RANGE --pretty=format:"- %s (%h)" --grep="^\(feat\\|fix\\|docs\\|refactor\\|perf\)" --invert-grep 2>/dev/null || true)
-          
+
           if [ -n "$FEATURES" ]; then
             echo "### 🚀 Features" >> release_notes.md
             echo "$FEATURES" | sed 's/^feat(\([^)]*\)):/\1:/' | sed 's/^feat:/✨:/' >> release_notes.md
             echo "" >> release_notes.md
           fi
-          
+
           if [ -n "$FIXES" ]; then
             echo "### 🐛 Bug Fixes" >> release_notes.md
             echo "$FIXES" | sed 's/^fix(\([^)]*\)):/\1:/' | sed 's/^fix:/🐛:/' >> release_notes.md
             echo "" >> release_notes.md
           fi
-          
+
           if [ -n "$PERF" ]; then
             echo "### ⚡ Performance" >> release_notes.md
             echo "$PERF" | sed 's/^perf(\([^)]*\)):/\1:/' | sed 's/^perf:/⚡:/' >> release_notes.md
             echo "" >> release_notes.md
           fi
-          
+
           if [ -n "$REFACTOR" ]; then
             echo "### ♻️ Refactoring" >> release_notes.md
             echo "$REFACTOR" | sed 's/^refactor(\([^)]*\)):/\1:/' | sed 's/^refactor:/♻️:/' >> release_notes.md
             echo "" >> release_notes.md
           fi
-          
+
           if [ -n "$DOCS" ]; then
             echo "### 📚 Documentation" >> release_notes.md
             echo "$DOCS" | sed 's/^docs(\([^)]*\)):/\1:/' | sed 's/^docs:/📚:/' >> release_notes.md
             echo "" >> release_notes.md
           fi
-          
+
           if [ -n "$OTHER" ]; then
             echo "### 📝 Other Changes" >> release_notes.md
             echo "$OTHER" >> release_notes.md
             echo "" >> release_notes.md
           fi
-          
+
           # Add manual CHANGELOG section if exists
           if [ -f CHANGELOG.md ]; then
             CHANGELOG_SECTION=$(awk "/^## \[v${VERSION}\]/ {flag=1; next} /^## \[/ {flag=0} flag" CHANGELOG.md)
@@ -192,7 +192,7 @@ jobs:
               echo "$CHANGELOG_SECTION" >> release_notes.md
             fi
           fi
-          
+
           # Add upgrade guide
           echo "" >> release_notes.md
           echo "---" >> release_notes.md
@@ -206,13 +206,13 @@ jobs:
           echo "3. Review the [CHANGELOG.md](./CHANGELOG.md) for migration steps" >> release_notes.md
           echo "4. Update your environment variables if needed" >> release_notes.md
           echo "5. The deployment will run automatically" >> release_notes.md
-          
+
           # Output for GitHub Actions
           NOTES=$(cat release_notes.md)
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo "$NOTES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          
+
           # Also output to console for debugging
           echo "Generated release notes:"
           cat release_notes.md

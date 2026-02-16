@@ -1,0 +1,63 @@
+excludes = [".git/*", "result", "*.lock", "*.patch", "bun.lockb"]
+
+[formatter.nixfmt]
+command = "nixfmt"
+includes = ["*.nix", "**/*.nix"]
+
+[formatter.biome]
+command = "biome"
+includes = [
+  "*.js",
+  "*.jsx",
+  "*.ts",
+  "*.tsx",
+  "*.json",
+  "*.jsonc",
+  "*.css",
+  "*.md",
+  "*.html",
+  "*.gql",
+  "*.graphql",
+  "*.astro",
+  "*.svelte",
+  "*.vue",
+  "**/*.js",
+  "**/*.jsx",
+  "**/*.ts",
+  "**/*.tsx",
+  "**/*.json",
+  "**/*.jsonc",
+  "**/*.css",
+  "**/*.md",
+  "**/*.html",
+  "**/*.gql",
+  "**/*.graphql",
+  "**/*.astro",
+  "**/*.svelte",
+  "**/*.vue",
+]
+options = ["format", "--write"]
+
+[formatter.shfmt]
+command = "shfmt"
+includes = ["*.sh", "*.bash", "**/*.sh", "**/*.bash"]
+options = ["-w", "-i", "2", "-s"]
+
+[formatter.taplo]
+command = "taplo"
+includes = ["*.toml", "**/*.toml"]
+options = ["format"]
+
+[formatter.actionlint]
+command = "actionlint"
+options = [
+  "-shellcheck=",
+  "-ignore",
+  "the runner of \".*\" action is too old to run on GitHub Actions",
+]
+includes = [
+  ".github/workflows/*.yml",
+  ".github/workflows/*.yaml",
+  "r2-explorer/.github/workflows/*.yml",
+  "r2-explorer/.github/workflows/*.yaml",
+]

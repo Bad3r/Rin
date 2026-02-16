@@ -56,5 +56,6 @@ jobs:
             - Do not change labels.
 
             Keep actions conservative. Avoid false-positive duplicate marking.
-          claude_args: |
-            --allowedTools "Read,Glob,Grep,mcp__github__get_issue,mcp__github__search_issues,mcp__github__list_issues,mcp__github__create_issue_comment,mcp__github__update_issue,mcp__github__get_issue_comments"
+          claude_args: "--allowedTools \"Read,Glob,Grep,mcp__github__get_issue,mcp__github__search_issues,\
+            mcp__github__list_issues,mcp__github__create_issue_comment,mcp__github__update_issue,\
+            mcp__github__get_issue_comments\""
