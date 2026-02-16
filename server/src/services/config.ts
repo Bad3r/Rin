@@ -1,6 +1,7 @@
 import { Router } from "../core/router";
 import type { Context } from "../core/types";
-import { getAIConfigForFrontend, setAIConfig } from "../utils/db-config";
+import { getAIConfigForFrontend, setAIConfig, getAIConfig } from "../utils/db-config";
+import { generateAISummary } from "../utils/ai";
 
 // Sensitive fields that should not be exposed to frontend
 const SENSITIVE_FIELDS = ['ai_summary.api_key'];
@@ -173,6 +174,108 @@ export function ConfigService(router: Router): void {
             
             await cache.clear();
             return 'OK';
+        });
+
+        // POST /config/test-ai - Test AI model configuration
+        group.post('/test-ai', async (ctx: Context) => {
+            const { set, admin, body, store: { db, env } } = ctx;
+            
+            if (!admin) {
+                set.status = 401;
+                return { error: 'Unauthorized' };
+            }
+
+            // Get current AI config from database
+            const config = await getAIConfig(db);
+            
+            // Override with test parameters if provided
+            const testConfig = {
+                ...config,
+                enabled: true, // Force enable for testing
+                provider: body.provider || config.provider,
+                model: body.model || config.model,
+                api_url: body.api_url !== undefined ? body.api_url : config.api_url,
+                api_key: body.api_key !== undefined ? body.api_key : config.api_key,
+            };
+
+            // Test prompt
+            const testPrompt = body.testPrompt || "Hello! This is a test message. Please respond with a simple greeting.";
+
+            try {
+                // Temporarily override config for testing
+                let result: string | null = null;
+                
+                if (testConfig.provider === 'worker-ai') {
+                    // Use Worker AI directly
+                    const response = await env.AI.run(testConfig.model as any, {
+                        messages: [
+                            { role: "user", content: testPrompt }
+                        ],
+                        max_tokens: 100,
+                    });
+                    
+                    const responseObj = response as any;
+                    if (responseObj && typeof responseObj === 'object' && 'response' in responseObj) {
+                        result = responseObj.response;
+                    } else if (typeof responseObj === 'string') {
+                        result = responseObj;
+                    }
+                } else {
+                    // Use external API
+                    const response = await fetch(`${testConfig.api_url}/chat/completions`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${testConfig.api_key}`,
+                        },
+                        body: JSON.stringify({
+                            model: testConfig.model,
+                            messages: [{ role: "user", content: testPrompt }],
+                            max_tokens: 100,
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        return { 
+                            success: false, 
+                            error: `API error: ${response.status}`, 
+                            details: errorText 
+                        };
+                    }
+
+                    const data = await response.json() as any;
+                    result = data.choices?.[0]?.message?.content;
+                }
+
+                if (result) {
+                    return { 
+                        success: true, 
+                        response: result,
+                        provider: testConfig.provider,
+                        model: testConfig.model
+                    };
+                } else {
+                    return { 
+                        success: false, 
+                        error: 'Empty response from AI' 
+                    };
+                }
+            } catch (error: any) {
+                return { 
+                    success: false, 
+                    error: error.message || 'Unknown error' 
+                };
+            }
+        }, {
+            type: 'object',
+            properties: {
+                provider: { type: 'string' },
+                model: { type: 'string' },
+                api_url: { type: 'string' },
+                api_key: { type: 'string' },
+                testPrompt: { type: 'string' }
+            }
         });
     });
 }

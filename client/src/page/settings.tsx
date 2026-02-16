@@ -615,6 +615,8 @@ function AISummarySettings() {
     const [apiUrl, setApiUrl] = useState('');
     const [loading, setLoading] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+    const [testResult, setTestResult] = useState<string>('');
     const { showAlert, AlertUI } = useAlert();
 
     // Load AI config from server config
@@ -701,6 +703,31 @@ function AISummarySettings() {
         }
         setApiKey('');
         showAlert(t('settings.ai_summary.save_success'));
+    };
+
+    const handleTestModel = async () => {
+        setTestStatus('testing');
+        setTestResult('');
+        try {
+            const preset = AI_PROVIDER_PRESETS.find(p => p.value === provider);
+            const { data } = await client.config.testAI({
+                provider: provider,
+                model: model,
+                api_url: apiUrl || preset?.url,
+                api_key: apiKey.trim() || undefined
+            });
+
+            if (data?.success) {
+                setTestStatus('success');
+                setTestResult(data.response || t('settings.ai_summary.test.success'));
+            } else {
+                setTestStatus('error');
+                setTestResult(data?.error || t('settings.ai_summary.test.failed'));
+            }
+        } catch (err: any) {
+            setTestStatus('error');
+            setTestResult(err.message || t('settings.ai_summary.test.error'));
+        }
     };
 
     const modelOptions = AI_MODEL_PRESETS[provider] || [];
@@ -840,6 +867,50 @@ function AISummarySettings() {
                         </div>
                     </div>
                 </>
+            )}
+
+            {/* Test Model Button - visible when AI is enabled */}
+            {enabled && (
+                <div className="flex flex-col w-full items-start">
+                    <div className="flex flex-row justify-between w-full items-center">
+                        <div className="flex flex-col">
+                            <p className="text-lg font-bold dark:text-white">
+                                {t('settings.ai_summary.test.title')}
+                            </p>
+                            <p className="text-xs text-neutral-500">
+                                {t('settings.ai_summary.test.desc')}
+                            </p>
+                        </div>
+                        <div className="flex flex-row items-center space-x-2">
+                            {testStatus === 'testing' && <ReactLoading width="1em" height="1em" type="spin" color="#FC466B" />}
+                            <Button
+                                title={t('settings.ai_summary.test.button')}
+                                onClick={handleTestModel}
+                                disabled={testStatus === 'testing'}
+                            />
+                        </div>
+                    </div>
+                    {testStatus === 'success' && (
+                        <div className="mt-2 p-3 bg-green-100 dark:bg-green-900 rounded-lg w-full">
+                            <p className="text-sm text-green-800 dark:text-green-200 font-semibold">
+                                {t('settings.ai_summary.test.success')}
+                            </p>
+                            <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                                {testResult}
+                            </p>
+                        </div>
+                    )}
+                    {testStatus === 'error' && (
+                        <div className="mt-2 p-3 bg-red-100 dark:bg-red-900 rounded-lg w-full">
+                            <p className="text-sm text-red-800 dark:text-red-200 font-semibold">
+                                {t('settings.ai_summary.test.failed')}
+                            </p>
+                            <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                                {testResult}
+                            </p>
+                        </div>
+                    )}
+                </div>
             )}
 
             {/* Save Button - only visible when there are unsaved configuration changes */}

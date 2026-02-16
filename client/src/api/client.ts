@@ -364,6 +364,17 @@ class ConfigAPI {
   async clearCache(): Promise<ApiResponse<void>> {
     return this.http.delete<void>("/api/config/cache");
   }
+
+  // POST /api/config/test-ai - Test AI model configuration
+  async testAI(body: {
+    provider?: string;
+    model?: string;
+    api_url?: string;
+    api_key?: string;
+    testPrompt?: string;
+  }): Promise<ApiResponse<{ success: boolean; response?: string; error?: string; details?: string; provider?: string; model?: string }>> {
+    return this.http.post<any>("/api/config/test-ai", body);
+  }
 }
 
 /**
