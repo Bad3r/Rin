@@ -24,6 +24,20 @@ Version 0.3.0 includes significant architectural changes:
 
 #### Required Changes
 
+**R2 Storage Users Note**
+
+If you use Cloudflare R2 as storage (without explicitly configuring S3_ENDPOINT and other variables), you need to add:
+
+```
+R2_BUCKET_NAME=your-bucket-name
+```
+
+**Steps**:
+1. Go to Settings → Secrets and variables → **Variables**
+2. Add `R2_BUCKET_NAME` with your R2 bucket name
+
+⚠️ **Important**: Starting from v0.3.0, Rin no longer auto-discovers R2 buckets. You must explicitly set `R2_BUCKET_NAME` to use R2 storage.
+
 **GitHub OAuth Variables (if using GitHub login)**
 
 Old variable names are deprecated:
