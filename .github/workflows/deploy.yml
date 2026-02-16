@@ -202,10 +202,29 @@ jobs:
           script: |
             const url = '${{ steps.deploy.outputs.url }}';
             const prNumber = parseInt('${{ needs.prepare.outputs.pr_number }}');
-            await github.rest.issues.createComment({
+            const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: prNumber,
-              body: `🚀 **Preview deployed!**\n\n🔗 ${url}`
+              issue_number: prNumber
             });
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('🚀 **Preview deployed!**')
+            );
+            const body = `🚀 **Preview deployed!**\n\n🔗 ${url}`;
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: body
+              });
+            }
 
