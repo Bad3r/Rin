@@ -31,6 +31,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     outputs:
       is_production: ${{ steps.meta.outputs.is_production }}
+      pr_number: ${{ steps.meta.outputs.pr_number }}
     steps:
       - name: Download build artifacts from workflow
         if: ${{ github.event_name == 'workflow_run' }}
@@ -68,6 +69,7 @@ jobs:
             else
               echo "is_production=false" >> $GITHUB_OUTPUT
             fi
+            echo "pr_number=0" >> $GITHUB_OUTPUT
           else
             # Auto deployment from workflow_run - check ref
             REF=$(cat ./artifacts/build-meta/ref 2>/dev/null || echo "unknown")
@@ -76,6 +78,9 @@ jobs:
             else
               echo "is_production=false" >> $GITHUB_OUTPUT
             fi
+            # Read PR number from build-meta
+            PR_NUMBER=$(cat ./artifacts/build-meta/pr_number 2>/dev/null || echo "0")
+            echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload artifacts for deploy job
@@ -160,6 +165,10 @@ jobs:
           AVATAR: ${{ steps.config.outputs.avatar || '' }}
           PAGE_SIZE: ${{ steps.config.outputs.page_size || '5' }}
           RSS_ENABLE: ${{ steps.config.outputs.rss_enable || 'false' }}
+          S3_CACHE_FOLDER: ${{ vars.S3_CACHE_FOLDER || 'cache/' }}
+          S3_FOLDER: ${{ vars.S3_FOLDER || 'images/' }}
+          S3_REGION: ${{ vars.S3_REGION || 'auto' }}
+          S3_FORCE_PATH_STYLE: ${{ vars.S3_FORCE_PATH_STYLE || 'false' }}
           R2_BUCKET_NAME: ${{ vars.R2_BUCKET_NAME || '' }}
           S3_ENDPOINT: ${{ secrets.S3_ENDPOINT || '' }}
           S3_ACCESS_HOST: ${{ secrets.S3_ACCESS_HOST || '' }}
@@ -174,7 +183,22 @@ jobs:
           WEBHOOK_URL: ${{ vars.WEBHOOK_URL || '' }}
           RSS_TITLE: ${{ vars.RSS_TITLE || '' }}
           RSS_DESCRIPTION: ${{ vars.RSS_DESCRIPTION || '' }}
+          CACHE_STORAGE_MODE: ${{ vars.CACHE_STORAGE_MODE || 's3' }}
         run: |
           bun run deploy
           echo "url=https://${WORKER_NAME}.${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.workers.dev" >> $GITHUB_OUTPUT
+
+      - name: Comment on PR
+        if: needs.prepare.outputs.pr_number != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deploy.outputs.url }}';
+            const prNumber = parseInt('${{ needs.prepare.outputs.pr_number }}');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `🚀 **Preview deployed!**\n\n🔗 ${url}`
+            });
 

@@ -18,8 +18,8 @@ const renv = (name: string, defaultValue?: string) => env(name, defaultValue, tr
 const DB_NAME = renv("DB_NAME", 'rin')
 const WORKER_NAME = renv("WORKER_NAME", 'rin-server')
 
-// Auto-discover R2 bucket if not specified
-const R2_BUCKET_NAME = env("R2_BUCKET_NAME", "rin-storage")
+// R2 bucket name (optional, only used if S3 is not explicitly configured)
+const R2_BUCKET_NAME = env("R2_BUCKET_NAME", "")
 
 // S3 configuration (optional - will use R2 if not specified)
 const S3_ENDPOINT = env("S3_ENDPOINT", "")
@@ -32,6 +32,7 @@ const S3_FORCE_PATH_STYLE = env("S3_FORCE_PATH_STYLE", "false")
 const WEBHOOK_URL = env("WEBHOOK_URL", "")
 const RSS_TITLE = env("RSS_TITLE", "")
 const RSS_DESCRIPTION = env("RSS_DESCRIPTION", "")
+const CACHE_STORAGE_MODE = env("CACHE_STORAGE_MODE", "s3")
 
 // Secrets
 const accessKeyId = env("S3_ACCESS_KEY_ID")
@@ -58,65 +59,23 @@ console.log(`  PAGE_SIZE: ${PAGE_SIZE}`)
 console.log(`  RSS_ENABLE: ${RSS_ENABLE}`)
 
 async function getR2BucketInfo(): Promise<{ name: string; endpoint: string; accessHost: string } | null> {
-    try {
-        // If R2 bucket name is explicitly provided, use it
-        if (R2_BUCKET_NAME) {
-            console.log(`Using specified R2 bucket: ${R2_BUCKET_NAME}`)
-            return {
-                name: R2_BUCKET_NAME,
-                endpoint: `https://${R2_BUCKET_NAME}.${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-                accessHost: `https://${R2_BUCKET_NAME}.${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`
-            }
-        }
-
-        // Try to auto-discover R2 bucket
-        console.log("Auto-discovering R2 bucket...")
-        const { stdout } = await $`bunx wrangler r2 bucket list`.quiet()
-
-        // Parse the output - wrangler r2 bucket list doesn't have --json flag
-        const lines = stdout.toString().split('\n').filter(line => line.trim())
-
-        // Skip header line
-        const bucketLines = lines.filter(line =>
-            !line.startsWith('Name') &&
-            !line.includes('Created') &&
-            line.trim().length > 0
-        )
-
-        if (bucketLines.length === 0) {
-            console.log("No R2 buckets found. Skipping R2 configuration.")
-            return null
-        }
-
-        // Parse bucket names (first column)
-        const buckets = bucketLines.map(line => {
-            const name = line.split(/\s+/)[0]
-            return { name }
-        })
-
-        // Use the first bucket or look for one with "rin" in the name
-        const bucket = buckets.find(b => b.name.toLowerCase().includes('rin')) || buckets[0]
-        console.log(`Found R2 bucket: ${bucket.name}`)
-
-        // Get account ID from wrangler config
-        const accountId = process.env.CF_ACCOUNT_ID
-        if (!accountId) {
-            console.log("CF_ACCOUNT_ID not set, using default endpoint format")
-            return {
-                name: bucket.name,
-                endpoint: ``,
-                accessHost: ``
-            }
-        }
-
-        return {
-            name: bucket.name,
-            endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-            accessHost: `https://${bucket.name}.${accountId}.r2.dev`
-        }
-    } catch (e) {
-        console.log("Could not auto-discover R2 bucket:", e)
+    // Only use R2 if explicitly configured via R2_BUCKET_NAME
+    if (!R2_BUCKET_NAME) {
+        console.log("R2_BUCKET_NAME not set, skipping R2 configuration")
         return null
+    }
+
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
+    if (!accountId) {
+        console.log("CLOUDFLARE_ACCOUNT_ID not set, cannot configure R2")
+        return null
+    }
+
+    console.log(`Using R2 bucket: ${R2_BUCKET_NAME}`)
+    return {
+        name: R2_BUCKET_NAME,
+        endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+        accessHost: `https://${R2_BUCKET_NAME}.${accountId}.r2.dev`
     }
 }
 
@@ -143,13 +102,21 @@ async function buildClient(): Promise<void> {
 async function deploy(): Promise<string> {
     console.log("🚀 Deploying Rin (Worker + Assets)...")
 
-    // Get R2 bucket info
-    const r2Info = await getR2BucketInfo()
-
-    // Use R2 if available and S3 not explicitly configured
-    const finalS3Endpoint = S3_ENDPOINT || r2Info?.endpoint || ""
-    const finalS3Bucket = S3_BUCKET || r2Info?.name || ""
-    const finalS3AccessHost = S3_ACCESS_HOST || r2Info?.accessHost || finalS3Endpoint
+    // Determine final S3 configuration
+    // Priority: 1. Explicit S3 config 2. R2 config (if S3 not set at all) 3. Empty values
+    let finalS3Endpoint = S3_ENDPOINT
+    let finalS3Bucket = S3_BUCKET
+    let finalS3AccessHost = S3_ACCESS_HOST
+    
+    // Only use R2 if no S3 config is provided at all
+    if (!S3_ENDPOINT && !S3_BUCKET && !S3_ACCESS_HOST) {
+        const r2Info = await getR2BucketInfo()
+        if (r2Info) {
+            finalS3Endpoint = r2Info.endpoint
+            finalS3Bucket = r2Info.name
+            finalS3AccessHost = r2Info.accessHost
+        }
+    }
 
     // Build client
     await buildClient()
@@ -190,6 +157,12 @@ S3_FORCE_PATH_STYLE = "${S3_FORCE_PATH_STYLE}"
 WEBHOOK_URL = "${WEBHOOK_URL}"
 RSS_TITLE = "${RSS_TITLE}"
 RSS_DESCRIPTION = "${RSS_DESCRIPTION}"
+CACHE_STORAGE_MODE = "${CACHE_STORAGE_MODE}"
+NAME = "${NAME}"
+DESCRIPTION = "${DESCRIPTION}"
+AVATAR = "${AVATAR}"
+PAGE_SIZE = "${PAGE_SIZE}"
+RSS_ENABLE = "${RSS_ENABLE}"
 
 [placement]
 mode = "smart"
