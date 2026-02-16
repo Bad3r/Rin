@@ -710,12 +710,13 @@ function AISummarySettings() {
         setTestResult(null);
         try {
             const preset = AI_PROVIDER_PRESETS.find(p => p.value === provider);
-            // Build request body - only include api_key if it has value
+            // Build request body - only include fields if they have value
             const requestBody: any = {
                 provider: provider,
                 model: model,
             };
-            if (apiUrl || preset?.url) {
+            // Only include api_url for non-Worker AI providers
+            if (provider !== 'worker-ai' && (apiUrl || preset?.url)) {
                 requestBody.api_url = apiUrl || preset?.url;
             }
             if (apiKey.trim()) {

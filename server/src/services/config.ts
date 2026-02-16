@@ -63,6 +63,43 @@ async function getClientConfigWithDefaults(
 
 export function ConfigService(router: Router): void {
     router.group('/config', (group) => {
+        // POST /config/test-ai - Test AI model configuration
+        // NOTE: Must be defined BEFORE /:type route to avoid being captured as a type parameter
+        group.post('/test-ai', async (ctx: Context) => {
+            const { set, admin, body, store: { db, env } } = ctx;
+
+            if (!admin) {
+                set.status = 401;
+                return { error: 'Unauthorized' };
+            }
+
+            // Get current AI config from database
+            const config = await getAIConfig(db);
+
+            // Build test config with overrides
+            const testConfig = {
+                provider: body.provider || config.provider,
+                model: body.model || config.model,
+                api_url: body.api_url !== undefined ? body.api_url : config.api_url,
+                api_key: body.api_key !== undefined ? body.api_key : config.api_key,
+            };
+
+            // Test prompt
+            const testPrompt = body.testPrompt || "Hello! This is a test message. Please respond with a simple greeting.";
+
+            // Use unified test function
+            return await testAIModel(env, testConfig, testPrompt);
+        }, {
+            type: 'object',
+            properties: {
+                provider: { type: 'string' },
+                model: { type: 'string' },
+                api_url: { type: 'string' },
+                api_key: { type: 'string' },
+                testPrompt: { type: 'string' }
+            }
+        });
+
         // GET /config/:type
         group.get('/:type', async (ctx: Context) => {
             const { set, admin, params, store: { db, serverConfig, clientConfig } } = ctx;
@@ -161,42 +198,6 @@ export function ConfigService(router: Router): void {
             
             await cache.clear();
             return 'OK';
-        });
-
-        // POST /config/test-ai - Test AI model configuration
-        group.post('/test-ai', async (ctx: Context) => {
-            const { set, admin, body, store: { db, env } } = ctx;
-            
-            if (!admin) {
-                set.status = 401;
-                return { error: 'Unauthorized' };
-            }
-
-            // Get current AI config from database
-            const config = await getAIConfig(db);
-            
-            // Build test config with overrides
-            const testConfig = {
-                provider: body.provider || config.provider,
-                model: body.model || config.model,
-                api_url: body.api_url !== undefined ? body.api_url : config.api_url,
-                api_key: body.api_key !== undefined ? body.api_key : config.api_key,
-            };
-
-            // Test prompt
-            const testPrompt = body.testPrompt || "Hello! This is a test message. Please respond with a simple greeting.";
-
-            // Use unified test function
-            return await testAIModel(env, testConfig, testPrompt);
-        }, {
-            type: 'object',
-            properties: {
-                provider: { type: 'string' },
-                model: { type: 'string' },
-                api_url: { type: 'string' },
-                api_key: { type: 'string' },
-                testPrompt: { type: 'string' }
-            }
         });
     });
 }

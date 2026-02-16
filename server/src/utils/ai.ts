@@ -36,21 +36,27 @@ async function executeWorkerAI(
     modelId: string,
     input: string
 ): Promise<string | null> {
-    const response = await env.AI.run(modelId as any, { input } as any);
-    
+    // Worker AI uses messages format for chat models
+    const response = await env.AI.run(modelId as any, {
+        messages: [
+            { role: "user", content: input }
+        ]
+    } as any);
+
     const responseObj = response as any;
     if (responseObj && typeof responseObj === 'object') {
+        // Worker AI response structure: { response: string }
         if ('response' in responseObj) return responseObj.response;
         if ('content' in responseObj) return responseObj.content;
         if ('output' in responseObj) return responseObj.output;
         if ('result' in responseObj) return responseObj.result;
         return JSON.stringify(responseObj);
     }
-    
+
     if (typeof responseObj === 'string') {
         return responseObj;
     }
-    
+
     return null;
 }
 
