@@ -21,15 +21,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": false,
-      "security": {
-        "recommended": true,
-        "noBlankTarget": "warn",
-        "noDangerouslySetInnerHtml": "warn",
-        "noDangerouslySetInnerHtmlWithChildren": "warn",
-        "noGlobalEval": "warn",
-        "noSecrets": "off"
-      }
+      "recommended": true
     }
   },
   "css": {
