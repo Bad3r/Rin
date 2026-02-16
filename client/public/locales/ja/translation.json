@@ -229,7 +229,16 @@
         "button": "設定を保存"
       },
       "save_success": "保存しました",
-      "unsaved_changes": "保存されていない変更があります"
+      "unsaved_changes": "保存されていない変更があります",
+      "test": {
+        "title": "モデルをテスト",
+        "desc": "AIモデルが利用可能かどうかをテスト",
+        "button": "接続をテスト",
+        "success": "テスト成功",
+        "failed": "テスト失敗",
+        "error": "テストエラー",
+        "testing": "テスト中..."
+      }
     },
     "get_config_failed$message": "設定の取得に失敗しました: {{message}}",
     "import_failed$message": "インポートに失敗しました: {{message}}",

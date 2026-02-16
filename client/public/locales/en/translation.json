@@ -238,7 +238,16 @@
         "button": "Save Configuration"
       },
       "save_success": "Saved successfully",
-      "unsaved_changes": "You have unsaved changes"
+      "unsaved_changes": "You have unsaved changes",
+      "test": {
+        "title": "Test Model",
+        "desc": "Test if the AI model is available",
+        "button": "Test Connection",
+        "success": "Test successful",
+        "failed": "Test failed",
+        "error": "Test error",
+        "testing": "Testing..."
+      }
     },
     "get_config_failed$message": "Failed to get configuration, {{message}}",
     "import_failed$message": "Import failed, {{message}}",

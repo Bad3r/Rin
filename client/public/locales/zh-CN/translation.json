@@ -238,7 +238,16 @@
         "button": "保存配置"
       },
       "save_success": "保存成功",
-      "unsaved_changes": "您有未保存的更改"
+      "unsaved_changes": "您有未保存的更改",
+      "test": {
+        "title": "测试模型",
+        "desc": "测试 AI 模型是否可用",
+        "button": "测试连接",
+        "success": "测试成功",
+        "failed": "测试失败",
+        "error": "测试出错",
+        "testing": "正在测试..."
+      }
     },
     "get_config_failed$message": "获取配置失败，{{message}}",
     "import_failed$message": "导入失败，{{message}}",

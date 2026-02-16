@@ -616,7 +616,7 @@ function AISummarySettings() {
     const [loading, setLoading] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
-    const [testResult, setTestResult] = useState<string>('');
+    const [testResult, setTestResult] = useState<{success?: boolean; response?: string; error?: string; details?: string} | null>(null);
     const { showAlert, AlertUI } = useAlert();
 
     // Load AI config from server config
@@ -707,7 +707,7 @@ function AISummarySettings() {
 
     const handleTestModel = async () => {
         setTestStatus('testing');
-        setTestResult('');
+        setTestResult(null);
         try {
             const preset = AI_PROVIDER_PRESETS.find(p => p.value === provider);
             const { data } = await client.config.testAI({
@@ -719,14 +719,25 @@ function AISummarySettings() {
 
             if (data?.success) {
                 setTestStatus('success');
-                setTestResult(data.response || t('settings.ai_summary.test.success'));
+                setTestResult({
+                    success: true,
+                    response: data.response || t('settings.ai_summary.test.success')
+                });
             } else {
                 setTestStatus('error');
-                setTestResult(data?.error || t('settings.ai_summary.test.failed'));
+                setTestResult({
+                    success: false,
+                    error: data?.error || t('settings.ai_summary.test.failed'),
+                    details: data?.details
+                });
             }
         } catch (err: any) {
             setTestStatus('error');
-            setTestResult(err.message || t('settings.ai_summary.test.error'));
+            setTestResult({
+                success: false,
+                error: err.message || t('settings.ai_summary.test.error'),
+                details: err?.details
+            });
         }
     };
 
@@ -890,24 +901,36 @@ function AISummarySettings() {
                             />
                         </div>
                     </div>
-                    {testStatus === 'success' && (
+                    {testStatus === 'success' && testResult && (
                         <div className="mt-2 p-3 bg-green-100 dark:bg-green-900 rounded-lg w-full">
                             <p className="text-sm text-green-800 dark:text-green-200 font-semibold">
                                 {t('settings.ai_summary.test.success')}
                             </p>
                             <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                                {testResult}
+                                {testResult.response}
                             </p>
                         </div>
                     )}
-                    {testStatus === 'error' && (
+                    {testStatus === 'error' && testResult && (
                         <div className="mt-2 p-3 bg-red-100 dark:bg-red-900 rounded-lg w-full">
                             <p className="text-sm text-red-800 dark:text-red-200 font-semibold">
                                 {t('settings.ai_summary.test.failed')}
                             </p>
-                            <p className="text-xs text-red-700 dark:text-red-300 mt-1">
-                                {testResult}
-                            </p>
+                            {testResult.error && (
+                                <p className="text-xs text-red-700 dark:text-red-300 mt-1 font-medium">
+                                    {testResult.error}
+                                </p>
+                            )}
+                            {testResult.details && (
+                                <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                    {testResult.details}
+                                </p>
+                            )}
+                            {!testResult.error && !testResult.details && (
+                                <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                                    {JSON.stringify(testResult)}
+                                </p>
+                            )}
                         </div>
                     )}
                 </div>

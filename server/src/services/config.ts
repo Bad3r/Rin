@@ -262,9 +262,31 @@ export function ConfigService(router: Router): void {
                     };
                 }
             } catch (error: any) {
+                let errorMessage = error.message || 'Unknown error';
+                let errorDetails = '';
+                
+                // Provide more detailed error messages for common issues
+                if (errorMessage.includes('fetch failed') || errorMessage.includes('NetworkError')) {
+                    errorMessage = 'Network error: Unable to connect to AI service';
+                    errorDetails = 'Please check your API URL and network connection. If using a custom API, ensure the URL is correct and accessible.';
+                } else if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+                    errorMessage = 'Authentication failed: Invalid API key';
+                    errorDetails = 'Please check your API key. Make sure it is correct and has not expired.';
+                } else if (errorMessage.includes('429') || errorMessage.includes('Too Many Requests')) {
+                    errorMessage = 'Rate limit exceeded';
+                    errorDetails = 'You have made too many requests. Please wait a moment and try again.';
+                } else if (errorMessage.includes('404')) {
+                    errorMessage = 'Model not found';
+                    errorDetails = `The model "${testConfig.model}" was not found. Please verify the model name is correct for provider "${testConfig.provider}".`;
+                } else if (errorMessage.includes('500') || errorMessage.includes('503')) {
+                    errorMessage = 'AI service temporarily unavailable';
+                    errorDetails = 'The AI service is experiencing issues. Please try again later.';
+                }
+                
                 return { 
                     success: false, 
-                    error: error.message || 'Unknown error' 
+                    error: errorMessage,
+                    details: errorDetails || undefined
                 };
             }
         }, {
