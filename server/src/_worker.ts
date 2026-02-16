@@ -77,8 +77,10 @@ export default {
         const db = drizzle(env.DB, { schema: schema });
 
         // Create cache instances
+        // Server config is forced to use database storage to prevent API key leakage
+        // Client config can still use S3 if configured for better performance
         const cache = new CacheImpl(db, env, "cache");
-        const serverConfig = new CacheImpl(db, env, "server.config");
+        const serverConfig = new CacheImpl(db, env, "server.config", "database");
         const clientConfig = new CacheImpl(db, env, "client.config");
 
         // Import and run crontab functions

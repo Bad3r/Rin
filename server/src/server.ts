@@ -12,14 +12,6 @@ interface ServiceLoader {
 
 // Service registry - order matters (longer prefixes first for specificity)
 const serviceRegistry: ServiceLoader[] = [
-    // AI Config
-    {
-        prefix: '/ai-config',
-        loader: async () => {
-            const { AIConfigService } = await import('./services/ai-config');
-            return AIConfigService;
-        }
-    },
     // Config
     {
         prefix: '/config',

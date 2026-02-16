@@ -69,6 +69,7 @@ export function createBaseApp(env: Env): Router {
         });
 
         // Use pre-existing serverConfig if provided, otherwise lazy-load
+        // Server config is forced to use database storage to prevent API key leakage
         const serverConfig = context.store?.serverConfig ?? await container.get('serverConfig', async () => {
             const { CacheImpl } = await import('../utils/cache');
             const lazyDb = await container.get('db', async () => {
@@ -76,7 +77,7 @@ export function createBaseApp(env: Env): Router {
                 const schema = await import('../db/schema');
                 return drizzle(env.DB, { schema });
             });
-            return new CacheImpl(lazyDb, env, "server.config");
+            return new CacheImpl(lazyDb, env, "server.config", "database");
         });
 
         // Use pre-existing clientConfig if provided, otherwise lazy-load

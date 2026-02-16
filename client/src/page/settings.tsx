@@ -494,6 +494,7 @@ function ItemWithUpload({
 
 // AI Provider presets with their default API URLs
 const AI_PROVIDER_PRESETS = [
+    { value: 'worker-ai', label: 'Cloudflare Worker AI (Free)', url: '' },
     { value: 'openai', label: 'OpenAI', url: 'https://api.openai.com/v1' },
     { value: 'claude', label: 'Claude', url: 'https://api.anthropic.com/v1' },
     { value: 'gemini', label: 'Gemini', url: 'https://generativelanguage.googleapis.com/v1beta/openai' },
@@ -502,6 +503,17 @@ const AI_PROVIDER_PRESETS = [
 ];
 
 const AI_MODEL_PRESETS: Record<string, string[]> = {
+    'worker-ai': [
+        'llama-3-8b',
+        'llama-3-1-8b',
+        'llama-2-7b',
+        'mistral-7b',
+        'mistral-7b-v2',
+        'gemma-2b',
+        'gemma-7b',
+        'deepseek-coder',
+        'qwen-7b'
+    ],
     openai: [
         // GPT-5 series (latest)
         'gpt-5.2',
@@ -603,26 +615,21 @@ function AISummarySettings() {
     const [apiUrl, setApiUrl] = useState('');
     const [loading, setLoading] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+    const [testResult, setTestResult] = useState<{success?: boolean; response?: string; error?: string; details?: string} | null>(null);
     const { showAlert, AlertUI } = useAlert();
 
-    // Load AI config from database via new API
+    // Load AI config from server config
     useEffect(() => {
         const loadConfig = async () => {
             try {
-                const response = await fetch(`${endpoint}/ai-config`);
-                if (response.ok) {
-                    const data = await response.json() as {
-                        enabled?: boolean;
-                        provider?: string;
-                        model?: string;
-                        api_key_set?: boolean;
-                        api_url?: string;
-                    };
-                    setEnabled(data.enabled ?? false);
-                    setProvider(data.provider ?? 'openai');
-                    setModel(data.model ?? 'gpt-4o-mini');
-                    setApiKeySet(data.api_key_set ?? false);
-                    setApiUrl(data.api_url ?? '');
+                const { data } = await client.config.get('server');
+                if (data) {
+                    setEnabled(data['ai_summary.enabled'] === 'true');
+                    setProvider(data['ai_summary.provider'] ?? 'openai');
+                    setModel(data['ai_summary.model'] ?? 'gpt-4o-mini');
+                    setApiKeySet(data['ai_summary.api_key'] === '••••••••');
+                    setApiUrl(data['ai_summary.api_url'] ?? '');
                 }
             } catch (err) {
                 console.error('Failed to load AI config:', err);
@@ -634,18 +641,15 @@ function AISummarySettings() {
     const updateConfig = async (updates: Record<string, any>) => {
         setLoading(true);
         try {
-            const response = await fetch(`${endpoint}/ai-config`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(updates)
-            });
-            if (!response.ok) {
-                const errorData = await response.text();
-                console.error('AI config save error:', response.status, errorData);
-                throw new Error(`Failed to save config: ${response.status} - ${errorData}`);
-            }
+            // Convert nested updates to flat keys
+            const flatUpdates: Record<string, any> = {};
+            if (updates.enabled !== undefined) flatUpdates['ai_summary.enabled'] = String(updates.enabled);
+            if (updates.provider !== undefined) flatUpdates['ai_summary.provider'] = updates.provider;
+            if (updates.model !== undefined) flatUpdates['ai_summary.model'] = updates.model;
+            if (updates.api_url !== undefined) flatUpdates['ai_summary.api_url'] = updates.api_url;
+            if (updates.api_key !== undefined) flatUpdates['ai_summary.api_key'] = updates.api_key;
+
+            await client.config.update('server', flatUpdates);
         } catch (err: any) {
             showAlert(t('settings.update_failed$message', { message: err.message }));
             throw err;
@@ -699,6 +703,57 @@ function AISummarySettings() {
         }
         setApiKey('');
         showAlert(t('settings.ai_summary.save_success'));
+    };
+
+    const handleTestModel = async () => {
+        setTestStatus('testing');
+        setTestResult(null);
+        try {
+            const preset = AI_PROVIDER_PRESETS.find(p => p.value === provider);
+            // Build request body - only include fields if they have value
+            const requestBody: any = {
+                provider: provider,
+                model: model,
+            };
+            // Only include api_url for non-Worker AI providers
+            if (provider !== 'worker-ai' && (apiUrl || preset?.url)) {
+                requestBody.api_url = apiUrl || preset?.url;
+            }
+            if (apiKey.trim()) {
+                requestBody.api_key = apiKey.trim();
+            }
+            
+            const { data, error } = await client.config.testAI(requestBody);
+
+            if (error) {
+                setTestStatus('error');
+                setTestResult({
+                    success: false,
+                    error: error.value || t('settings.ai_summary.test.failed'),
+                    details: t('settings.ai_summary.test.http_error$status', { status: error.status })
+                });
+            } else if (data?.success) {
+                setTestStatus('success');
+                setTestResult({
+                    success: true,
+                    response: data.response || t('settings.ai_summary.test.success')
+                });
+            } else {
+                setTestStatus('error');
+                setTestResult({
+                    success: false,
+                    error: data?.error || t('settings.ai_summary.test.failed'),
+                    details: data?.details
+                });
+            }
+        } catch (err: any) {
+            setTestStatus('error');
+            setTestResult({
+                success: false,
+                error: err.message || t('settings.ai_summary.test.error'),
+                details: err?.details
+            });
+        }
     };
 
     const modelOptions = AI_MODEL_PRESETS[provider] || [];
@@ -838,6 +893,62 @@ function AISummarySettings() {
                         </div>
                     </div>
                 </>
+            )}
+
+            {/* Test Model Button - visible when AI is enabled */}
+            {enabled && (
+                <div className="flex flex-col w-full items-start">
+                    <div className="flex flex-row justify-between w-full items-center">
+                        <div className="flex flex-col">
+                            <p className="text-lg font-bold dark:text-white">
+                                {t('settings.ai_summary.test.title')}
+                            </p>
+                            <p className="text-xs text-neutral-500">
+                                {t('settings.ai_summary.test.desc')}
+                            </p>
+                        </div>
+                        <div className="flex flex-row items-center space-x-2">
+                            {testStatus === 'testing' && <ReactLoading width="1em" height="1em" type="spin" color="#FC466B" />}
+                            <Button
+                                title={t('settings.ai_summary.test.button')}
+                                onClick={handleTestModel}
+                                disabled={testStatus === 'testing'}
+                            />
+                        </div>
+                    </div>
+                    {testStatus === 'success' && testResult && (
+                        <div className="mt-2 p-3 bg-green-100 dark:bg-green-900 rounded-lg w-full">
+                            <p className="text-sm text-green-800 dark:text-green-200 font-semibold">
+                                {t('settings.ai_summary.test.success')}
+                            </p>
+                            <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                                {testResult.response}
+                            </p>
+                        </div>
+                    )}
+                    {testStatus === 'error' && testResult && (
+                        <div className="mt-2 p-3 bg-red-100 dark:bg-red-900 rounded-lg w-full">
+                            <p className="text-sm text-red-800 dark:text-red-200 font-semibold">
+                                {t('settings.ai_summary.test.failed')}
+                            </p>
+                            {testResult.error && (
+                                <p className="text-xs text-red-700 dark:text-red-300 mt-1 font-medium">
+                                    {testResult.error}
+                                </p>
+                            )}
+                            {testResult.details && (
+                                <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                    {testResult.details}
+                                </p>
+                            )}
+                            {!testResult.error && !testResult.details && (
+                                <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                                    {JSON.stringify(testResult)}
+                                </p>
+                            )}
+                        </div>
+                    )}
+                </div>
             )}
 
             {/* Save Button - only visible when there are unsaved configuration changes */}

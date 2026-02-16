@@ -112,10 +112,21 @@ class HttpClient {
         } catch {
           errorValue = await response.text();
         }
+        // Extract error message from various formats
+        let errorMessage: string;
+        if (typeof errorValue === 'string') {
+          errorMessage = errorValue;
+        } else if (errorValue && typeof errorValue === 'object') {
+          // Handle { error: { message: string } } format
+          const err = errorValue as any;
+          errorMessage = err.error?.message || err.message || err.error || JSON.stringify(errorValue);
+        } else {
+          errorMessage = String(errorValue ?? response.statusText);
+        }
         return {
           error: {
             status: response.status,
-            value: typeof errorValue === 'string' ? errorValue : String(errorValue ?? response.statusText),
+            value: errorMessage,
           },
         };
       }
@@ -364,20 +375,34 @@ class ConfigAPI {
   async clearCache(): Promise<ApiResponse<void>> {
     return this.http.delete<void>("/api/config/cache");
   }
+
+  // POST /api/config/test-ai - Test AI model configuration
+  async testAI(body: {
+    provider?: string;
+    model?: string;
+    api_url?: string;
+    api_key?: string;
+    testPrompt?: string;
+  }): Promise<ApiResponse<{ success: boolean; response?: string; error?: string; details?: string; provider?: string; model?: string }>> {
+    return this.http.post<any>("/api/config/test-ai", body);
+  }
 }
 
 /**
- * AI Config API methods
+ * AI Config API methods (deprecated, use ConfigAPI instead)
+ * @deprecated AI config is now part of server config. Use client.config.get('server') and client.config.update('server', {...}) instead.
  */
 class AIConfigAPI {
   constructor(private http: HttpClient) {}
 
   // GET /api/ai-config
+  /** @deprecated Use client.config.get('server') instead */
   async get(): Promise<ApiResponse<AIConfig>> {
     return this.http.get<AIConfig>("/api/ai-config");
   }
 
   // POST /api/ai-config
+  /** @deprecated Use client.config.update('server', {...}) instead */
   async update(body: Partial<AIConfig>): Promise<ApiResponse<void>> {
     return this.http.post<void>("/api/ai-config", body);
   }

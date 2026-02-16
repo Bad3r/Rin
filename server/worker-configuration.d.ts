@@ -20,6 +20,7 @@ declare namespace Cloudflare {
 	interface Env {
 		DB: D1Database;
 		ASSETS?: Fetcher;
+		AI: Ai;
 		S3_FOLDER: "images/";
 		S3_CACHE_FOLDER: "cache/";
 		S3_REGION: "auto";

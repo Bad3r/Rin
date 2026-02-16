@@ -119,7 +119,7 @@ export function FeedService(router: Router): void {
 
         // POST /feed - Create feed
         group.post('/', async (ctx: Context) => {
-            const { admin, set, uid, body, store: { db, cache } } = ctx;
+            const { admin, set, uid, body, store: { db, cache, env } } = ctx;
             const { title, alias, listed, content, summary, draft, tags, createdAt } = body;
             
             if (!admin) {
@@ -150,7 +150,7 @@ export function FeedService(router: Router): void {
             // Generate AI summary if enabled and not a draft
             let ai_summary = "";
             if (!draft) {
-                const generatedSummary = await generateAISummary(db, content);
+                const generatedSummary = await generateAISummary(env, db, content);
                 if (generatedSummary) {
                     ai_summary = generatedSummary;
                 }
@@ -360,7 +360,7 @@ export function FeedService(router: Router): void {
 
         // POST /feed/:id - Update feed
         group.post('/:id', async (ctx: Context) => {
-            const { admin, set, uid, params, body, store: { db, cache } } = ctx;
+            const { admin, set, uid, params, body, store: { db, cache, env } } = ctx;
             const { id } = params;
             const { title, listed, content, summary, alias, draft, top, tags, createdAt } = body;
             
@@ -383,7 +383,7 @@ export function FeedService(router: Router): void {
             const isDraft = draft !== undefined ? draft : (feed.draft === 1);
             
             if (contentChanged && !isDraft) {
-                const generatedSummary = await generateAISummary(db, content);
+                const generatedSummary = await generateAISummary(env, db, content);
                 if (generatedSummary) {
                     ai_summary = generatedSummary;
                 }
@@ -391,7 +391,7 @@ export function FeedService(router: Router): void {
             
             if (!isDraft && feed.draft === 1 && !feed.ai_summary) {
                 const contentToSummarize = content || feed.content;
-                const generatedSummary = await generateAISummary(db, contentToSummarize);
+                const generatedSummary = await generateAISummary(env, db, contentToSummarize);
                 if (generatedSummary) {
                     ai_summary = generatedSummary;
                 }
