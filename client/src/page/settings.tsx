@@ -605,24 +605,17 @@ function AISummarySettings() {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const { showAlert, AlertUI } = useAlert();
 
-    // Load AI config from database via new API
+    // Load AI config from server config
     useEffect(() => {
         const loadConfig = async () => {
             try {
-                const response = await fetch(`${endpoint}/ai-config`);
-                if (response.ok) {
-                    const data = await response.json() as {
-                        enabled?: boolean;
-                        provider?: string;
-                        model?: string;
-                        api_key_set?: boolean;
-                        api_url?: string;
-                    };
-                    setEnabled(data.enabled ?? false);
-                    setProvider(data.provider ?? 'openai');
-                    setModel(data.model ?? 'gpt-4o-mini');
-                    setApiKeySet(data.api_key_set ?? false);
-                    setApiUrl(data.api_url ?? '');
+                const { data } = await client.config.get('server');
+                if (data) {
+                    setEnabled(data['ai_summary.enabled'] === 'true');
+                    setProvider(data['ai_summary.provider'] ?? 'openai');
+                    setModel(data['ai_summary.model'] ?? 'gpt-4o-mini');
+                    setApiKeySet(data['ai_summary.api_key'] === '••••••••');
+                    setApiUrl(data['ai_summary.api_url'] ?? '');
                 }
             } catch (err) {
                 console.error('Failed to load AI config:', err);
@@ -634,18 +627,15 @@ function AISummarySettings() {
     const updateConfig = async (updates: Record<string, any>) => {
         setLoading(true);
         try {
-            const response = await fetch(`${endpoint}/ai-config`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(updates)
-            });
-            if (!response.ok) {
-                const errorData = await response.text();
-                console.error('AI config save error:', response.status, errorData);
-                throw new Error(`Failed to save config: ${response.status} - ${errorData}`);
-            }
+            // Convert nested updates to flat keys
+            const flatUpdates: Record<string, any> = {};
+            if (updates.enabled !== undefined) flatUpdates['ai_summary.enabled'] = String(updates.enabled);
+            if (updates.provider !== undefined) flatUpdates['ai_summary.provider'] = updates.provider;
+            if (updates.model !== undefined) flatUpdates['ai_summary.model'] = updates.model;
+            if (updates.api_url !== undefined) flatUpdates['ai_summary.api_url'] = updates.api_url;
+            if (updates.api_key !== undefined) flatUpdates['ai_summary.api_key'] = updates.api_key;
+
+            await client.config.update('server', flatUpdates);
         } catch (err: any) {
             showAlert(t('settings.update_failed$message', { message: err.message }));
             throw err;

@@ -367,17 +367,20 @@ class ConfigAPI {
 }
 
 /**
- * AI Config API methods
+ * AI Config API methods (deprecated, use ConfigAPI instead)
+ * @deprecated AI config is now part of server config. Use client.config.get('server') and client.config.update('server', {...}) instead.
  */
 class AIConfigAPI {
   constructor(private http: HttpClient) {}
 
   // GET /api/ai-config
+  /** @deprecated Use client.config.get('server') instead */
   async get(): Promise<ApiResponse<AIConfig>> {
     return this.http.get<AIConfig>("/api/ai-config");
   }
 
   // POST /api/ai-config
+  /** @deprecated Use client.config.update('server', {...}) instead */
   async update(body: Partial<AIConfig>): Promise<ApiResponse<void>> {
     return this.http.post<void>("/api/ai-config", body);
   }

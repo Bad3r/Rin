@@ -348,17 +348,48 @@ export class TestAPIClient {
     },
   };
 
-  // AI Config API
+  // AI Config API (deprecated - use config API instead)
   aiConfig = {
     get: async (options?: TestAPIOptions): Promise<ApiResponse<AIConfig>> => {
-      return this.get<AIConfig>('/ai-config', options);
+      // AI config is now part of server config, return empty config
+      const serverConfig = await this.config.get('server', options);
+      if (serverConfig.data) {
+        return {
+          data: {
+            enabled: serverConfig.data['ai_summary.enabled'] === 'true',
+            provider: serverConfig.data['ai_summary.provider'] || 'openai',
+            model: serverConfig.data['ai_summary.model'] || 'gpt-4o-mini',
+            api_key: serverConfig.data['ai_summary.api_key'] === '••••••••' ? 'set' : '',
+            api_url: serverConfig.data['ai_summary.api_url'] || '',
+          } as AIConfig,
+        };
+      }
+      return {
+        error: serverConfig.error,
+        data: {
+          enabled: false,
+          provider: 'openai',
+          model: 'gpt-4o-mini',
+          api_key: '',
+          api_url: '',
+        } as AIConfig,
+      };
     },
 
     update: async (
       body: Partial<AIConfig>,
       options?: TestAPIOptions
     ): Promise<ApiResponse<void>> => {
-      return this.post<void>('/ai-config', body, options);
+      // Convert AI config to flat format for server config
+      const flatBody: Record<string, any> = {};
+      if (body.enabled !== undefined) flatBody['ai_summary.enabled'] = String(body.enabled);
+      if (body.provider !== undefined) flatBody['ai_summary.provider'] = body.provider;
+      if (body.model !== undefined) flatBody['ai_summary.model'] = body.model;
+      if (body.api_url !== undefined) flatBody['ai_summary.api_url'] = body.api_url;
+      if (body.api_key !== undefined && body.api_key.trim() !== '') {
+        flatBody['ai_summary.api_key'] = body.api_key;
+      }
+      return this.config.update('server', flatBody, options);
     },
   };
 
