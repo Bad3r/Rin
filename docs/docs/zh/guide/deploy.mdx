@@ -107,9 +107,25 @@ Rin 目前支持账号密码登录与 Github OAuth 登录，可二选一或同�
 
 ### 图片存储配置
 
-默认情况下，Rin 使用 Cloudflare R2 存储图片。如果您需要配置 S3 兼容存储：
+Rin 支持两种存储方式：**Cloudflare R2**（推荐）或 **S3 兼容存储**。
 
-添加以下 Secrets：
+#### 使用 Cloudflare R2（推荐）
+
+如果未配置任何 S3 环境变量，部署脚本会自动尝试使用 Cloudflare R2。您只需在 GitHub Variables 中设置：
+
+| Variable 名称 | 说明 | 示例 |
+|--------------|------|------|
+| `R2_BUCKET_NAME` | R2 存储桶名称 | `my-blog-images` |
+
+部署脚本会自动构建 R2 的 endpoint 和 access host。如果您希望使用自定义域名访问图片，可以额外设置：
+
+| Variable 名称 | 说明 | 示例 |
+|--------------|------|------|
+| `S3_ACCESS_HOST` | 图片访问域名（可选） | `https://images.myblog.com` |
+
+#### 使用 S3 兼容存储
+
+如果您需要使用其他 S3 兼容存储（如 AWS S3、MinIO 等），需要完整配置以下 Secrets：
 
 | Secret 名称 | 说明 |
 |------------|------|
@@ -117,6 +133,15 @@ Rin 目前支持账号密码登录与 Github OAuth 登录，可二选一或同�
 | `S3_ACCESS_KEY_ID` | Access Key ID |
 | `S3_SECRET_ACCESS_KEY` | Secret Access Key |
 | `S3_BUCKET` | 存储桶名称 |
+
+以及以下 Variable（可选）：
+
+| Variable 名称 | 说明 | 默认值 |
+|--------------|------|--------|
+| `S3_ACCESS_HOST` | 图片访问域名 | 同 `S3_ENDPOINT` |
+| `S3_REGION` | 存储区域 | `auto` |
+| `S3_FOLDER` | 图片存放路径 | `images/` |
+| `S3_FORCE_PATH_STYLE` | 是否使用路径样式 | `false` |
 
 ### GitHub OAuth 配置
 

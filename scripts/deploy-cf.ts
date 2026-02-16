@@ -102,13 +102,21 @@ async function buildClient(): Promise<void> {
 async function deploy(): Promise<string> {
     console.log("🚀 Deploying Rin (Worker + Assets)...")
 
-    // Get R2 bucket info
-    const r2Info = await getR2BucketInfo()
-
-    // Use R2 if available and S3 not explicitly configured
-    const finalS3Endpoint = S3_ENDPOINT || r2Info?.endpoint || ""
-    const finalS3Bucket = S3_BUCKET || r2Info?.name || ""
-    const finalS3AccessHost = S3_ACCESS_HOST || r2Info?.accessHost || finalS3Endpoint
+    // Determine final S3 configuration
+    // Priority: 1. Explicit S3 config 2. R2 config (if S3 not set at all) 3. Empty values
+    let finalS3Endpoint = S3_ENDPOINT
+    let finalS3Bucket = S3_BUCKET
+    let finalS3AccessHost = S3_ACCESS_HOST
+    
+    // Only use R2 if no S3 config is provided at all
+    if (!S3_ENDPOINT && !S3_BUCKET && !S3_ACCESS_HOST) {
+        const r2Info = await getR2BucketInfo()
+        if (r2Info) {
+            finalS3Endpoint = r2Info.endpoint
+            finalS3Bucket = r2Info.name
+            finalS3AccessHost = r2Info.accessHost
+        }
+    }
 
     // Build client
     await buildClient()

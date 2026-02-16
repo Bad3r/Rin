@@ -24,20 +24,6 @@ v0.3.0 版本包含重大的架构变更：
 
 #### 必需变更
 
-**R2 存储用户注意**
-
-如果您使用 Cloudflare R2 作为存储（未显式配置 S3_ENDPOINT 等变量），需要添加：
-
-```
-R2_BUCKET_NAME=your-bucket-name
-```
-
-**操作步骤**：
-1. 进入 Settings → Secrets and variables → **Variables**
-2. 添加 `R2_BUCKET_NAME`，值为您的 R2 存储桶名称
-
-⚠️ **重要**：从 v0.3.0 开始，Rin 不再自动发现 R2 bucket。必须显式设置 `R2_BUCKET_NAME` 才能使用 R2 存储。
-
 **GitHub OAuth 变量（如果使用 GitHub 登录）**
 
 旧变量名已弃用：
