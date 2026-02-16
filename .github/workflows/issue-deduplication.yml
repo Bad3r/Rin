@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Issue Deduplication
+
+on:
+  issues:
+    types: [opened]
+
+concurrency:
+  group: issue-dedup-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  deduplicate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Check for duplicate issues
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Analyze this newly opened issue in Rin and determine whether it is a duplicate of an existing OPEN issue.
+
+            Repository: ${{ github.repository }}
+            New issue number: #${{ github.event.issue.number }}
+
+            Context for this project:
+            - Monorepo with client/, server/, cli/, packages/api/, docs/
+            - Cloudflare Workers + D1 deployment and GitHub Actions CI/CD
+
+            Required process:
+            1. Use mcp__github__get_issue to fetch the new issue.
+            2. Use mcp__github__search_issues (and mcp__github__list_issues if needed) to find similar OPEN issues.
+            3. Compare scope, symptoms, root cause, and impacted area.
+
+            Duplicate handling rules:
+            - Only mark as duplicate when confidence is high and an OPEN canonical issue exists.
+            - Add one concise, polite comment linking canonical issue(s).
+            - Add the label "duplicate".
+
+            If not a duplicate:
+            - Do not add a comment.
+            - Do not change labels.
+
+            Keep actions conservative. Avoid false-positive duplicate marking.
+          claude_args: |
+            --allowedTools "mcp__github__get_issue,mcp__github__search_issues,mcp__github__list_issues,mcp__github__create_issue_comment,mcp__github__update_issue,mcp__github__get_issue_comments"
