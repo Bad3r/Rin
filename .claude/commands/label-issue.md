@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(gh label list:*),Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh search:*)
+allowed-tools: Bash(gh label list:*),Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh search:*),Read,Glob,Grep
 description: Apply issue labels for Rin using deterministic triage rules
 ---
 
