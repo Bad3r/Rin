@@ -65,8 +65,8 @@ async function getR2BucketInfo(): Promise<{ name: string; endpoint: string; acce
             console.log(`Using specified R2 bucket: ${R2_BUCKET_NAME}`)
             return {
                 name: R2_BUCKET_NAME,
-                endpoint: `https://${R2_BUCKET_NAME}.${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-                accessHost: `https://${R2_BUCKET_NAME}.${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`
+                endpoint: `https://${R2_BUCKET_NAME}.${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+                accessHost: `https://${R2_BUCKET_NAME}.${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`
             }
         }
 
@@ -100,9 +100,9 @@ async function getR2BucketInfo(): Promise<{ name: string; endpoint: string; acce
         console.log(`Found R2 bucket: ${bucket.name}`)
 
         // Get account ID from wrangler config
-        const accountId = process.env.CF_ACCOUNT_ID
+        const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
         if (!accountId) {
-            console.log("CF_ACCOUNT_ID not set, using default endpoint format")
+            console.log("CLOUDFLARE_ACCOUNT_ID not set, using default endpoint format")
             return {
                 name: bucket.name,
                 endpoint: ``,
