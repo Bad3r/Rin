@@ -281,6 +281,8 @@ export function ConfigService(router: Router): void {
                 let errorMessage = error.message || 'Unknown error';
                 let errorDetails = '';
                 
+                console.error('[Test AI] Error caught:', error);
+                
                 // Provide more detailed error messages for common issues
                 if (errorMessage.includes('fetch failed') || errorMessage.includes('NetworkError')) {
                     errorMessage = 'Network error: Unable to connect to AI service';
@@ -297,6 +299,9 @@ export function ConfigService(router: Router): void {
                 } else if (errorMessage.includes('500') || errorMessage.includes('503')) {
                     errorMessage = 'AI service temporarily unavailable';
                     errorDetails = 'The AI service is experiencing issues. Please try again later.';
+                } else if (errorMessage.includes('Invalid') || errorMessage.includes('type')) {
+                    errorMessage = `AI model error: ${errorMessage}`;
+                    errorDetails = `The AI service returned an error. Please check that the model "${testConfig.model}" is correct and supported by your provider.`;
                 }
                 
                 return { 
