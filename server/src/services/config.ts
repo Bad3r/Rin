@@ -92,11 +92,11 @@ export function ConfigService(router: Router): void {
         }, {
             type: 'object',
             properties: {
-                provider: { type: 'string' },
-                model: { type: 'string' },
-                api_url: { type: 'string' },
-                api_key: { type: 'string' },
-                testPrompt: { type: 'string' }
+                provider: { type: 'string', optional: true },
+                model: { type: 'string', optional: true },
+                api_url: { type: 'string', optional: true },
+                api_key: { type: 'string', optional: true },
+                testPrompt: { type: 'string', optional: true }
             }
         });
 

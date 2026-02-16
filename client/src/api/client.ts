@@ -112,10 +112,21 @@ class HttpClient {
         } catch {
           errorValue = await response.text();
         }
+        // Extract error message from various formats
+        let errorMessage: string;
+        if (typeof errorValue === 'string') {
+          errorMessage = errorValue;
+        } else if (errorValue && typeof errorValue === 'object') {
+          // Handle { error: { message: string } } format
+          const err = errorValue as any;
+          errorMessage = err.error?.message || err.message || err.error || JSON.stringify(errorValue);
+        } else {
+          errorMessage = String(errorValue ?? response.statusText);
+        }
         return {
           error: {
             status: response.status,
-            value: typeof errorValue === 'string' ? errorValue : String(errorValue ?? response.statusText),
+            value: errorMessage,
           },
         };
       }
