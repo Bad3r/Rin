@@ -33,7 +33,17 @@ jobs:
           prompt: |
             Analyze this newly opened issue in Rin and determine whether it is a duplicate of an existing OPEN issue.
 
-            Repository: ${{ github.repository }}
+        env:
+          REPO_NAME: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Analyze this newly opened issue in Rin and determine whether it is a duplicate of an existing OPEN issue.
+
+            Repository: {{ env.REPO_NAME }}
+            New issue number: #{{ env.ISSUE_NUMBER }}
             New issue number: #${{ github.event.issue.number }}
 
             Context for this project:
