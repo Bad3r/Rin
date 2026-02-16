@@ -32,6 +32,20 @@ jobs:
         with:
           fetch-depth: 2
 
+      - name: Validate analysis type
+        id: validate_analysis_type
+        shell: bash
+        run: |
+          analysis_type="${{ github.event.inputs.analysis_type }}"
+          case "$analysis_type" in
+            summarize-commit|security-review) ;;
+            *)
+              echo "Invalid analysis type: $analysis_type"
+              exit 1
+              ;;
+          esac
+          echo "analysis_type=$analysis_type" >> "$GITHUB_OUTPUT"
+
       - name: Run Claude Analysis
         uses: anthropics/claude-code-action@v1
         with:
@@ -40,7 +54,7 @@ jobs:
           prompt: |
             REPO: ${{ github.repository }}
             BRANCH: ${{ github.ref_name }}
-            ANALYSIS_TYPE: ${{ github.event.inputs.analysis_type }}
+            ANALYSIS_TYPE: ${{ steps.validate_analysis_type.outputs.analysis_type }}
 
             Analyze only the latest commit in this repository.
 
