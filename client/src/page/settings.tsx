@@ -710,12 +710,19 @@ function AISummarySettings() {
         setTestResult(null);
         try {
             const preset = AI_PROVIDER_PRESETS.find(p => p.value === provider);
-            const { data, error } = await client.config.testAI({
+            // Build request body - only include api_key if it has value
+            const requestBody: any = {
                 provider: provider,
                 model: model,
-                api_url: apiUrl || preset?.url,
-                api_key: apiKey.trim() || undefined
-            });
+            };
+            if (apiUrl || preset?.url) {
+                requestBody.api_url = apiUrl || preset?.url;
+            }
+            if (apiKey.trim()) {
+                requestBody.api_key = apiKey.trim();
+            }
+            
+            const { data, error } = await client.config.testAI(requestBody);
 
             if (error) {
                 setTestStatus('error');
