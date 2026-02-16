@@ -119,6 +119,14 @@ class S3StorageProvider implements StorageProvider {
         console.log('Cache load from S3', this.cacheUrl);
         try {
             const response = await fetch(new Request(this.cacheUrl));
+            if (!response.ok) {
+                if (response.status === 404) {
+                    console.log('Cache file not found in S3, starting with empty cache');
+                } else {
+                    console.error(`Cache load from S3 failed: HTTP ${response.status}`);
+                }
+                return;
+            }
             const data = await response.json<any>();
             for (let key in data) {
                 this.cacheMap.set(key, data[key]);

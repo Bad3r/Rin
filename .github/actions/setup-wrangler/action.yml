@@ -29,16 +29,21 @@ runs:
         crons = ["*/20 * * * *"]
 
         [vars]
-        S3_FOLDER = "images/"
-        S3_CACHE_FOLDER = "cache/"
-        S3_REGION = "auto"
+        S3_FOLDER = "${{ vars.S3_FOLDER || 'images/' }}"
+        S3_CACHE_FOLDER = "${{ vars.S3_CACHE_FOLDER || 'cache/' }}"
+        S3_REGION = "${{ vars.S3_REGION || 'auto' }}"
         S3_ENDPOINT = "https://example.s3.endpoint"
         S3_ACCESS_HOST = "https://example.s3.endpoint"
         S3_BUCKET = "rin-bucket"
-        S3_FORCE_PATH_STYLE = "false"
-        RSS_TITLE = "Rin"
-        RSS_DESCRIPTION = "A lightweight personal blogging system"
-        CACHE_STORAGE_MODE = "s3"
+        S3_FORCE_PATH_STYLE = "${{ vars.S3_FORCE_PATH_STYLE || 'false' }}"
+        RSS_TITLE = "${{ vars.RSS_TITLE || 'Rin' }}"
+        RSS_DESCRIPTION = "${{ vars.RSS_DESCRIPTION || 'A lightweight personal blogging system' }}"
+        CACHE_STORAGE_MODE = "${{ vars.CACHE_STORAGE_MODE || 's3' }}"
+        NAME = "${{ vars.NAME || 'Rin' }}"
+        DESCRIPTION = "${{ vars.DESCRIPTION || 'A lightweight personal blogging system' }}"
+        AVATAR = "${{ vars.AVATAR || '' }}"
+        PAGE_SIZE = "${{ vars.PAGE_SIZE || '5' }}"
+        RSS_ENABLE = "${{ vars.RSS_ENABLE || 'false' }}"
 
         [[d1_databases]]
         binding = "DB"
