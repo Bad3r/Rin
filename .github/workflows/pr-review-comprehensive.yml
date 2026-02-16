@@ -1,0 +1,55 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: PR Review (Risk-Focused)
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review-with-tracking:
+    if: ${{ github.event.pull_request.draft == false && github.event.pull_request.head.repo.fork == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: PR Review with Progress Tracking
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          track_progress: true
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Perform a blocking-risk-focused review. Prioritize findings that could cause:
+            - security vulnerabilities
+            - correctness bugs/regressions
+            - production incidents or deployment breakage
+            - test coverage gaps for risky behavior changes
+
+            Review process:
+            1. List findings by severity: critical, high, medium.
+            2. For each finding, include impacted file/path and why it is risky.
+            3. Recommend the smallest safe fix.
+            4. Call out missing tests for changed high-risk paths.
+
+            Do not spend review budget on stylistic nits unless they hide a real risk.
+            Use inline comments for concrete code issues and a top-level summary for overall risk.
+
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
