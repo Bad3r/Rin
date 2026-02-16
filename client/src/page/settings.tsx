@@ -494,6 +494,7 @@ function ItemWithUpload({
 
 // AI Provider presets with their default API URLs
 const AI_PROVIDER_PRESETS = [
+    { value: 'worker-ai', label: 'Cloudflare Worker AI (Free)', url: '' },
     { value: 'openai', label: 'OpenAI', url: 'https://api.openai.com/v1' },
     { value: 'claude', label: 'Claude', url: 'https://api.anthropic.com/v1' },
     { value: 'gemini', label: 'Gemini', url: 'https://generativelanguage.googleapis.com/v1beta/openai' },
@@ -502,6 +503,17 @@ const AI_PROVIDER_PRESETS = [
 ];
 
 const AI_MODEL_PRESETS: Record<string, string[]> = {
+    'worker-ai': [
+        'llama-3-8b',
+        'llama-3-1-8b',
+        'llama-2-7b',
+        'mistral-7b',
+        'mistral-7b-v2',
+        'gemma-2b',
+        'gemma-7b',
+        'deepseek-coder',
+        'qwen-7b'
+    ],
     openai: [
         // GPT-5 series (latest)
         'gpt-5.2',
