@@ -47,7 +47,7 @@ jobs:
         run: |
           URL="${{ github.event.inputs.artifact_url }}"
           echo "Downloading from: $URL"
-          
+
           mkdir -p ./artifacts
           if [[ "$URL" == *.zip ]]; then
             curl -L "$URL" -o ./artifacts/build.zip
@@ -207,8 +207,8 @@ jobs:
               repo: context.repo.repo,
               issue_number: prNumber
             });
-            const botComment = comments.find(comment => 
-              comment.user.type === 'Bot' && 
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
               comment.body.includes('🚀 **Preview deployed!**')
             );
             const body = `🚀 **Preview deployed!**\n\n🔗 ${url}`;
@@ -227,4 +227,3 @@ jobs:
                 body: body
               });
             }
-
