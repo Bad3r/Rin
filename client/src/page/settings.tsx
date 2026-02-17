@@ -1,5 +1,5 @@
 import * as Switch from '@radix-ui/react-switch'
-import { ChangeEvent, useContext, useEffect, useRef, useState } from 'react'
+import { type ChangeEvent, useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ReactLoading from 'react-loading'
 import Modal from 'react-modal'
@@ -62,7 +62,7 @@ export function Settings() {
         setServerLoading(false)
       })
     ref.current = true
-  }, [])
+  }, [showAlert, t])
 
   async function handleFaviconChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -271,8 +271,8 @@ export function Settings() {
           <div className='flex flex-col items-start w-full'>
             <p className='text-base font-bold dark:text-white mt-2'>{t('settings.import_skipped')}</p>
             <ul className='flex flex-col items-start max-h-64 overflow-auto w-full'>
-              {msgList.map((msg, idx) => (
-                <p key={idx} className='text-sm dark:text-white'>
+              {msgList.map(msg => (
+                <p key={`${msg.title}-${msg.reason}`} className='text-sm dark:text-white'>
                   {t('settings.import_skipped_item$title$reason', { title: msg.title, reason: msg.reason })}
                 </p>
               ))}
@@ -280,6 +280,7 @@ export function Settings() {
           </div>
           <div className='w-full flex flex-col items-center mt-4'>
             <button
+              type='button'
               onClick={() => {
                 setIsOpen(false)
               }}
@@ -310,7 +311,9 @@ function ItemSwitch({
   configKey: string
   type: 'client' | 'server'
 }) {
-  const config = type === 'client' ? useContext(ClientConfigContext) : useContext(ServerConfigContext)
+  const clientConfig = useContext(ClientConfigContext)
+  const serverConfig = useContext(ServerConfigContext)
+  const config = type === 'client' ? clientConfig : serverConfig
   const defaultValue = config?.default<boolean>(configKey)
   const [checked, setChecked] = useState(defaultValue)
   const [loading, setLoading] = useState(false)
@@ -321,7 +324,7 @@ function ItemSwitch({
     if (value !== undefined) {
       setChecked(value)
     }
-  }, [config])
+  }, [config, configKey])
   function updateConfig(type: 'client' | 'server', key: string, value: any) {
     const checkedValue = checked
     setChecked(!checkedValue)
@@ -388,7 +391,9 @@ function ItemInput({
   configKey: string
   type: 'client' | 'server'
 }) {
-  const config = type === 'client' ? useContext(ClientConfigContext) : useContext(ServerConfigContext)
+  const clientConfig = useContext(ClientConfigContext)
+  const serverConfig = useContext(ServerConfigContext)
+  const config = type === 'client' ? clientConfig : serverConfig
   const defaultValue = config?.default<string>(configKey)
   const [value, setValue] = useState('')
   const [loading, setLoading] = useState(false)
@@ -402,7 +407,7 @@ function ItemInput({
     if (value !== undefined) {
       setValue(value)
     }
-  }, [config])
+  }, [config, configKey])
   function updateConfig(type: 'client' | 'server', key: string, value: any) {
     setLoading(true)
     client.config

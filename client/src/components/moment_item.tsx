@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { Markdown } from './markdown'
 import { timeago } from '../utils/timeago'
+import { Markdown } from './markdown'
 
 interface Moment {
   id: number
@@ -53,6 +53,7 @@ export function MomentItem({
           <div>
             <div className='flex gap-2'>
               <button
+                type='button'
                 aria-label={t('edit')}
                 onClick={() => onEdit(moment)}
                 className='flex-1 flex flex-col items-end justify-center px-2 py bg-secondary bg-button rounded-full transition'
@@ -60,6 +61,7 @@ export function MomentItem({
                 <i className='ri-edit-2-line dark:text-neutral-400' />
               </button>
               <button
+                type='button'
                 aria-label={t('delete.title')}
                 onClick={() => onDelete(moment.id)}
                 className='flex-1 flex flex-col items-end justify-center px-2 py bg-secondary bg-button rounded-full transition'

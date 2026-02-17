@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, expect, it } from 'bun:test'
 import { WranglerParsers } from './test-utils'
 
 describe('Wrangler --json 输出解析测试', () => {

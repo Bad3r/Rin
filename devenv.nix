@@ -58,7 +58,7 @@
     biome-check = {
       enable = true;
       name = "biome check";
-      entry = "bunx @biomejs/biome@2.4.0 check --files-ignore-unknown=true --linter-enabled=false --assist-enabled=false --enforce-assist=false client server packages cli docs scripts package.json turbo.json biome.json";
+      entry = "bunx @biomejs/biome@2.4.0 lint --files-ignore-unknown=true client server packages cli docs scripts package.json turbo.json biome.json";
       language = "system";
       pass_filenames = false;
       always_run = true;

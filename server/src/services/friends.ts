@@ -1,13 +1,13 @@
+import { friendCreateSchema, friendUpdateSchema } from '@rin/api'
 import { eq } from 'drizzle-orm'
-import { Router } from '../core/router'
+import type { Router } from '../core/router'
 import type { Context } from '../core/types'
 import * as schema from '../db/schema'
 import { friends } from '../db/schema'
+import type { DB } from '../server'
 import type { CacheImpl } from '../utils/cache'
 import { Config } from '../utils/config'
 import { notify } from '../utils/webhook'
-import type { DB } from '../server'
-import { friendCreateSchema, friendUpdateSchema } from '@rin/api'
 
 export function FriendService(router: Router): void {
   router.group('/api/friend', group => {
@@ -128,7 +128,7 @@ export function FriendService(router: Router): void {
           return 'Unauthorized'
         }
 
-        const exist = await db.query.friends.findFirst({ where: eq(friends.id, parseInt(params.id)) })
+        const exist = await db.query.friends.findFirst({ where: eq(friends.id, parseInt(params.id, 10)) })
         if (!exist) {
           set.status = 404
           return 'Not found'
@@ -161,7 +161,7 @@ export function FriendService(router: Router): void {
             accepted: finalAccepted === undefined ? undefined : finalAccepted,
             sort_order: finalSortOrder === undefined ? undefined : finalSortOrder,
           })
-          .where(eq(friends.id, parseInt(params.id)))
+          .where(eq(friends.id, parseInt(params.id, 10)))
 
         if (!admin) {
           const webhookUrl = (await serverConfig.get(Config.webhookUrl)) || env.WEBHOOK_URL
@@ -189,7 +189,7 @@ export function FriendService(router: Router): void {
         return 'Unauthorized'
       }
 
-      const exist = await db.query.friends.findFirst({ where: eq(friends.id, parseInt(params.id)) })
+      const exist = await db.query.friends.findFirst({ where: eq(friends.id, parseInt(params.id, 10)) })
       if (!exist) {
         set.status = 404
         return 'Not found'
@@ -200,19 +200,19 @@ export function FriendService(router: Router): void {
         return 'Permission denied'
       }
 
-      await db.delete(friends).where(eq(friends.id, parseInt(params.id)))
+      await db.delete(friends).where(eq(friends.id, parseInt(params.id, 10)))
       return 'OK'
     })
   })
 }
 
 export async function friendCrontab(
-  env: Env,
+  _env: Env,
   ctx: ExecutionContext,
   db: DB,
-  cache: CacheImpl,
+  _cache: CacheImpl,
   serverConfig: CacheImpl,
-  clientConfig: CacheImpl
+  _clientConfig: CacheImpl
 ) {
   const enable = await serverConfig.getOrDefault('friend_crontab', true)
   const ua = (await serverConfig.get('friend_ua')) || 'Rin-Check/0.1.0'

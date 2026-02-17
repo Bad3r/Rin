@@ -1,4 +1,4 @@
-import { Router } from '../core/router'
+import type { Router } from '../core/router'
 import type { Context } from '../core/types'
 import { path_join } from '../utils/path'
 

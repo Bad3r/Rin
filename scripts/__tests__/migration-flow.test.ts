@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, expect, it } from 'bun:test'
 import { HyperLogLog } from '../../server/src/utils/hyperloglog'
 
 describe('迁移流程完整测试', () => {

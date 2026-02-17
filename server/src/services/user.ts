@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { Router } from '../core/router'
+import type { Router } from '../core/router'
 import type { Context } from '../core/types'
 import { users } from '../db/schema'
 import { BadRequestError, ForbiddenError, InternalServerError, NotFoundError } from '../errors'
@@ -13,7 +13,7 @@ export function UserService(router: Router): void {
         throw new BadRequestError('GitHub OAuth is not configured')
       }
 
-      const referer = headers['referer']
+      const referer = headers.referer
 
       if (!referer) {
         throw new BadRequestError('Referer header is required')
@@ -52,7 +52,7 @@ export function UserService(router: Router): void {
       console.log('cookie_state', cookie.state.value)
 
       // Verify state to prevent CSRF attacks
-      if (query.state != cookie.state.value) {
+      if (query.state !== cookie.state.value) {
         throw new BadRequestError('Invalid state parameter')
       }
 
@@ -93,7 +93,7 @@ export function UserService(router: Router): void {
         if (user) {
           profile.permission = user.permission
           await db.update(users).set(profile).where(eq(users.id, user.id))
-          authToken = await jwt!.sign({ id: user.id })
+          authToken = await jwt?.sign({ id: user.id })
           cookie.token.set({
             value: authToken,
             expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
@@ -121,7 +121,7 @@ export function UserService(router: Router): void {
           if (!result || result.length === 0) {
             throw new InternalServerError('Failed to register user')
           } else {
-            authToken = await jwt!.sign({ id: result[0].insertedId })
+            authToken = await jwt?.sign({ id: result[0].insertedId })
             cookie.token.set({
               value: authToken,
               expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),

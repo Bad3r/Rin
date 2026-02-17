@@ -1,4 +1,4 @@
-import { SignJWT, jwtVerify, type JWTPayload, type JWSHeaderParameters, type KeyLike } from 'jose'
+import { jwtVerify, type KeyLike, SignJWT } from 'jose'
 
 export interface JWTPayloadSpec {
   iss?: string

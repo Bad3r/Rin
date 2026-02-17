@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet'
 import { useTranslation } from 'react-i18next'
 import { FeedCard } from '../components/feed_card'
 import { Waiting } from '../components/loading'
-import { client } from '../main'
-
 import { useSiteConfig } from '../hooks/useSiteConfig'
+import { client } from '../main'
 import { siteName } from '../utils/constants'
 
 type FeedsData = {
@@ -40,7 +39,7 @@ export function HashtagPage({ name }: { name: string }) {
   const [status, setStatus] = useState<'loading' | 'idle'>('idle')
   const [hashtag, setHashtag] = useState<FeedsData>()
   const ref = useRef('')
-  function fetchFeeds() {
+  const fetchFeeds = useCallback(() => {
     const nameDecoded = decodeURI(name)
     client.tag.get(nameDecoded).then(({ data }) => {
       if (data) {
@@ -48,13 +47,13 @@ export function HashtagPage({ name }: { name: string }) {
         setStatus('idle')
       }
     })
-  }
+  }, [name])
   useEffect(() => {
     if (ref.current === name) return
     setStatus('loading')
     fetchFeeds()
     ref.current = name
-  }, [name])
+  }, [name, fetchFeeds])
   return (
     <>
       <Helmet>

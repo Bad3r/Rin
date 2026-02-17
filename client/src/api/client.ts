@@ -1,67 +1,66 @@
 // API Client for Rin - Type-safe HTTP client to replace Eden
 // This client provides a clean, type-safe interface for all backend API endpoints
 
-import { getAuthToken } from '../utils/auth'
-import { endpoint } from '../config'
-
 // Import shared types
 import type {
+  AIConfig,
   ApiResponse,
-  RequestOptions,
+  AuthStatus,
+  Comment,
+  ConfigResponse,
+  ConfigType,
+  CreateCommentRequest,
+  CreateFeedRequest,
+  CreateFriendRequest,
+  CreateMomentRequest,
   Feed,
   FeedListResponse,
-  TimelineItem,
-  CreateFeedRequest,
-  UpdateFeedRequest,
-  UserProfile,
-  UpdateProfileRequest,
-  Tag,
-  TagDetail,
-  Comment,
-  CreateCommentRequest,
   Friend,
   FriendListResponse,
-  CreateFriendRequest,
-  UpdateFriendRequest,
-  Moment,
-  CreateMomentRequest,
-  ConfigType,
-  ConfigResponse,
-  AIConfig,
-  UploadResponse,
-  AuthStatus,
   LoginRequest,
   LoginResponse,
+  Moment,
+  RequestOptions,
+  Tag,
+  TagDetail,
+  TimelineItem,
+  UpdateFeedRequest,
+  UpdateFriendRequest,
+  UpdateProfileRequest,
+  UploadResponse,
+  UserProfile,
 } from '@rin/api'
+import { endpoint } from '../config'
+import { getAuthToken } from '../utils/auth'
 
 // Re-export for external use
 export type {
+  AIConfig,
   ApiResponse,
-  RequestOptions,
+  AuthStatus,
+  Comment,
+  ConfigResponse,
+  ConfigType,
+  CreateCommentRequest,
+  CreateFeedRequest,
+  CreateFriendRequest,
+  CreateMomentRequest,
   Feed,
   FeedListResponse,
-  TimelineItem,
-  CreateFeedRequest,
-  UpdateFeedRequest,
-  UserProfile,
-  UpdateProfileRequest,
-  Tag,
-  TagDetail,
-  Comment,
-  CreateCommentRequest,
   Friend,
   FriendListResponse,
-  CreateFriendRequest,
-  UpdateFriendRequest,
-  Moment,
-  CreateMomentRequest,
-  ConfigType,
-  ConfigResponse,
-  AIConfig,
-  UploadResponse,
-  AuthStatus,
   LoginRequest,
   LoginResponse,
+  Moment,
+  RequestOptions,
+  Tag,
+  TagDetail,
+  TimelineItem,
+  UpdateFeedRequest,
+  UpdateFriendRequest,
+  UpdateProfileRequest,
+  UploadResponse,
+  UserProfile,
 } from '@rin/api'
 
 /**
@@ -85,7 +84,7 @@ class HttpClient {
     // Add auth token if available
     const token = getAuthToken()
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`
+      headers.Authorization = `Bearer ${token}`
     }
 
     if (body !== undefined && !(body instanceof FormData)) {

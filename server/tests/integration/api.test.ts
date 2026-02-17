@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
+import type { Database } from 'bun:sqlite'
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { createBaseApp } from '../../src/core/base'
+import { CommentService } from '../../src/services/comments'
 import { FeedService } from '../../src/services/feed'
 import { TagService } from '../../src/services/tag'
-import { CommentService } from '../../src/services/comments'
-import { createMockDB, createMockEnv, cleanupTestDB } from '../fixtures'
+import { cleanupTestDB, createMockDB, createMockEnv } from '../fixtures'
 import { createTestClient } from '../test-api-client'
-import type { Database } from 'bun:sqlite'
 
 describe('Integration Tests - API Flow', () => {
   let db: any
@@ -26,7 +26,7 @@ describe('Integration Tests - API Flow', () => {
       get: async () => undefined,
       set: async () => {},
       deletePrefix: async () => {},
-      getOrSet: async (key: string, fn: Function) => fn(),
+      getOrSet: async (_key: string, fn: Function) => fn(),
       getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
     })
     app.state('serverConfig', {
@@ -42,7 +42,7 @@ describe('Integration Tests - API Flow', () => {
       sign: async (payload: any) => `mock_token_${payload.id}`,
       verify: async (token: string) => {
         const match = token.match(/mock_token_(\d+)/)
-        return match ? { id: parseInt(match[1]) } : null
+        return match ? { id: parseInt(match[1], 10) } : null
       },
     })
 
@@ -62,7 +62,7 @@ describe('Integration Tests - API Flow', () => {
     cleanupTestDB(sqlite)
   })
 
-  async function seedTestData(db: any) {
+  async function seedTestData(_db: any) {
     sqlite.exec(`
             INSERT INTO users (id, username, avatar, permission, openid) VALUES 
                 (1, 'author', 'author.png', 1, 'gh_author'),
@@ -103,7 +103,7 @@ describe('Integration Tests - API Flow', () => {
       expect(createResult.data).toBeDefined()
       expect(createResult.data?.insertedId).toBeDefined()
 
-      const feedId = createResult.data!.insertedId
+      const feedId = createResult.data?.insertedId
 
       // 2. Get the created feed
       const getResult = await api.feed.get(feedId)

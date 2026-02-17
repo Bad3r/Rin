@@ -1,19 +1,18 @@
-import { and, asc, count, desc, eq, gt, like, lt, or } from 'drizzle-orm'
-import { feeds, visits, visitStats } from '../db/schema'
-import { HyperLogLog } from '../utils/hyperloglog'
-import { Router } from '../core/router'
-import { t } from '../core/types'
-import type { Context } from '../core/types'
 import {
-  feedListSchema,
   feedCreateSchema,
-  feedUpdateSchema,
+  feedListSchema,
   feedSetTopSchema,
+  feedUpdateSchema,
   searchSchema,
   wpImportSchema,
 } from '@rin/api'
+import { and, asc, count, desc, eq, gt, like, lt, or } from 'drizzle-orm'
+import type { Router } from '../core/router'
+import type { Context } from '../core/types'
+import { feeds, visitStats, visits } from '../db/schema'
 import { generateAISummary } from '../utils/ai'
-import { CacheImpl } from '../utils/cache'
+import type { CacheImpl } from '../utils/cache'
+import { HyperLogLog } from '../utils/hyperloglog'
 import { extractImage } from '../utils/image'
 import { bindTagToPost } from './tag'
 
@@ -51,8 +50,8 @@ export function FeedService(router: Router): void {
           return 'Permission denied'
         }
 
-        const page_num = (page ? (parseInt(page as string) > 0 ? parseInt(page as string) : 1) : 1) - 1
-        const limit_num = limit ? (parseInt(limit as string) > 50 ? 50 : parseInt(limit as string)) : 20
+        const page_num = (page ? (parseInt(page as string, 10) > 0 ? parseInt(page as string, 10) : 1) : 1) - 1
+        const limit_num = limit ? (parseInt(limit as string, 10) > 50 ? 50 : parseInt(limit as string, 10)) : 20
         const cacheKey = `feeds_${type}_${page_num}_${limit_num}`
         const cached = await cache.get(cacheKey)
 
@@ -218,7 +217,7 @@ export function FeedService(router: Router): void {
         store: { db, cache, clientConfig },
       } = ctx
       const { id } = params
-      const id_num = parseInt(id)
+      const id_num = parseInt(id, 10)
       const cacheKey = `feed_${id}`
 
       const feed = await cache.getOrSet(cacheKey, () =>
@@ -259,7 +258,7 @@ export function FeedService(router: Router): void {
         const visitorKey = `${ip}`
 
         // Get or create visit stats for this feed
-        let stats = await db.query.visitStats.findFirst({
+        const stats = await db.query.visitStats.findFirst({
           where: eq(visitStats.feedId, feed.id),
         })
 
@@ -309,7 +308,7 @@ export function FeedService(router: Router): void {
       const { id } = params
       let id_num: number
 
-      if (isNaN(parseInt(id))) {
+      if (Number.isNaN(parseInt(id, 10))) {
         const aliasRecord = await db.select({ id: feeds.id }).from(feeds).where(eq(feeds.alias, id))
         if (aliasRecord.length === 0) {
           set.status = 404
@@ -317,7 +316,7 @@ export function FeedService(router: Router): void {
         }
         id_num = aliasRecord[0].id
       } else {
-        id_num = parseInt(id)
+        id_num = parseInt(id, 10)
       }
 
       const feed = await db.query.feeds.findFirst({
@@ -411,7 +410,7 @@ export function FeedService(router: Router): void {
         const { id } = params
         const { title, listed, content, summary, alias, draft, top, tags, createdAt } = body
 
-        const id_num = parseInt(id)
+        const id_num = parseInt(id, 10)
         const feed = await db.query.feeds.findFirst({ where: eq(feeds.id, id_num) })
 
         if (!feed) {
@@ -425,7 +424,7 @@ export function FeedService(router: Router): void {
         }
 
         // Generate AI summary if content changed and not a draft
-        let ai_summary: string | undefined = undefined
+        let ai_summary: string | undefined
         const contentChanged = content && content !== feed.content
         const isDraft = draft !== undefined ? draft : feed.draft === 1
 
@@ -485,7 +484,7 @@ export function FeedService(router: Router): void {
         const { id } = params
         const { top } = body
 
-        const id_num = parseInt(id)
+        const id_num = parseInt(id, 10)
         const feed = await db.query.feeds.findFirst({ where: eq(feeds.id, id_num) })
 
         if (!feed) {
@@ -516,7 +515,7 @@ export function FeedService(router: Router): void {
       } = ctx
       const { id } = params
 
-      const id_num = parseInt(id)
+      const id_num = parseInt(id, 10)
       const feed = await db.query.feeds.findFirst({ where: eq(feeds.id, id_num) })
 
       if (!feed) {
@@ -549,8 +548,8 @@ export function FeedService(router: Router): void {
       const { page, limit } = query
 
       keyword = decodeURI(keyword)
-      const page_num = (page ? (parseInt(page as string) > 0 ? parseInt(page as string) : 1) : 1) - 1
-      const limit_num = limit ? (parseInt(limit as string) > 50 ? 50 : parseInt(limit as string)) : 20
+      const page_num = (page ? (parseInt(page as string, 10) > 0 ? parseInt(page as string, 10) : 1) : 1) - 1
+      const limit_num = limit ? (parseInt(limit as string, 10) > 50 ? 50 : parseInt(limit as string, 10)) : 20
 
       if (keyword === undefined || keyword.trim().length === 0) {
         return { size: 0, data: [], hasNext: false }
@@ -645,10 +644,10 @@ export function FeedService(router: Router): void {
         const contentHtml = item?.['content:encoded']
         const content = html2md(contentHtml)
         const summary = content.length > 100 ? content.slice(0, 100) : content
-        let tags = item?.['category']
+        let tags = item?.category
 
         if (tags && Array.isArray(tags)) {
-          tags = tags.map((tag: any) => tag + '')
+          tags = tags.map((tag: any) => `${tag}`)
         } else if (tags && typeof tags === 'string') {
           tags = [tags]
         }
@@ -666,7 +665,7 @@ export function FeedService(router: Router): void {
 
       let success = 0
       let skipped = 0
-      let skippedList: { title: string; reason: string }[] = []
+      const skippedList: { title: string; reason: string }[] = []
 
       for (const item of feedItems) {
         if (!item.content) {

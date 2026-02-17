@@ -1,29 +1,29 @@
 import type {
+  AIConfig,
   ApiResponse,
+  AuthStatus,
+  Comment,
+  ConfigResponse,
+  ConfigType,
+  CreateCommentRequest,
+  CreateFeedRequest,
+  CreateFriendRequest,
+  CreateMomentRequest,
   Feed,
   FeedListResponse,
-  TimelineItem,
-  CreateFeedRequest,
-  UpdateFeedRequest,
-  UserProfile,
-  UpdateProfileRequest,
-  Tag,
-  TagDetail,
-  Comment,
-  CreateCommentRequest,
   Friend,
   FriendListResponse,
-  CreateFriendRequest,
-  UpdateFriendRequest,
-  Moment,
-  CreateMomentRequest,
-  ConfigType,
-  ConfigResponse,
-  AIConfig,
-  UploadResponse,
-  AuthStatus,
   LoginRequest,
   LoginResponse,
+  Moment,
+  Tag,
+  TagDetail,
+  TimelineItem,
+  UpdateFeedRequest,
+  UpdateFriendRequest,
+  UpdateProfileRequest,
+  UploadResponse,
+  UserProfile,
 } from '@rin/api'
 
 /**
@@ -68,7 +68,7 @@ export class TestAPIClient {
     }
 
     if (options?.token) {
-      headers['Authorization'] = `Bearer ${options.token}`
+      headers.Authorization = `Bearer ${options.token}`
     }
 
     if (body !== undefined && !(body instanceof FormData)) {

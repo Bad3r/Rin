@@ -56,7 +56,7 @@ export function LoginPage() {
       } else {
         setError(t('login.error.failed'))
       }
-    } catch (err) {
+    } catch (_err) {
       setError(t('login.error.network'))
     } finally {
       setIsLoading(false)

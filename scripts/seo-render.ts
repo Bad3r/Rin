@@ -1,6 +1,6 @@
+import path from 'node:path'
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import puppeteer from 'puppeteer'
-import path from 'node:path'
 
 const env = process.env
 const baseUrl = env.SEO_BASE_URL || ''
@@ -84,7 +84,7 @@ async function fetchPage(url: string) {
       return anchors.map(anchor => anchor.href)
     })
     for (const link of links.filter(
-      link => link.startsWith(baseUrl) || (containsKey != '' && link.includes(containsKey))
+      link => link.startsWith(baseUrl) || (containsKey !== '' && link.includes(containsKey))
     )) {
       const linkWithoutHash = link.split('#')[0]
       if (fetchedLinks.has(linkWithoutHash)) {

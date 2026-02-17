@@ -163,7 +163,7 @@ export async function generateAISummary(env: Env, db: any, content: string): Pro
 
   const { provider, model } = config
   const maxContentLength = 8000
-  const truncatedContent = content.length > maxContentLength ? content.slice(0, maxContentLength) + '...' : content
+  const truncatedContent = content.length > maxContentLength ? `${content.slice(0, maxContentLength)}...` : content
 
   try {
     let result: string | null

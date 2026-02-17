@@ -1,30 +1,30 @@
-import { useEffect, useRef, useState, useContext } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet'
-import { DefaultParams, PathPattern, Route, Switch } from 'wouter'
+import { useTranslation } from 'react-i18next'
+import { type DefaultParams, type PathPattern, Route, Switch } from 'wouter'
 import Footer from './components/footer'
 import { Header } from './components/header'
 import { Padding } from './components/padding'
+import { Tips, TipsPage } from './components/tips.tsx'
 import useTableOfContents from './hooks/useTableOfContents.tsx'
 import { client } from './main'
 import { CallbackPage } from './page/callback'
-import { LoginPage } from './page/login'
-import { ProfilePage } from './page/profile'
+import { ErrorPage } from './page/error.tsx'
 import { FeedPage, TOCHeader } from './page/feed'
 import { FeedsPage } from './page/feeds'
 import { FriendsPage } from './page/friends'
 import { HashtagPage } from './page/hashtag.tsx'
 import { HashtagsPage } from './page/hashtags.tsx'
+import { LoginPage } from './page/login'
+import { MomentsPage } from './page/moments'
+import { ProfilePage } from './page/profile'
+import { SearchPage } from './page/search.tsx'
 import { Settings } from './page/settings.tsx'
 import { TimelinePage } from './page/timeline'
 import { WritingPage } from './page/writing'
 import { ClientConfigContext, ConfigWrapper, defaultClientConfig } from './state/config.tsx'
-import { Profile, ProfileContext } from './state/profile'
+import { type Profile, ProfileContext } from './state/profile'
 import { tryInt } from './utils/int'
-import { SearchPage } from './page/search.tsx'
-import { Tips, TipsPage } from './components/tips.tsx'
-import { useTranslation } from 'react-i18next'
-import { MomentsPage } from './page/moments'
-import { ErrorPage } from './page/error.tsx'
 
 function App() {
   const ref = useRef(false)
@@ -75,114 +75,112 @@ function App() {
   }, [])
   const favicon = '/favicon'
   return (
-    <>
-      <ClientConfigContext.Provider value={config}>
-        <ProfileContext.Provider value={profile}>
-          <Helmet>{favicon && <link rel='icon' href={favicon} />}</Helmet>
-          <Switch>
-            <RouteMe path='/'>
-              <FeedsPage />
-            </RouteMe>
+    <ClientConfigContext.Provider value={config}>
+      <ProfileContext.Provider value={profile}>
+        <Helmet>{favicon && <link rel='icon' href={favicon} />}</Helmet>
+        <Switch>
+          <RouteMe path='/'>
+            <FeedsPage />
+          </RouteMe>
 
-            <RouteMe path='/timeline'>
-              <TimelinePage />
-            </RouteMe>
+          <RouteMe path='/timeline'>
+            <TimelinePage />
+          </RouteMe>
 
-            <RouteMe path='/moments'>
-              <MomentsPage />
-            </RouteMe>
+          <RouteMe path='/moments'>
+            <MomentsPage />
+          </RouteMe>
 
-            <RouteMe path='/friends'>
-              <FriendsPage />
-            </RouteMe>
+          <RouteMe path='/friends'>
+            <FriendsPage />
+          </RouteMe>
 
-            <RouteMe path='/hashtags'>
-              <HashtagsPage />
-            </RouteMe>
+          <RouteMe path='/hashtags'>
+            <HashtagsPage />
+          </RouteMe>
 
-            <RouteMe path='/hashtag/:name'>
-              {params => {
-                return <HashtagPage name={params.name || ''} />
-              }}
-            </RouteMe>
+          <RouteMe path='/hashtag/:name'>
+            {params => {
+              return <HashtagPage name={params.name || ''} />
+            }}
+          </RouteMe>
 
-            <RouteMe path='/search/:keyword'>
-              {params => {
-                return <SearchPage keyword={params.keyword || ''} />
-              }}
-            </RouteMe>
+          <RouteMe path='/search/:keyword'>
+            {params => {
+              return <SearchPage keyword={params.keyword || ''} />
+            }}
+          </RouteMe>
 
-            <RouteMe path='/settings' paddingClassName='mx-4' requirePermission>
-              <Settings />
-            </RouteMe>
+          <RouteMe path='/settings' paddingClassName='mx-4' requirePermission>
+            <Settings />
+          </RouteMe>
 
-            <RouteMe path='/writing' paddingClassName='mx-4' requirePermission>
-              <WritingPage />
-            </RouteMe>
+          <RouteMe path='/writing' paddingClassName='mx-4' requirePermission>
+            <WritingPage />
+          </RouteMe>
 
-            <RouteMe path='/writing/:id' paddingClassName='mx-4' requirePermission>
-              {({ id }) => {
-                const id_num = tryInt(0, id)
-                return <WritingPage id={id_num} />
-              }}
-            </RouteMe>
+          <RouteMe path='/writing/:id' paddingClassName='mx-4' requirePermission>
+            {({ id }) => {
+              const id_num = tryInt(0, id)
+              return <WritingPage id={id_num} />
+            }}
+          </RouteMe>
 
-            <RouteMe path='/callback'>
-              <CallbackPage />
-            </RouteMe>
+          <RouteMe path='/callback'>
+            <CallbackPage />
+          </RouteMe>
 
-            <RouteMe path='/login'>
-              <LoginPage />
-            </RouteMe>
+          <RouteMe path='/login'>
+            <LoginPage />
+          </RouteMe>
 
-            <RouteMe path='/profile'>
-              <ProfilePage />
-            </RouteMe>
+          <RouteMe path='/profile'>
+            <ProfilePage />
+          </RouteMe>
 
-            <RouteWithIndex path='/feed/:id'>
-              {(params, TOC, clean) => {
-                return <FeedPage id={params.id || ''} TOC={TOC} clean={clean} />
-              }}
-            </RouteWithIndex>
+          <RouteWithIndex path='/feed/:id'>
+            {(params, TOC, clean) => {
+              return <FeedPage id={params.id || ''} TOC={TOC} clean={clean} />
+            }}
+          </RouteWithIndex>
 
-            <RouteWithIndex path='/:alias'>
-              {(params, TOC, clean) => {
-                return <FeedPage id={params.alias || ''} TOC={TOC} clean={clean} />
-              }}
-            </RouteWithIndex>
+          <RouteWithIndex path='/:alias'>
+            {(params, TOC, clean) => {
+              return <FeedPage id={params.alias || ''} TOC={TOC} clean={clean} />
+            }}
+          </RouteWithIndex>
 
-            <RouteMe path='/user/github'>
-              {_ => (
-                <TipsPage>
-                  <Tips value={t('error.api_url')} type='error' />
-                </TipsPage>
-              )}
-            </RouteMe>
+          <RouteMe path='/user/github'>
+            {_ => (
+              <TipsPage>
+                <Tips value={t('error.api_url')} type='error' />
+              </TipsPage>
+            )}
+          </RouteMe>
 
-            <RouteMe path='/*/user/github'>
-              {_ => (
-                <TipsPage>
-                  <Tips value={t('error.api_url_slash')} type='error' />
-                </TipsPage>
-              )}
-            </RouteMe>
+          <RouteMe path='/*/user/github'>
+            {_ => (
+              <TipsPage>
+                <Tips value={t('error.api_url_slash')} type='error' />
+              </TipsPage>
+            )}
+          </RouteMe>
 
-            <RouteMe path='/user/github/callback'>
-              {_ => (
-                <TipsPage>
-                  <Tips value={t('error.github_callback')} type='error' />
-                </TipsPage>
-              )}
-            </RouteMe>
+          <RouteMe path='/user/github/callback'>
+            {_ => (
+              <TipsPage>
+                <Tips value={t('error.github_callback')} type='error' />
+              </TipsPage>
+            )}
+          </RouteMe>
 
-            {/* Default route in a switch */}
-            <RouteMe>
-              <ErrorPage error={t('error.not_found')} />
-            </RouteMe>
-          </Switch>
-        </ProfileContext.Provider>
-      </ClientConfigContext.Provider>
-    </>
+          {/* Default route in a switch */}
+          <RouteMe>
+            <ErrorPage error={t('error.not_found')} />
+          </RouteMe>
+        </Switch>
+      </ProfileContext.Provider>
+    </ClientConfigContext.Provider>
   )
 }
 
@@ -199,11 +197,10 @@ function RouteMe({
   paddingClassName?: string
   requirePermission?: boolean
 }) {
-  if (requirePermission) {
-    const profile = useContext(ProfileContext)
-    const { t } = useTranslation()
-    if (!profile?.permission) children = <ErrorPage error={t('error.permission_denied')} />
-  }
+  const profile = useContext(ProfileContext)
+  const { t } = useTranslation()
+  const protectedChildren =
+    requirePermission && !profile?.permission ? <ErrorPage error={t('error.permission_denied')} /> : children
   return (
     <Route path={path}>
       {params => {
@@ -211,7 +208,7 @@ function RouteMe({
           <>
             <Header>{headerComponent}</Header>
             <Padding className={paddingClassName}>
-              {typeof children === 'function' ? children(params) : children}
+              {typeof protectedChildren === 'function' ? protectedChildren(params) : protectedChildren}
             </Padding>
             <Footer />
           </>

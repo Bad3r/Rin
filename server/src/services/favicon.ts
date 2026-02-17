@@ -1,5 +1,4 @@
-import { Router } from '../core/router'
-import { t } from '../core/types'
+import type { Router } from '../core/router'
 import type { Context } from '../core/types'
 import { path_join } from '../utils/path'
 import { createS3Client, putObject } from '../utils/s3'

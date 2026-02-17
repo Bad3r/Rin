@@ -1,11 +1,12 @@
 import Editor from '@monaco-editor/react'
-import { editor } from 'monaco-editor'
-import React, { useRef, useState, useEffect } from 'react'
+import type { editor } from 'monaco-editor'
+import type React from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Loading from 'react-loading'
+import { client } from '../main'
 import { useColorMode } from '../utils/darkModeUtils'
 import { Markdown } from './markdown'
-import { client } from '../main'
 
 interface MarkdownEditorProps {
   content: string
@@ -103,7 +104,7 @@ export function MarkdownEditor({
     }
 
     return (
-      <button onClick={() => uploadRef.current?.click()}>
+      <button type='button' onClick={() => uploadRef.current?.click()}>
         <input
           ref={uploadRef}
           onChange={upChange}
@@ -163,15 +164,27 @@ export function MarkdownEditor({
   return (
     <div className='flex flex-col mx-4 my-2 md:mx-0 md:my-0 gap-2'>
       <div className='flex flex-row space-x-2'>
-        <button className={`${preview === 'edit' ? 'text-theme' : ''}`} onClick={() => setPreview('edit')}>
+        <button
+          type='button'
+          className={`${preview === 'edit' ? 'text-theme' : ''}`}
+          onClick={() => setPreview('edit')}
+        >
           {' '}
           {t('edit')}{' '}
         </button>
-        <button className={`${preview === 'preview' ? 'text-theme' : ''}`} onClick={() => setPreview('preview')}>
+        <button
+          type='button'
+          className={`${preview === 'preview' ? 'text-theme' : ''}`}
+          onClick={() => setPreview('preview')}
+        >
           {' '}
           {t('preview')}{' '}
         </button>
-        <button className={`${preview === 'comparison' ? 'text-theme' : ''}`} onClick={() => setPreview('comparison')}>
+        <button
+          type='button'
+          className={`${preview === 'comparison' ? 'text-theme' : ''}`}
+          onClick={() => setPreview('comparison')}
+        >
           {' '}
           {t('comparison')}{' '}
         </button>
@@ -184,12 +197,15 @@ export function MarkdownEditor({
         )}
       </div>
       <div className={`grid grid-cols-1 ${preview === 'comparison' ? 'sm:grid-cols-2' : ''}`}>
-        <div className={'flex flex-col ' + (preview === 'preview' ? 'hidden' : '')}>
+        <div className={`flex flex-col ${preview === 'preview' ? 'hidden' : ''}`}>
           <div className='flex flex-row justify-start mb-2'>
             <UploadImageButton />
           </div>
-          <div
+          <form
             className={'relative'}
+            onSubmit={event => {
+              event.preventDefault()
+            }}
             onDrop={e => {
               e.preventDefault()
               const editor = editorRef.current
@@ -244,9 +260,9 @@ export function MarkdownEditor({
                 pasteAs: { enabled: false },
               }}
             />
-          </div>
+          </form>
         </div>
-        <div className={'px-4 overflow-y-scroll ' + (preview !== 'edit' ? '' : 'hidden')} style={{ height: height }}>
+        <div className={`px-4 overflow-y-scroll ${preview !== 'edit' ? '' : 'hidden'}`} style={{ height: height }}>
           <Markdown content={content ? content : placeholder} />
         </div>
       </div>

@@ -1,5 +1,4 @@
-import { Router } from '../core/router'
-import { t } from '../core/types'
+import type { Router } from '../core/router'
 import type { Context } from '../core/types'
 import { path_join } from '../utils/path'
 import { createS3Client, putObject } from '../utils/s3'
@@ -54,7 +53,7 @@ export function StorageService(router: Router): void {
         const suffix = key.includes('.') ? key.split('.').pop() : ''
         const hashArray = await crypto.subtle.digest({ name: 'SHA-1' }, await file.arrayBuffer())
         const hash = buf2hex(hashArray)
-        const hashkey = path_join(folder, hash + '.' + suffix)
+        const hashkey = path_join(folder, `${hash}.${suffix}`)
 
         try {
           await putObject(s3, env, hashkey, file, file.type)

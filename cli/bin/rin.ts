@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+
 /**
  * Rin CLI - Unified command line interface for Rin blog platform
  *
@@ -10,12 +11,11 @@
  *   rin release patch          Create a new release
  */
 
-import { parseArgs } from 'util'
+import { existsSync } from 'node:fs'
+import * as net from 'node:net'
+import { join } from 'node:path'
+import { parseArgs } from 'node:util'
 import { $ } from 'bun'
-import { existsSync, readFileSync, readdirSync } from 'fs'
-import { join } from 'path'
-import * as net from 'net'
-import stripIndent from 'strip-indent'
 
 // Colors for terminal output
 const colors = {
@@ -56,7 +56,7 @@ function parseEnv(content: string): Record<string, string> {
   return env
 }
 
-async function loadEnv(): Promise<Record<string, string>> {
+async function _loadEnv(): Promise<Record<string, string>> {
   try {
     const file = Bun.file('.env.local')
     if (await file.exists()) {
@@ -102,7 +102,7 @@ async function devCommand(args: string[]) {
     strict: false,
   })
 
-  const PORT = parseInt((values.port as string) || '11498')
+  const PORT = parseInt((values.port as string) || '11498', 10)
 
   // Check port
   if (!(await checkPort(PORT))) {

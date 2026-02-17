@@ -1,6 +1,6 @@
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import { createBaseApp } from './core/base'
-import { Router } from './core/router'
+import type { Router } from './core/router'
 
 export type DB = DrizzleD1Database<typeof import('./db/schema')>
 
@@ -163,7 +163,7 @@ function findMatchingServices(pathname: string): ServiceLoader[] {
 
   // Find the first matching service
   for (const service of sorted) {
-    if (pathname === service.prefix || pathname.startsWith(service.prefix + '/')) {
+    if (pathname === service.prefix || pathname.startsWith(`${service.prefix}/`)) {
       return [service]
     }
   }

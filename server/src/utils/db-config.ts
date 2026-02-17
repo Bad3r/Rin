@@ -50,19 +50,19 @@ export async function setDBConfig(db: any, key: string, value: string): Promise<
 export async function getAIConfig(db: any): Promise<AIConfig> {
   const config: AIConfig = { ...defaultAIConfig }
 
-  const enabled = await getDBConfig(db, AI_CONFIG_PREFIX + 'enabled')
+  const enabled = await getDBConfig(db, `${AI_CONFIG_PREFIX}enabled`)
   if (enabled !== null) config.enabled = enabled === 'true'
 
-  const provider = await getDBConfig(db, AI_CONFIG_PREFIX + 'provider')
+  const provider = await getDBConfig(db, `${AI_CONFIG_PREFIX}provider`)
   if (provider !== null) config.provider = provider
 
-  const model = await getDBConfig(db, AI_CONFIG_PREFIX + 'model')
+  const model = await getDBConfig(db, `${AI_CONFIG_PREFIX}model`)
   if (model !== null) config.model = model
 
-  const apiKey = await getDBConfig(db, AI_CONFIG_PREFIX + 'api_key')
+  const apiKey = await getDBConfig(db, `${AI_CONFIG_PREFIX}api_key`)
   if (apiKey !== null) config.api_key = apiKey
 
-  const apiUrl = await getDBConfig(db, AI_CONFIG_PREFIX + 'api_url')
+  const apiUrl = await getDBConfig(db, `${AI_CONFIG_PREFIX}api_url`)
   if (apiUrl !== null) config.api_url = apiUrl
 
   return config
@@ -73,20 +73,20 @@ export async function getAIConfig(db: any): Promise<AIConfig> {
  */
 export async function setAIConfig(db: any, updates: Partial<AIConfig>): Promise<void> {
   if (updates.enabled !== undefined) {
-    await setDBConfig(db, AI_CONFIG_PREFIX + 'enabled', String(updates.enabled))
+    await setDBConfig(db, `${AI_CONFIG_PREFIX}enabled`, String(updates.enabled))
   }
   if (updates.provider !== undefined) {
-    await setDBConfig(db, AI_CONFIG_PREFIX + 'provider', updates.provider)
+    await setDBConfig(db, `${AI_CONFIG_PREFIX}provider`, updates.provider)
   }
   if (updates.model !== undefined) {
-    await setDBConfig(db, AI_CONFIG_PREFIX + 'model', updates.model)
+    await setDBConfig(db, `${AI_CONFIG_PREFIX}model`, updates.model)
   }
   if (updates.api_key !== undefined && updates.api_key.trim() !== '') {
     // Only update API key if a new value is provided
-    await setDBConfig(db, AI_CONFIG_PREFIX + 'api_key', updates.api_key)
+    await setDBConfig(db, `${AI_CONFIG_PREFIX}api_key`, updates.api_key)
   }
   if (updates.api_url !== undefined) {
-    await setDBConfig(db, AI_CONFIG_PREFIX + 'api_url', updates.api_url)
+    await setDBConfig(db, `${AI_CONFIG_PREFIX}api_url`, updates.api_url)
   }
 }
 

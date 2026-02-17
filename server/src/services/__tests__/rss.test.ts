@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { RSSService, rssCrontab } from '../rss'
-import { createBaseApp } from '../../core/base'
-import { createMockDB, createMockEnv, cleanupTestDB } from '../../../tests/fixtures'
 import type { Database } from 'bun:sqlite'
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
+import { createBaseApp } from '../../core/base'
+import { RSSService, rssCrontab } from '../rss'
 
 describe('RSSService', () => {
   let db: any
@@ -32,7 +32,7 @@ describe('RSSService', () => {
     cleanupTestDB(sqlite)
   })
 
-  async function seedTestData(db: any) {
+  async function seedTestData(_db: any) {
     // Insert test user
     sqlite.exec(`
             INSERT INTO users (id, username, avatar, openid) VALUES (1, 'testuser', 'avatar.png', 'gh_test')
@@ -277,8 +277,8 @@ describe('rssCrontab', () => {
 
   it('should generate and save RSS feeds to S3', async () => {
     // Mock S3 putObject
-    const putCalls: any[] = []
-    const originalModule = await import('../rss')
+    const _putCalls: any[] = []
+    const _originalModule = await import('../rss')
 
     // Since we can't easily mock the module, we'll check that it doesn't throw
     try {

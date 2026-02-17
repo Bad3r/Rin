@@ -41,7 +41,7 @@ export default {
         if (asset && (asset.status === 200 || (asset.status >= 300 && asset.status < 400))) {
           return asset
         }
-      } catch (e) {
+      } catch (_e) {
         // Asset not found, continue to serve index.html
       }
     }
@@ -58,7 +58,7 @@ export default {
         ) {
           return indexResponse
         }
-      } catch (e) {
+      } catch (_e) {
         // index.html not found
       }
     }

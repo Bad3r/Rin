@@ -47,7 +47,7 @@ export async function getMigrationVersion(typ: 'local' | 'remote', db: string) {
     return -1
   } else {
     console.log('migration_version:', result[0].results[0].value)
-    return parseInt(result[0].results[0].value)
+    return parseInt(result[0].results[0].value, 10)
   }
 }
 

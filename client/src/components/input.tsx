@@ -5,7 +5,7 @@ interface InputProps {
   value: string
   className?: string
   placeholder: string
-  id?: number
+  id?: string | number
   setValue: (v: string) => void
   onSubmit?: () => void
   disabled?: boolean
@@ -13,13 +13,13 @@ interface InputProps {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ autofocus, value, setValue, className, placeholder, onSubmit, disabled, type = 'text' }, ref) => {
+  ({ autofocus, value, setValue, className, placeholder, id, onSubmit, disabled, type = 'text' }, ref) => {
     return (
       <input
+        id={id?.toString()}
         ref={ref}
         type={type}
         disabled={disabled}
-        autoFocus={autofocus}
         placeholder={placeholder}
         value={value}
         onKeyDown={event => {

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'bun:test'
-import { path_join, getFirstPathSegment } from '../path'
+import { describe, expect, it } from 'bun:test'
+import { getFirstPathSegment, path_join } from '../path'
 
 describe('path_join', () => {
   it('should join simple paths', () => {

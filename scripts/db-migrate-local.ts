@@ -1,6 +1,6 @@
-import * as fs from 'fs'
-import * as path from 'path'
-import { execSync } from 'child_process'
+import { execSync } from 'node:child_process'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import { fixTopField, getMigrationVersion, isInfoExist, updateMigrationVersion } from './db-fix-top-field'
 
 const DB_NAME = 'rin'
@@ -17,7 +17,7 @@ const sqlFiles = fs
   .filter(dirent => dirent.isFile() && dirent.name.endsWith('.sql'))
   .map(dirent => dirent.name)
   .filter(file => {
-    const version = parseInt(file.split('-')[0])
+    const version = parseInt(file.split('-')[0], 10)
     return version > migrationVersion
   })
   .sort()
@@ -40,7 +40,7 @@ for (const file of sqlFiles) {
 if (sqlFiles.length === 0) {
   console.log('No migration needed.')
 } else {
-  const lastVersion = parseInt(sqlFiles[sqlFiles.length - 1].split('-')[0])
+  const lastVersion = parseInt(sqlFiles[sqlFiles.length - 1].split('-')[0], 10)
   if (lastVersion > migrationVersion) {
     // Update the migration version
     await updateMigrationVersion(typ, DB_NAME, lastVersion)

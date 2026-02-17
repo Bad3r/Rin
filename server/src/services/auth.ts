@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm'
-import { Router } from '../core/router'
+import type { Router } from '../core/router'
 import type { Context } from '../core/types'
 import { users } from '../db/schema'
-import { BadRequestError, ForbiddenError, InternalServerError, NotFoundError } from '../errors'
+import { BadRequestError, ForbiddenError, InternalServerError } from '../errors'
 
 // Hash password using SHA-256
 async function hashPassword(password: string): Promise<string> {
@@ -82,7 +82,7 @@ export function PasswordAuthService(router: Router): void {
         }
 
         // Generate JWT token
-        const token = await jwt!.sign({ id: user.id })
+        const token = await jwt?.sign({ id: user.id })
 
         // Set JWT cookie (for backward compatibility)
         cookie.token.set({
@@ -120,7 +120,7 @@ export function PasswordAuthService(router: Router): void {
       }
 
       // Generate JWT token
-      const token = await jwt!.sign({ id: user.id })
+      const token = await jwt?.sign({ id: user.id })
 
       // Set JWT cookie (for backward compatibility)
       cookie.token.set({

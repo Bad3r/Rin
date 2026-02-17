@@ -1,5 +1,5 @@
-import type { Context, JWTUtils, CookieValue } from './types'
 import { eq } from 'drizzle-orm'
+import type { Context, CookieValue } from './types'
 
 export async function deriveAuth(context: Context): Promise<void> {
   const { cookie, jwt, store, request } = context
@@ -7,7 +7,7 @@ export async function deriveAuth(context: Context): Promise<void> {
   // Try to get token from Authorization header first, then fallback to cookie
   let token: string | undefined
   const authHeader = request.headers.get('authorization')
-  if (authHeader && authHeader.startsWith('Bearer ')) {
+  if (authHeader?.startsWith('Bearer ')) {
     token = authHeader.substring(7)
   } else {
     token = cookie.token?.value

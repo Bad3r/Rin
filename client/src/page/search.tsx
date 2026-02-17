@@ -1,12 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearch } from 'wouter'
 import { FeedCard } from '../components/feed_card'
 import { Waiting } from '../components/loading'
-import { client } from '../main'
-
 import { useSiteConfig } from '../hooks/useSiteConfig'
+import { client } from '../main'
 import { siteName } from '../utils/constants'
 import { tryInt } from '../utils/int'
 
@@ -25,7 +24,7 @@ export function SearchPage({ keyword }: { keyword: string }) {
   const page = tryInt(1, query.get('page'))
   const limit = tryInt(10, query.get('limit'), siteConfig.pageSize)
   const ref = useRef('')
-  function fetchFeeds() {
+  const fetchFeeds = useCallback(() => {
     if (!keyword) return
     client.search.search(keyword).then(({ data }) => {
       if (data) {
@@ -33,14 +32,14 @@ export function SearchPage({ keyword }: { keyword: string }) {
         setStatus('idle')
       }
     })
-  }
+  }, [keyword])
   useEffect(() => {
     const key = `${page} ${limit} ${keyword}`
-    if (ref.current == key) return
+    if (ref.current === key) return
     setStatus('loading')
     fetchFeeds()
     ref.current = key
-  }, [page, limit, keyword])
+  }, [page, limit, keyword, fetchFeeds])
   const title = t('article.search.title$keyword', { keyword })
   return (
     <>

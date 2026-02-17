@@ -243,10 +243,6 @@ export type AsyncHandler<T = Response> = (...args: any[]) => Promise<T>
 
 export function catchAsync<T>(fn: AsyncHandler<T>): AsyncHandler<T | Response> {
   return async (...args: any[]) => {
-    try {
-      return await fn(...args)
-    } catch (error) {
-      throw error
-    }
+    return await fn(...args)
   }
 }

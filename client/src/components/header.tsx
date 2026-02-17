@@ -3,15 +3,15 @@ import { useTranslation } from 'react-i18next'
 import ReactModal from 'react-modal'
 import Popup from 'reactjs-popup'
 import { Link, useLocation } from 'wouter'
-import { Profile, ProfileContext } from '../state/profile'
+import { useSiteConfig } from '../hooks/useSiteConfig'
+import { client } from '../main'
+import { ClientConfigContext } from '../state/config'
+import { type Profile, ProfileContext } from '../state/profile'
+import { removeAuthToken } from '../utils/auth'
 import { Button } from './button'
 import { IconSmall } from './icon'
 import { Input } from './input'
 import { Padding } from './padding'
-import { ClientConfigContext } from '../state/config'
-import { client } from '../main'
-import { removeAuthToken } from '../utils/auth'
-import { useSiteConfig } from '../hooks/useSiteConfig'
 
 export function Header({ children }: { children?: React.ReactNode }) {
   const profile = useContext(ProfileContext)
@@ -66,7 +66,7 @@ export function Header({ children }: { children?: React.ReactNode }) {
         <div className='h-20'></div>
       </>
     ),
-    [profile, children, siteConfig]
+    [profile, children, siteConfig, t]
   )
 }
 
@@ -117,6 +117,7 @@ function Menu() {
         trigger={
           <div>
             <button
+              type='button'
               onClick={() => setOpen(true)}
               className='w-10 h-10 rounded-full flex flex-row items-center justify-center'
             >
@@ -183,7 +184,7 @@ function NavBar({ menu, onClick }: { menu: boolean; onClick?: () => void }) {
       <NavItem
         menu={menu}
         onClick={onClick}
-        when={profile?.permission == true}
+        when={profile?.permission === true}
         title={t('writing')}
         selected={location.startsWith('/writing')}
         href='/writing'
@@ -199,7 +200,7 @@ function NavBar({ menu, onClick }: { menu: boolean; onClick?: () => void }) {
       <NavItem
         menu={menu}
         onClick={onClick}
-        when={profile?.permission == true}
+        when={profile?.permission === true}
         title={t('settings.title')}
         selected={location === '/settings'}
         href='/settings'
@@ -218,10 +219,11 @@ function LanguageSwitch({ className }: { className?: string }) {
     { code: 'ja', name: '日本語' },
   ]
   return (
-    <div className={className + ' flex flex-row items-center'}>
+    <div className={`${className} flex flex-row items-center`}>
       <Popup
         trigger={
           <button
+            type='button'
             title={label}
             aria-label={label}
             className='flex rounded-full border dark:border-neutral-600 px-2 bg-w aspect-[1] items-center justify-center t-primary bg-button'
@@ -236,7 +238,7 @@ function LanguageSwitch({ className }: { className?: string }) {
         <div className='border-card'>
           <p className='font-bold t-primary'>Languages</p>
           {languages.map(({ code, name }) => (
-            <button key={code} onClick={() => i18n.changeLanguage(code)}>
+            <button type='button' key={code} onClick={() => i18n.changeLanguage(code)}>
               {name}
             </button>
           ))}
@@ -261,8 +263,9 @@ function SearchButton({ className, onClose }: { className?: string; onClose?: ()
     if (value.length !== 0) setLocation(`/search/${key}`)
   }
   return (
-    <div className={className + ' flex flex-row items-center'}>
+    <div className={`${className} flex flex-row items-center`}>
       <button
+        type='button'
         onClick={() => setIsOpened(true)}
         title={label}
         aria-label={label}
@@ -321,56 +324,55 @@ function UserAvatar({ className, profile }: { className?: string; profile?: Prof
     <>
       {' '}
       {config.get<boolean>('login.enabled') && (
-        <div className={className + ' flex flex-row items-center'}>
+        <div className={`${className} flex flex-row items-center`}>
           {profile ? (
-            <>
-              <div className='w-8 relative group'>
-                {profile.avatar ? (
-                  <img
-                    src={profile.avatar}
-                    alt='Avatar'
-                    className='w-8 h-8 rounded-full border cursor-pointer'
-                    onClick={() => setLocation('/profile')}
-                  />
-                ) : (
-                  <div
-                    className='w-8 h-8 rounded-full border cursor-pointer bg-secondary flex items-center justify-center'
-                    onClick={() => setLocation('/profile')}
-                  >
-                    <i className='ri-user-line text-lg t-secondary'></i>
-                  </div>
-                )}
-                <div className='z-50 absolute left-0 top-0 w-10 h-8 opacity-0 group-hover:opacity-100 duration-300 flex flex-row gap-1'>
-                  <IconSmall
-                    label={t('profile.title')}
-                    name='ri-user-settings-line'
-                    onClick={() => setLocation('/profile')}
-                    hover={false}
-                  />
-                  <IconSmall
-                    label={t('logout')}
-                    name='ri-logout-circle-line'
-                    onClick={async () => {
-                      await client.user.logout()
-                      removeAuthToken()
-                      window.location.reload()
-                    }}
-                    hover={false}
-                  />
-                </div>
+            <div className='w-8 relative group'>
+              {profile.avatar ? (
+                <button
+                  type='button'
+                  className='w-8 h-8 rounded-full border overflow-hidden'
+                  onClick={() => setLocation('/profile')}
+                >
+                  <img src={profile.avatar} alt='Avatar' className='w-8 h-8 rounded-full' />
+                </button>
+              ) : (
+                <button
+                  type='button'
+                  className='w-8 h-8 rounded-full border cursor-pointer bg-secondary flex items-center justify-center'
+                  onClick={() => setLocation('/profile')}
+                >
+                  <i className='ri-user-line text-lg t-secondary'></i>
+                </button>
+              )}
+              <div className='z-50 absolute left-0 top-0 w-10 h-8 opacity-0 group-hover:opacity-100 duration-300 flex flex-row gap-1'>
+                <IconSmall
+                  label={t('profile.title')}
+                  name='ri-user-settings-line'
+                  onClick={() => setLocation('/profile')}
+                  hover={false}
+                />
+                <IconSmall
+                  label={t('logout')}
+                  name='ri-logout-circle-line'
+                  onClick={async () => {
+                    await client.user.logout()
+                    removeAuthToken()
+                    window.location.reload()
+                  }}
+                  hover={false}
+                />
               </div>
-            </>
+            </div>
           ) : (
-            <>
-              <button
-                onClick={() => setLocation('/login')}
-                title={label}
-                aria-label={label}
-                className='flex rounded-full border dark:border-neutral-600 px-2 bg-w aspect-[1] items-center justify-center t-primary bg-button'
-              >
-                <i className='ri-user-received-line'></i>
-              </button>
-            </>
+            <button
+              type='button'
+              onClick={() => setLocation('/login')}
+              title={label}
+              aria-label={label}
+              className='flex rounded-full border dark:border-neutral-600 px-2 bg-w aspect-[1] items-center justify-center t-primary bg-button'
+            >
+              <i className='ri-user-received-line'></i>
+            </button>
           )}
         </div>
       )}

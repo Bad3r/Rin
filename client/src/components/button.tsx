@@ -13,6 +13,7 @@ export function Button({
 }) {
   return (
     <button
+      type='button'
       onClick={onClick}
       disabled={disabled}
       className={`${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${secondary ? 'bg-secondary t-primary bg-button' : 'bg-theme text-white active:bg-theme-active hover:bg-theme-hover'} text-nowrap rounded-full px-4 py-2 h-min`}
@@ -35,6 +36,7 @@ export function ButtonWithLoading({
 }) {
   return (
     <button
+      type='button'
       onClick={onClick}
       disabled={loading}
       className={`${secondary ? 'bg-secondary t-primary bg-button' : 'bg-theme text-white active:bg-theme-active hover:bg-theme-hover'} text-nowrap rounded-full px-4 py-2 h-min space-x-2 flex flex-row items-center`}

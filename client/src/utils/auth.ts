@@ -45,7 +45,7 @@ export function headersWithAuth(): Record<string, string> {
 
   const token = getAuthToken()
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`
+    headers.Authorization = `Bearer ${token}`
   }
 
   return headers

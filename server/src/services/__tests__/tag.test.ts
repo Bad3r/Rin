@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { TagService, bindTagToPost } from '../tag'
-import { createBaseApp } from '../../core/base'
-import { createMockDB, createMockEnv, seedTestData, cleanupTestDB } from '../../../tests/fixtures'
 import type { Database } from 'bun:sqlite'
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { cleanupTestDB, createMockDB, createMockEnv, seedTestData } from '../../../tests/fixtures'
+import { createBaseApp } from '../../core/base'
+import { bindTagToPost, TagService } from '../tag'
 
 describe('TagService', () => {
   let db: any
@@ -23,7 +23,7 @@ describe('TagService', () => {
       sign: async (payload: any) => `mock_token_${payload.id}`,
       verify: async (token: string) => {
         const match = token.match(/mock_token_(\d+)/)
-        return match ? { id: parseInt(match[1]) } : null
+        return match ? { id: parseInt(match[1], 10) } : null
       },
     })
 

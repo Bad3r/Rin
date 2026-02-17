@@ -1,10 +1,10 @@
+import { commentCreateSchema } from '@rin/api'
 import { desc, eq } from 'drizzle-orm'
-import { comments, feeds, users } from '../db/schema'
-import { Router } from '../core/router'
+import type { Router } from '../core/router'
 import type { Context } from '../core/types'
+import { comments, feeds, users } from '../db/schema'
 import { Config } from '../utils/config'
 import { notify } from '../utils/webhook'
-import { commentCreateSchema } from '@rin/api'
 
 export function CommentService(router: Router): void {
   router.group('/comment', group => {
@@ -13,7 +13,7 @@ export function CommentService(router: Router): void {
         params,
         store: { db },
       } = ctx
-      const feedId = parseInt(params.feed)
+      const feedId = parseInt(params.feed, 10)
 
       const comment_list = await db.query.comments.findMany({
         where: eq(comments.feedId, feedId),
@@ -50,8 +50,8 @@ export function CommentService(router: Router): void {
           return 'Content is required'
         }
 
-        const feedId = parseInt(params.feed)
-        if (uid == undefined) {
+        const feedId = parseInt(params.feed, 10)
+        if (uid === undefined) {
           return 'Invalid uid'
         }
 
@@ -95,7 +95,7 @@ export function CommentService(router: Router): void {
         return 'Unauthorized'
       }
 
-      const id_num = parseInt(params.id)
+      const id_num = parseInt(params.id, 10)
       const comment = await db.query.comments.findFirst({ where: eq(comments.id, id_num) })
 
       if (!comment) {

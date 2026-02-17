@@ -22,16 +22,14 @@ export function path_join(...paths: string[]): string {
           resolvedParts.push(part)
         }
       } else if (part === '.') {
-        continue
       } else if (part.length === 0) {
-        continue
       } else {
         resolvedParts.push(part)
       }
     }
   }
 
-  let result = resolvedParts.join(separator)
+  const result = resolvedParts.join(separator)
 
   if (result.length === 0) {
     return isAbsolute ? separator : '.'

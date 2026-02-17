@@ -3,18 +3,18 @@ import _ from 'lodash'
 import { Calendar } from 'primereact/calendar'
 import 'primereact/resources/primereact.css'
 import 'primereact/resources/themes/lara-light-indigo/theme.css'
+import mermaid from 'mermaid'
 import { useCallback, useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet'
 import { useTranslation } from 'react-i18next'
 import Loading from 'react-loading'
-import { ShowAlertType, useAlert } from '../components/dialog'
+import { type ShowAlertType, useAlert } from '../components/dialog'
 import { Checkbox, Input } from '../components/input'
+import { MarkdownEditor } from '../components/markdown_editor'
+import { useSiteConfig } from '../hooks/useSiteConfig'
 import { client } from '../main'
 import { Cache } from '../utils/cache'
-import { useSiteConfig } from '../hooks/useSiteConfig'
 import { siteName } from '../utils/constants'
-import mermaid from 'mermaid'
-import { MarkdownEditor } from '../components/markdown_editor'
 
 async function publish({
   title,
@@ -59,7 +59,7 @@ async function publish({
   if (data) {
     showAlert(t('publish.success'), () => {
       Cache.with().clear()
-      window.location.href = '/feed/' + data.insertedId
+      window.location.href = `/feed/${data.insertedId}`
     })
   }
 }
@@ -108,7 +108,7 @@ async function update({
   } else {
     showAlert(t('update.success'), () => {
       Cache.with(id).clear()
-      window.location.href = '/feed/' + id
+      window.location.href = `/feed/${id}`
     })
   }
 }
@@ -183,19 +183,19 @@ export function WritingPage({ id }: { id?: number }) {
     if (id) {
       client.feed.get(id).then(({ data }) => {
         if (data) {
-          if (title == '' && data.title) setTitle(data.title)
-          if (tags == '' && data.hashtags)
+          if (title === '' && data.title) setTitle(data.title)
+          if (tags === '' && data.hashtags)
             setTags(data.hashtags.map(({ name }: { name: string }) => `#${name}`).join(' '))
-          if (alias == '' && (data as any).alias) setAlias((data as any).alias)
-          if (content == '') setContent(data.content)
-          if (summary == '') setSummary((data as any).summary || '')
+          if (alias === '' && (data as any).alias) setAlias((data as any).alias)
+          if (content === '') setContent(data.content)
+          if (summary === '') setSummary((data as any).summary || '')
           setListed((data as any).listed === 1)
           setDraft((data as any).draft === 1)
           setCreatedAt(new Date(data.createdAt))
         }
       })
     }
-  }, [])
+  }, [alias, content, id, setAlias, setContent, setSummary, setTags, setTitle, summary, tags, title])
   const debouncedUpdate = useCallback(
     _.debounce(() => {
       mermaid.initialize({
@@ -222,41 +222,41 @@ export function WritingPage({ id }: { id?: number }) {
   )
   useEffect(() => {
     debouncedUpdate()
-  }, [content, debouncedUpdate])
+  }, [debouncedUpdate])
   function MetaInput({ className }: { className?: string }) {
     return (
-      <>
-        <div className={className}>
-          <Input id={id} value={title} setValue={setTitle} placeholder={t('title')} />
-          <Input id={id} value={summary} setValue={setSummary} placeholder={t('summary')} className='mt-4' />
-          <Input id={id} value={tags} setValue={setTags} placeholder={t('tags')} className='mt-4' />
-          <Input id={id} value={alias} setValue={setAlias} placeholder={t('alias')} className='mt-4' />
-          <div
-            className='select-none flex flex-row justify-between items-center mt-6 mb-2 px-4'
-            onClick={() => setDraft(!draft)}
-          >
-            <p>{t('visible.self_only')}</p>
-            <Checkbox id='draft' value={draft} setValue={setDraft} placeholder={t('draft')} />
-          </div>
-          <div
-            className='select-none flex flex-row justify-between items-center mt-6 mb-2 px-4'
-            onClick={() => setListed(!listed)}
-          >
-            <p>{t('listed')}</p>
-            <Checkbox id='listed' value={listed} setValue={setListed} placeholder={t('listed')} />
-          </div>
-          <div className='select-none flex flex-row justify-between items-center mt-4 mb-2 pl-4'>
-            <p className='break-keep mr-2'>{t('created_at')}</p>
-            <Calendar
-              value={createdAt}
-              onChange={e => setCreatedAt(e.value || undefined)}
-              showTime
-              touchUI
-              hourFormat='24'
-            />
-          </div>
+      <div className={className}>
+        <Input id={id} value={title} setValue={setTitle} placeholder={t('title')} />
+        <Input id={id} value={summary} setValue={setSummary} placeholder={t('summary')} className='mt-4' />
+        <Input id={id} value={tags} setValue={setTags} placeholder={t('tags')} className='mt-4' />
+        <Input id={id} value={alias} setValue={setAlias} placeholder={t('alias')} className='mt-4' />
+        <button
+          type='button'
+          className='select-none flex flex-row justify-between items-center mt-6 mb-2 px-4 w-full'
+          onClick={() => setDraft(!draft)}
+        >
+          <p>{t('visible.self_only')}</p>
+          <Checkbox id='draft' value={draft} setValue={setDraft} placeholder={t('draft')} />
+        </button>
+        <button
+          type='button'
+          className='select-none flex flex-row justify-between items-center mt-6 mb-2 px-4 w-full'
+          onClick={() => setListed(!listed)}
+        >
+          <p>{t('listed')}</p>
+          <Checkbox id='listed' value={listed} setValue={setListed} placeholder={t('listed')} />
+        </button>
+        <div className='select-none flex flex-row justify-between items-center mt-4 mb-2 pl-4'>
+          <p className='break-keep mr-2'>{t('created_at')}</p>
+          <Calendar
+            value={createdAt}
+            onChange={e => setCreatedAt(e.value || undefined)}
+            showTime
+            touchUI
+            hourFormat='24'
+          />
         </div>
-      </>
+      </div>
     )
   }
 
@@ -278,6 +278,7 @@ export function WritingPage({ id }: { id?: number }) {
           </div>
           <div className='visible md:hidden flex flex-row justify-center mt-8'>
             <button
+              type='button'
               onClick={publishButton}
               className='basis-1/2 bg-theme text-white py-4 rounded-full shadow-xl shadow-light flex flex-row justify-center items-center space-x-2'
             >
@@ -290,6 +291,7 @@ export function WritingPage({ id }: { id?: number }) {
           {MetaInput({ className: 'bg-w rounded-2xl shadow-xl shadow-light p-4 mx-8' })}
           <div className='flex flex-row justify-center mt-8'>
             <button
+              type='button'
               onClick={publishButton}
               className='basis-1/2 bg-theme text-white py-4 rounded-full shadow-xl shadow-light flex flex-row justify-center items-center space-x-2'
             >

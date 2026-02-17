@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { CommentService } from '../comments'
-import { createBaseApp } from '../../core/base'
-import { createMockDB, createMockEnv, cleanupTestDB } from '../../../tests/fixtures'
-import { createTestClient } from '../../../tests/test-api-client'
 import type { Database } from 'bun:sqlite'
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
+import { createTestClient } from '../../../tests/test-api-client'
+import { createBaseApp } from '../../core/base'
+import { CommentService } from '../comments'
 
 describe('CommentService', () => {
   let db: any
@@ -30,7 +30,7 @@ describe('CommentService', () => {
       sign: async (payload: any) => `mock_token_${payload.id}`,
       verify: async (token: string) => {
         const match = token.match(/mock_token_(\d+)/)
-        return match ? { id: parseInt(match[1]) } : null
+        return match ? { id: parseInt(match[1], 10) } : null
       },
     })
 

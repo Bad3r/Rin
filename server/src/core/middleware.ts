@@ -1,7 +1,7 @@
-import type { Context, Middleware } from './types'
+import type { Middleware } from './types'
 
 export const corsMiddleware = (): Middleware => {
-  return async (context, env) => {
+  return async (context, _env) => {
     const { request, set } = context
     const origin = request.headers.get('origin') || '*'
 
@@ -24,7 +24,7 @@ export const timingMiddleware = (): Middleware => {
     const start = Date.now()
 
     // Store original set.status setter
-    const originalHeaders = context.set.headers
+    const _originalHeaders = context.set.headers
 
     // Add timing header after request is processed
     const end = Date.now()

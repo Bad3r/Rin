@@ -1,12 +1,12 @@
 import { and, desc, eq } from 'drizzle-orm'
-import { Router } from '../core/router'
+import type { Router } from '../core/router'
 import type { Context } from '../core/types'
 import { feeds, users } from '../db/schema'
+import type { DB } from '../server'
 import { extractImage } from '../utils/image'
 import { path_join } from '../utils/path'
 import { createS3Client, putObject } from '../utils/s3'
 import { FAVICON_ALLOWED_TYPES, getFaviconKey } from './favicon'
-import type { DB } from '../server'
 
 // Lazy-loaded modules for RSS generation
 let Feed: any
@@ -155,7 +155,7 @@ async function generateFeed(env: Env, db: DB, frontendUrl: string) {
   const accessHost = env.S3_ACCESS_HOST || env.S3_ENDPOINT
   const faviconKey = getFaviconKey(env)
 
-  let feedConfig: any = {
+  const feedConfig: any = {
     title: env.RSS_TITLE,
     description: env.RSS_DESCRIPTION || 'Feed from Rin',
     id: frontendUrl,
@@ -188,9 +188,7 @@ async function generateFeed(env: Env, db: DB, frontendUrl: string) {
           feedConfig.image = `${accessHost}/${originFaviconKey}`
           break
         }
-      } catch (error) {
-        continue
-      }
+      } catch (_error) {}
     }
 
     try {
@@ -198,7 +196,7 @@ async function generateFeed(env: Env, db: DB, frontendUrl: string) {
       if (response.ok) {
         feedConfig.favicon = `${accessHost}/${faviconKey}`
       }
-    } catch (error) {}
+    } catch (_error) {}
   }
 
   const feed = new Feed(feedConfig)

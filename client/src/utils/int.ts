@@ -2,8 +2,8 @@ export function tryInt(defaultValue: number, ...args: (string | number | undefin
   for (const v of args) {
     if (typeof v === 'number') return v
     if (typeof v === 'string') {
-      const n = parseInt(v)
-      if (!isNaN(n)) return n
+      const n = parseInt(v, 10)
+      if (!Number.isNaN(n)) return n
     }
   }
   return defaultValue

@@ -88,7 +88,7 @@ export function ProfilePage() {
       setTimeout(() => {
         window.location.reload()
       }, 1000)
-    } catch (err) {
+    } catch (_err) {
       setError(t('profile.error.network'))
     } finally {
       setIsLoading(false)
@@ -121,8 +121,11 @@ export function ProfilePage() {
         <div className='space-y-6'>
           {/* Avatar section */}
           <div className='flex flex-col items-center space-y-4'>
-            <label className='text-sm font-medium t-secondary'>{t('profile.avatar')}</label>
-            <div
+            <label htmlFor='profile-avatar-input' className='text-sm font-medium t-secondary'>
+              {t('profile.avatar')}
+            </label>
+            <button
+              type='button'
               className='relative w-32 h-32 rounded-full overflow-hidden cursor-pointer border-4 border-theme hover:opacity-80 transition-opacity'
               onClick={handleAvatarClick}
             >
@@ -136,15 +139,25 @@ export function ProfilePage() {
               <div className='absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity'>
                 <i className='ri-camera-line text-white text-2xl'></i>
               </div>
-            </div>
-            <input ref={fileInputRef} type='file' accept='image/*' className='hidden' onChange={handleFileChange} />
+            </button>
+            <input
+              id='profile-avatar-input'
+              ref={fileInputRef}
+              type='file'
+              accept='image/*'
+              className='hidden'
+              onChange={handleFileChange}
+            />
             <p className='text-xs t-secondary'>{t('profile.avatar_hint')}</p>
           </div>
 
           {/* Username section */}
           <div className='space-y-2'>
-            <label className='text-sm font-medium t-secondary'>{t('profile.username')}</label>
+            <label htmlFor='profile-username' className='text-sm font-medium t-secondary'>
+              {t('profile.username')}
+            </label>
             <Input
+              id='profile-username'
               value={username}
               setValue={setUsername}
               placeholder={t('profile.username_placeholder')}

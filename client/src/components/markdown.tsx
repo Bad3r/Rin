@@ -1,18 +1,18 @@
 import 'katex/dist/katex.min.css'
-import React, { cloneElement, isValidElement, useEffect, useMemo, useRef } from 'react'
+import React, { cloneElement, isValidElement, useCallback, useEffect, useMemo, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { base16AteliersulphurpoolLight, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
 import gfm from 'remark-gfm'
-import remarkMermaid from '../remark/remarkMermaid'
 import { remarkAlert } from 'remark-github-blockquote-alert'
 import remarkMath from 'remark-math'
-import Lightbox, { SlideImage } from 'yet-another-react-lightbox'
+import Lightbox, { type SlideImage } from 'yet-another-react-lightbox'
 import Counter from 'yet-another-react-lightbox/plugins/counter'
 import Download from 'yet-another-react-lightbox/plugins/download'
 import Zoom from 'yet-another-react-lightbox/plugins/zoom'
+import remarkMermaid from '../remark/remarkMermaid'
 import 'yet-another-react-lightbox/styles.css'
 import { useColorMode } from '../utils/darkModeUtils'
 
@@ -49,30 +49,64 @@ export function Markdown({ content }: { content: string }) {
 
   useEffect(() => {
     slides.current = undefined
-  }, [content])
+  }, [])
+
+  const show = useCallback((src: string | undefined) => {
+    let slidesLocal = slides.current
+    if (!slidesLocal) {
+      const parent = document.getElementsByClassName('toc-content')[0]
+      if (!parent) return
+      const images = parent.querySelectorAll('img')
+      slidesLocal = Array.from(images)
+        .map(image => {
+          const url = image.getAttribute('src') || ''
+          const filename = url.split('/').pop() || ''
+          const alt = image.getAttribute('alt') || ''
+          return {
+            src: url,
+            alt: alt,
+            imageFit: 'contain' as const,
+            download: {
+              url: url,
+              filename: filename,
+            },
+          }
+        })
+        .filter(slide => slide.src !== '')
+      slides.current = slidesLocal
+    }
+    const slideIndex = slidesLocal?.findIndex(slide => slide.src === src) ?? -1
+    setIndex(slideIndex)
+  }, [])
 
   const Content = useMemo(
     () => (
       <ReactMarkdown
         className='toc-content dark:text-neutral-300'
         remarkPlugins={[gfm, remarkMermaid, remarkMath, remarkAlert]}
-        children={content}
         rehypePlugins={[rehypeKatex, rehypeRaw]}
         components={{
           img({ node, src, ...props }) {
-            const offset = node!.position!.start.offset!
+            const offset = node?.position?.start.offset ?? 0
             const previousContent = content.slice(0, offset)
             const newlinesBefore = countNewlinesBeforeNode(previousContent, offset)
+            const imageAlt = typeof props.alt === 'string' ? props.alt : ''
             const Image = ({ rounded, scale }: { rounded: boolean; scale: string }) => (
-              <img
-                src={src}
-                {...props}
+              <button
+                type='button'
+                className='bg-transparent border-0 p-0'
                 onClick={() => {
                   show(src)
                 }}
-                className={`mx-auto ${rounded ? 'rounded-xl' : ''}`}
-                style={{ zoom: scale }}
-              />
+              >
+                <img
+                  src={src}
+                  {...props}
+                  alt={imageAlt}
+                  className={`mx-auto ${rounded ? 'rounded-xl' : ''}`}
+                  style={{ zoom: scale }}
+                />
+              </button>
             )
             if (
               newlinesBefore >= 1 ||
@@ -93,7 +127,6 @@ export function Markdown({ content }: { content: string }) {
             }
           },
           code(props) {
-            const [copied, setCopied] = React.useState(false)
             const { children, className, node, ...rest } = props
             const match = /language-(\w+)/.exec(className || '')
 
@@ -129,14 +162,18 @@ export function Markdown({ content }: { content: string }) {
                     {String(children).replace(/\n$/, '')}
                   </SyntaxHighlighter>
                   <button
+                    type='button'
                     className='absolute top-1 right-1 px-2 py-1 bg-w rounded-md text-sm bg-hover select-none invisible group-hover:visible'
-                    onClick={() => {
-                      navigator.clipboard.writeText(String(children))
-                      setCopied(true)
-                      setTimeout(() => setCopied(false), 2000)
+                    onClick={event => {
+                      void navigator.clipboard.writeText(String(children))
+                      const button = event.currentTarget
+                      button.textContent = 'Copied!'
+                      window.setTimeout(() => {
+                        button.textContent = 'Copy'
+                      }, 2000)
                     }}
                   >
-                    {copied ? 'Copied!' : 'Copy'}
+                    Copy
                   </button>
                 </div>
               )
@@ -274,7 +311,7 @@ export function Markdown({ content }: { content: string }) {
             </sub>
           ),
           section({ children, ...props }) {
-            if (props.hasOwnProperty('data-footnotes')) {
+            if (Object.hasOwn(props, 'data-footnotes')) {
               props.className = `${props.className || ''} mt-8`.trim()
             }
             const modifiedChildren = React.Children.map(children, child => {
@@ -292,38 +329,12 @@ export function Markdown({ content }: { content: string }) {
             return <div {...props}>{children}</div>
           },
         }}
-      />
+      >
+        {content}
+      </ReactMarkdown>
     ),
-    [content]
+    [content, colorMode, show]
   )
-
-  const show = (src: string | undefined) => {
-    let slidesLocal = slides.current
-    if (!slidesLocal) {
-      const parent = document.getElementsByClassName('toc-content')[0]
-      if (!parent) return
-      const images = parent.querySelectorAll('img')
-      slidesLocal = Array.from(images)
-        .map(image => {
-          const url = image.getAttribute('src') || ''
-          const filename = url.split('/').pop() || ''
-          const alt = image.getAttribute('alt') || ''
-          return {
-            src: url,
-            alt: alt,
-            imageFit: 'contain' as const,
-            download: {
-              url: url,
-              filename: filename,
-            },
-          }
-        })
-        .filter(slide => slide.src !== '')
-      slides.current = slidesLocal
-    }
-    const index = slidesLocal?.findIndex(slide => slide.src === src) ?? -1
-    setIndex(index)
-  }
 
   return (
     <>

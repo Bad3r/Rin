@@ -4,10 +4,10 @@
  * 同时启动前端和后端，并处理数据库迁移
  */
 
-import { spawn } from 'child_process'
-import * as fs from 'fs'
-import * as path from 'path'
-import * as net from 'net'
+import { spawn } from 'node:child_process'
+import * as fs from 'node:fs'
+import * as net from 'node:net'
+import * as path from 'node:path'
 
 const ROOT_DIR = process.cwd()
 
@@ -116,8 +116,8 @@ if (!fs.existsSync(ENV_FILE)) {
 }
 const envContent = fs.readFileSync(ENV_FILE, 'utf-8')
 const env = parseEnv(envContent)
-const FRONTEND_PORT = env.FRONTEND_PORT ? parseInt(env.FRONTEND_PORT) : 5173
-const BACKEND_PORT = env.BACKEND_PORT ? parseInt(env.BACKEND_PORT) : 11498
+const FRONTEND_PORT = env.FRONTEND_PORT ? parseInt(env.FRONTEND_PORT, 10) : 5173
+const BACKEND_PORT = env.BACKEND_PORT ? parseInt(env.BACKEND_PORT, 10) : 11498
 
 async function startDev() {
   log('Dev', '启动开发服务器...', colors.green)
@@ -200,7 +200,9 @@ function startServers() {
       .toString()
       .split('\n')
       .filter((l: string) => l.trim())
-    lines.forEach((line: string) => log('Backend', line, colors.red))
+    lines.forEach((line: string) => {
+      log('Backend', line, colors.red)
+    })
   })
 
   frontend.stdout.on('data', data => {
@@ -228,7 +230,9 @@ function startServers() {
       .toString()
       .split('\n')
       .filter((l: string) => l.trim())
-    lines.forEach((line: string) => log('Frontend', line, colors.red))
+    lines.forEach((line: string) => {
+      log('Frontend', line, colors.red)
+    })
   })
 
   // 进程退出处理
@@ -265,12 +269,12 @@ function startServers() {
 
   // 显示访问信息
   function showReadyMessage() {
-    console.log('\n' + '='.repeat(60))
+    console.log(`\n${'='.repeat(60)}`)
     console.log(`${colors.bright}🚀 开发服务器已启动！${colors.reset}`)
     console.log('='.repeat(60))
     console.log(`${colors.cyan}📱 前端地址:${colors.reset} http://localhost:${FRONTEND_PORT}`)
     console.log(`${colors.blue}🔌 后端地址:${colors.reset} http://localhost:${BACKEND_PORT}`)
-    console.log('='.repeat(60) + '\n')
+    console.log(`${'='.repeat(60)}\n`)
   }
 
   // 超时显示（如果检测失败）

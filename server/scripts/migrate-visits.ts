@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+
 /**
  * Migration script to convert existing visits data to HyperLogLog format
  * Run this after deploying the new schema (0006.sql)
@@ -6,11 +7,11 @@
  * Usage: bun run scripts/migrate-visits.ts
  */
 
-import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { Database } from 'bun:sqlite'
+import { eq } from 'drizzle-orm'
+import { drizzle } from 'drizzle-orm/bun-sqlite'
 import * as schema from '../src/db/schema'
 import { HyperLogLog } from '../src/utils/hyperloglog'
-import { eq } from 'drizzle-orm'
 
 const { visits, visitStats } = schema
 
@@ -39,7 +40,7 @@ async function migrate() {
       if (!groupedVisits.has(visit.feedId)) {
         groupedVisits.set(visit.feedId, [])
       }
-      groupedVisits.get(visit.feedId)!.push(visit.ip)
+      groupedVisits.get(visit.feedId)?.push(visit.ip)
     }
 
     console.log(`Found ${allVisits.length} visits across ${groupedVisits.size} feeds`)
@@ -52,7 +53,7 @@ async function migrate() {
         where: eq(visitStats.feedId, feedId),
       })
 
-      if (existing && existing.hllData) {
+      if (existing?.hllData) {
         // Already migrated, skip
         console.log(`  Feed ${feedId}: already migrated (skipping)`)
         continue

@@ -1,16 +1,16 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, expect, it } from 'bun:test'
 import { HyperLogLog } from '../../server/src/utils/hyperloglog'
 
 // 生成唯一 IP 列表
 function generateUniqueIPs(count: number): string[] {
   const ips: string[] = []
   for (let i = 0; i < count; i++) {
-    const segment1 = Math.floor(i / Math.pow(256, 3)) % 256
-    const segment2 = Math.floor(i / Math.pow(256, 2)) % 256
+    const segment1 = Math.floor(i / 256 ** 3) % 256
+    const segment2 = Math.floor(i / 256 ** 2) % 256
     const segment3 = Math.floor(i / 256) % 256
     const segment4 = i % 256
-    const segment5 = Math.floor(i / Math.pow(256, 5)) % 256
-    const segment6 = Math.floor(i / Math.pow(256, 6)) % 256
+    const segment5 = Math.floor(i / 256 ** 5) % 256
+    const segment6 = Math.floor(i / 256 ** 6) % 256
 
     if (i % 3 === 0) {
       ips.push(`${segment1}.${segment2}.${segment3}.${segment4}`)
@@ -71,8 +71,8 @@ describe('HLL 最大数据规模测试', () => {
           const end = Math.min((batch + 1) * batchSize, test.count)
 
           for (let i = start; i < end; i++) {
-            const segment1 = Math.floor(i / Math.pow(256, 3)) % 256
-            const segment2 = Math.floor(i / Math.pow(256, 2)) % 256
+            const segment1 = Math.floor(i / 256 ** 3) % 256
+            const segment2 = Math.floor(i / 256 ** 2) % 256
             const segment3 = Math.floor(i / 256) % 256
             const segment4 = i % 256
             const ip = `${segment1}.${segment2}.${segment3}.${segment4}`
@@ -122,8 +122,8 @@ describe('HLL 最大数据规模测试', () => {
             const end = Math.min((batch + 1) * batchSize, test.count)
 
             for (let i = start; i < end; i++) {
-              const segment1 = Math.floor(i / Math.pow(256, 3)) % 256
-              const segment2 = Math.floor(i / Math.pow(256, 2)) % 256
+              const segment1 = Math.floor(i / 256 ** 3) % 256
+              const segment2 = Math.floor(i / 256 ** 2) % 256
               const segment3 = Math.floor(i / 256) % 256
               const segment4 = i % 256
               const ip = `${segment1}.${segment2}.${segment3}.${segment4}`
@@ -166,7 +166,7 @@ describe('HLL 序列化数据大小测试', () => {
   it('应该测试不同规模下的序列化大小', async () => {
     const sizes = [100, 1000, 10000, 100000, 1000000]
 
-    console.log('\n' + '='.repeat(80))
+    console.log(`\n${'='.repeat(80)}`)
     console.log('HLL 序列化数据大小测试')
     console.log('='.repeat(80))
     console.log('\n数据规模      序列化大小    压缩率      估算准确性')
@@ -207,7 +207,7 @@ describe('HLL 内存使用测试', () => {
   it('应该测试不同规模下的内存占用', async () => {
     const sizes = [1000, 10000, 100000, 1000000]
 
-    console.log('\n' + '='.repeat(80))
+    console.log(`\n${'='.repeat(80)}`)
     console.log('HLL 内存使用测试')
     console.log('='.repeat(80))
     console.log('\n数据规模      寄存器数量    内存占用(估算)   每万UV内存')
@@ -254,7 +254,7 @@ describe('HLL 数据库字段兼容性测试', () => {
     const serialized = hll.serialize()
 
     // 检查各种数据库字段类型的兼容性
-    console.log('\n' + '='.repeat(80))
+    console.log(`\n${'='.repeat(80)}`)
     console.log('HLL 数据库字段兼容性测试')
     console.log('='.repeat(80))
 

@@ -5,8 +5,8 @@
  * 提供共享的测试辅助函数和 mock 数据生成器
  */
 
-import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { Database } from 'bun:sqlite'
+import { drizzle } from 'drizzle-orm/bun-sqlite'
 
 // 类型定义
 export type CacheStorageMode = 'database' | 's3'
@@ -72,12 +72,12 @@ export const WranglerParsers = {
     try {
       const json = JSON.parse(stdout)
       if (Array.isArray(json) && json.length > 0 && json[0].results && json[0].results.length > 0) {
-        return parseInt(json[0].results[0].count) || 0
+        return parseInt(json[0].results[0].count, 10) || 0
       }
-    } catch (e) {
+    } catch (_e) {
       const match = stdout.match(/"count":\s*(\d+)/)
       if (match) {
-        return parseInt(match[1]) || 0
+        return parseInt(match[1], 10) || 0
       }
     }
     return 0
@@ -90,14 +90,14 @@ export const WranglerParsers = {
     try {
       const json = JSON.parse(stdout)
       if (Array.isArray(json) && json.length > 0 && json[0].results) {
-        return json[0].results.map((row: any) => parseInt(row.feed_id)).filter((id: number) => !isNaN(id))
+        return json[0].results.map((row: any) => parseInt(row.feed_id, 10)).filter((id: number) => !Number.isNaN(id))
       }
-    } catch (e) {
+    } catch (_e) {
       return stdout
         .split('\n')
         .map(line => line.trim())
         .filter(line => /^\d+$/.test(line))
-        .map(id => parseInt(id))
+        .map(id => parseInt(id, 10))
     }
     return []
   },
@@ -111,7 +111,7 @@ export const WranglerParsers = {
       if (Array.isArray(json) && json.length > 0 && json[0].results) {
         return json[0].results.map((row: any) => row.ip).filter((ip: string) => ip && typeof ip === 'string')
       }
-    } catch (e) {
+    } catch (_e) {
       // Fallback: 解析旧格式输出
       return stdout
         .split('\n')
@@ -133,12 +133,12 @@ export const HLLTestData = {
   generateUniqueIPs(count: number): string[] {
     const ips: string[] = []
     for (let i = 0; i < count; i++) {
-      const segment1 = Math.floor(i / Math.pow(256, 3)) % 256
-      const segment2 = Math.floor(i / Math.pow(256, 2)) % 256
+      const segment1 = Math.floor(i / 256 ** 3) % 256
+      const segment2 = Math.floor(i / 256 ** 2) % 256
       const segment3 = Math.floor(i / 256) % 256
       const segment4 = i % 256
-      const segment5 = Math.floor(i / Math.pow(256, 5)) % 256
-      const segment6 = Math.floor(i / Math.pow(256, 6)) % 256
+      const segment5 = Math.floor(i / 256 ** 5) % 256
+      const segment6 = Math.floor(i / 256 ** 6) % 256
 
       if (i % 3 === 0) {
         ips.push(`${segment1}.${segment2}.${segment3}.${segment4}`)

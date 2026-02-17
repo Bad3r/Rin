@@ -59,13 +59,13 @@ const useTableOfContents = (selector: string) => {
       if (header.getAttribute('data-id') !== null) return
       header.setAttribute('data-id', i.toString()) // set data-id
       intersectingList.push(false) // increase array length
-      io.current!.observe(header) // register to observe
+      io.current?.observe(header) // register to observe
     })
     lastRef.current = ref
     return () => {
       if (io.current) io.current.disconnect()
     }
-  }, [ref])
+  }, [ref, selector])
 
   const cleanup = (newId: string) => {
     if (lastRef.current === newId) return
@@ -80,17 +80,18 @@ const useTableOfContents = (selector: string) => {
         <ul className='max-h-[calc(100vh-10.25rem)] overflow-auto' style={{ scrollbarWidth: 'none' }}>
           {tableOfContents.length === 0 && <li>{t('index.empty.title')}</li>}
           {tableOfContents.map(item => (
-            <li
-              key={`toc$${item.index}`}
-              className={`cursor-pointer hover:opacity-50 ${activeIndex === item.index ? 'text-theme' : ''}`}
-              style={{ marginLeft: item.marginLeft }}
-              onClick={() => {
-                item.element.scrollIntoView({
-                  behavior: 'smooth',
-                })
-              }}
-            >
-              {item.text}
+            <li key={`toc$${item.index}`} style={{ marginLeft: item.marginLeft }}>
+              <button
+                type='button'
+                className={`hover:opacity-50 ${activeIndex === item.index ? 'text-theme' : ''}`}
+                onClick={() => {
+                  item.element.scrollIntoView({
+                    behavior: 'smooth',
+                  })
+                }}
+              >
+                {item.text}
+              </button>
             </li>
           ))}
         </ul>

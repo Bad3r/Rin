@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, expect, it } from 'bun:test'
 import { WranglerParsers } from './test-utils'
 
 describe('Wrangler JSON 解析测试', () => {
@@ -28,7 +28,7 @@ describe('Wrangler JSON 解析测试', () => {
       )
 
       console.log('\n测试 count 解析:')
-      console.log('  输入:', wranglerOutput.substring(0, 200) + '...')
+      console.log('  输入:', `${wranglerOutput.substring(0, 200)}...`)
 
       const count = WranglerParsers.parseCount(wranglerOutput)
       console.log('  解析结果:', count)

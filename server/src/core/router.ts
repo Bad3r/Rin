@@ -1,6 +1,5 @@
+import { generateRequestId, handleError } from './error-handler'
 import type { Context, Handler, Middleware, RouteDefinition } from './types'
-import { handleError, generateRequestId } from './error-handler'
-import { isAppError } from '../errors'
 
 export class Router {
   private routes: Map<string, RouteDefinition[]> = new Map()
@@ -26,7 +25,7 @@ export class Router {
     if (!this.routes.has(method)) {
       this.routes.set(method, [])
     }
-    this.routes.get(method)!.push({ path, handler, schema })
+    this.routes.get(method)?.push({ path, handler, schema })
     return this
   }
 
@@ -62,7 +61,7 @@ export class Router {
         this.routes.set(method, [])
       }
       for (const route of routes) {
-        this.routes.get(method)!.push({
+        this.routes.get(method)?.push({
           path: prefix + route.path,
           handler: route.handler,
           schema: route.schema,
@@ -247,7 +246,7 @@ export class Router {
     if (['POST', 'PUT', 'PATCH'].includes(method)) {
       try {
         context.body = await this.parseBody(request)
-      } catch (e) {
+      } catch (_e) {
         // Body parsing failed, return structured error
         const { ValidationError } = await import('../errors')
         return handleError(new ValidationError('Invalid request body format'), context, requestId)

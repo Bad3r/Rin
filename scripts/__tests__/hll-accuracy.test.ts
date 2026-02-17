@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, expect, it } from 'bun:test'
 import { HyperLogLog } from '../../server/src/utils/hyperloglog'
-import { HLLTestData, calculateRelativeError } from './test-utils'
+import { calculateRelativeError, HLLTestData } from './test-utils'
 
 // HLL 误差测试配置
 //
@@ -92,14 +92,14 @@ describe('HLL 算法误差测试 - 不同数据规模', () => {
   }
 
   it('生成误差统计报告', () => {
-    console.log('\n' + '='.repeat(80))
+    console.log(`\n${'='.repeat(80)}`)
     console.log('HLL 算法误差测试报告')
     console.log('='.repeat(80))
     console.log('\n规模      唯一IP数   总访问数   实际UV     估算UV     误差(%)    容差(%)    结果')
     console.log('-'.repeat(80))
 
     let totalPassed = 0
-    let totalTests = results.length
+    const totalTests = results.length
 
     for (const r of results) {
       const errorPercent = (r.relativeError * 100).toFixed(2).padStart(6)
@@ -270,7 +270,7 @@ describe('HLL 算法误差测试 - 连续迁移场景', () => {
     const batchSize = 100
     const allIPs = HLLTestData.generateIPsWithDuplicates(uniqueCount, 0.2)
 
-    let hll = new HyperLogLog()
+    const hll = new HyperLogLog()
     let processedCount = 0
 
     while (processedCount < allIPs.length) {

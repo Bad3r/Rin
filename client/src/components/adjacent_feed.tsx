@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link } from 'wouter'
 import { client } from '../main.tsx'
 import { timeago } from '../utils/timeago.ts'
-import { Link } from 'wouter'
-import { useTranslation } from 'react-i18next'
 
 export type AdjacentFeed = {
   id: number

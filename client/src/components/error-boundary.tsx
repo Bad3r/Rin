@@ -1,4 +1,4 @@
-import { Component, ErrorInfo, ReactNode } from 'react'
+import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { ErrorPage } from '../page/error'
 
 // ============================================================================
@@ -206,7 +206,11 @@ export class RouteErrorBoundary extends Component<ErrorBoundaryProps, ErrorBound
         <div className='w-full flex flex-col items-center justify-center p-8'>
           <h2 className='text-xl font-bold text-red-600 mb-4'>This page failed to load</h2>
           <p className='text-gray-600 mb-4'>{error?.message || 'An unexpected error occurred'}</p>
-          <button onClick={this.reset} className='px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600'>
+          <button
+            type='button'
+            onClick={this.reset}
+            className='px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600'
+          >
             Try Again
           </button>
         </div>

@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { UserService } from '../user'
-import { createBaseApp } from '../../core/base'
-import { createMockDB, createMockEnv, cleanupTestDB } from '../../../tests/fixtures'
-import { createTestClient } from '../../../tests/test-api-client'
 import type { Database } from 'bun:sqlite'
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
+import { createTestClient } from '../../../tests/test-api-client'
+import { createBaseApp } from '../../core/base'
+import { UserService } from '../user'
 
 describe('UserService', () => {
   let db: any
@@ -25,13 +25,14 @@ describe('UserService', () => {
       sign: async (payload: any) => `mock_token_${payload.id}`,
       verify: async (token: string) => {
         const match = token.match(/mock_token_(\d+)/)
-        return match ? { id: parseInt(match[1]) } : null
+        return match ? { id: parseInt(match[1], 10) } : null
       },
     })
     app.state('oauth2', {
       generateState: () => 'mock_state',
-      createRedirectUrl: (state: string, provider: string) => `https://github.com/login?state=${state}`,
-      authorize: async (provider: string, code: string) => (code === 'valid_code' ? { accessToken: 'gh_token' } : null),
+      createRedirectUrl: (state: string, _provider: string) => `https://github.com/login?state=${state}`,
+      authorize: async (_provider: string, code: string) =>
+        code === 'valid_code' ? { accessToken: 'gh_token' } : null,
     })
     app.state('anyUser', async () => false)
 

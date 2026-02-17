@@ -1,8 +1,8 @@
-import { count, desc, eq } from 'drizzle-orm'
-import { moments } from '../db/schema'
-import { Router } from '../core/router'
-import type { Context } from '../core/types'
 import { momentCreateSchema, momentUpdateSchema } from '@rin/api'
+import { count, desc, eq } from 'drizzle-orm'
+import type { Router } from '../core/router'
+import type { Context } from '../core/types'
+import { moments } from '../db/schema'
 
 export function MomentsService(router: Router): void {
   router.group('/moments', group => {
@@ -16,8 +16,8 @@ export function MomentsService(router: Router): void {
         } = ctx
         const { page, limit } = query
 
-        const page_num = (page ? (parseInt(page as string) > 0 ? parseInt(page as string) : 1) : 1) - 1
-        const limit_num = limit ? (parseInt(limit as string) > 50 ? 50 : parseInt(limit as string)) : 20
+        const page_num = (page ? (parseInt(page as string, 10) > 0 ? parseInt(page as string, 10) : 1) : 1) - 1
+        const limit_num = limit ? (parseInt(limit as string, 10) > 50 ? 50 : parseInt(limit as string, 10)) : 20
         const cacheKey = `moments_${page_num}_${limit_num}`
         const cached = await cache.get(cacheKey)
 
@@ -134,7 +134,7 @@ export function MomentsService(router: Router): void {
           return 'Permission denied'
         }
 
-        const id_num = parseInt(params.id)
+        const id_num = parseInt(params.id, 10)
         const moment = await db.query.moments.findFirst({ where: eq(moments.id, id_num) })
 
         if (!moment) {
@@ -181,7 +181,7 @@ export function MomentsService(router: Router): void {
         return 'Permission denied'
       }
 
-      const id_num = parseInt(params.id)
+      const id_num = parseInt(params.id, 10)
       const moment = await db.query.moments.findFirst({ where: eq(moments.id, id_num) })
 
       if (!moment) {

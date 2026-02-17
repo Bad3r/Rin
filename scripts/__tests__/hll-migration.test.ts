@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test'
+import { describe, expect, it, mock } from 'bun:test'
 import { HyperLogLog } from '../../server/src/utils/hyperloglog'
 
 // 模拟 wrangler 命令执行
-const mockExec = mock()
+const _mockExec = mock()
 
 // 从 deploy-cf.ts 中提取的函数
 async function generateHLLData(ips: string[]): Promise<string> {
@@ -281,8 +281,8 @@ describe('Real-world Migration Scenarios', () => {
   })
 
   it('should handle edge case with very long IP strings', async () => {
-    const longIp = '192.168.1.1' + 'x'.repeat(1000)
-    const ips = [longIp, longIp + '1', longIp + '2']
+    const longIp = `192.168.1.1${'x'.repeat(1000)}`
+    const ips = [longIp, `${longIp}1`, `${longIp}2`]
 
     const hllData = await generateHLLData(ips)
     expect(hllData).toBeDefined()

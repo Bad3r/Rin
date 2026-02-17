@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 export function listenSystemMode() {
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')

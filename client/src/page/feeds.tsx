@@ -1,15 +1,14 @@
-import { useContext, useEffect, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet'
+import { useTranslation } from 'react-i18next'
 import { Link, useSearch } from 'wouter'
 import { FeedCard } from '../components/feed_card'
 import { Waiting } from '../components/loading'
+import { useSiteConfig } from '../hooks/useSiteConfig'
 import { client } from '../main'
 import { ProfileContext } from '../state/profile'
-
-import { useSiteConfig } from '../hooks/useSiteConfig'
 import { siteName } from '../utils/constants'
 import { tryInt } from '../utils/int'
-import { useTranslation } from 'react-i18next'
 
 type FeedsData = {
   size: number
@@ -27,8 +26,10 @@ export function FeedsPage() {
   const { t } = useTranslation()
   const siteConfig = useSiteConfig()
   const query = new URLSearchParams(useSearch())
+  const queryType = (query.get('type') as FeedType) || 'normal'
+  const queryPage = query.get('page') || ''
   const profile = useContext(ProfileContext)
-  const [listState, _setListState] = useState<FeedType>((query.get('type') as FeedType) || 'normal')
+  const [listState, _setListState] = useState<FeedType>(queryType)
   const [status, setStatus] = useState<'loading' | 'idle'>('idle')
   const [feeds, setFeeds] = useState<FeedsMap>({
     draft: { size: 0, data: [], hasNext: false },
@@ -38,34 +39,38 @@ export function FeedsPage() {
   const page = tryInt(1, query.get('page'))
   const limit = tryInt(10, query.get('limit'), siteConfig.pageSize)
   const ref = useRef('')
-  function fetchFeeds(type: FeedType) {
-    client.feed
-      .list({
-        page: page,
-        limit: limit,
-        type: type,
-      })
-      .then(({ data }) => {
-        if (data) {
-          setFeeds({
-            ...feeds,
-            [type]: data,
-          })
-          setStatus('idle')
-        }
-      })
-  }
+
+  const fetchFeeds = useCallback(
+    (type: FeedType) => {
+      client.feed
+        .list({
+          page: page,
+          limit: limit,
+          type: type,
+        })
+        .then(({ data }) => {
+          if (data) {
+            setFeeds(prev => ({
+              ...prev,
+              [type]: data,
+            }))
+            setStatus('idle')
+          }
+        })
+    },
+    [limit, page]
+  )
+
   useEffect(() => {
-    const key = `${query.get('page')} ${query.get('type')}`
-    if (ref.current == key) return
-    const type = (query.get('type') as FeedType) || 'normal'
-    if (type !== listState) {
-      _setListState(type)
+    const key = `${queryPage} ${queryType}`
+    if (ref.current === key) return
+    if (queryType !== listState) {
+      _setListState(queryType)
     }
     setStatus('loading')
-    fetchFeeds(type)
+    fetchFeeds(queryType)
     ref.current = key
-  }, [query.get('page'), query.get('type')])
+  }, [fetchFeeds, listState, queryPage, queryType])
   return (
     <>
       <Helmet>

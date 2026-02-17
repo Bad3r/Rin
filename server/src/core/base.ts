@@ -1,11 +1,10 @@
-import { Router, createRouter } from './router'
 import { corsMiddleware, timingMiddleware } from './middleware'
-import { deriveAuth, createCookieHelpers } from './setup'
+import { createRouter, type Router } from './router'
+import { createCookieHelpers, deriveAuth } from './setup'
 import type { Context, OAuth2Utils } from './types'
 
 // Lazy initialization container
 class LazyInitContainer {
-  private env: Env
   private instances: Map<string, any> = new Map()
   private initializing: Map<string, Promise<any>> = new Map()
 
@@ -112,7 +111,7 @@ export function createBaseApp(env: Env): Router {
       }))
 
     // Lazy load OAuth only when needed
-    let oauth2: OAuth2Utils | undefined = undefined
+    let oauth2: OAuth2Utils | undefined
     if (env.RIN_GITHUB_CLIENT_ID && env.RIN_GITHUB_CLIENT_SECRET) {
       oauth2 = await container.get('oauth2', async () => {
         const { createOAuthPlugin, GitHubProvider } = await import('../utils/oauth')

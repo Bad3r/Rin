@@ -1,8 +1,8 @@
 import { and, eq } from 'drizzle-orm'
-import type { DB } from '../server'
-import { feedHashtags, hashtags } from '../db/schema'
-import { Router } from '../core/router'
+import type { Router } from '../core/router'
 import type { Context } from '../core/types'
+import { feedHashtags, hashtags } from '../db/schema'
+import type { DB } from '../server'
 
 export function TagService(router: Router): void {
   router.group('/tag', group => {

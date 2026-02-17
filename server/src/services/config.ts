@@ -1,7 +1,7 @@
-import { Router } from '../core/router'
+import type { Router } from '../core/router'
 import type { Context } from '../core/types'
-import { getAIConfigForFrontend, setAIConfig, getAIConfig } from '../utils/db-config'
-import { testAIModel, generateAISummary } from '../utils/ai'
+import { testAIModel } from '../utils/ai'
+import { getAIConfig, getAIConfigForFrontend, setAIConfig } from '../utils/db-config'
 
 // Sensitive fields that should not be exposed to frontend
 const SENSITIVE_FIELDS = ['ai_summary.api_key']

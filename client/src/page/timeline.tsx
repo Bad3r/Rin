@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'wouter'
 import { Waiting } from '../components/loading'
-import { client } from '../main'
 import { useSiteConfig } from '../hooks/useSiteConfig'
+import { client } from '../main'
 import { siteName } from '../utils/constants'
-import { useTranslation } from 'react-i18next'
 
 interface FeedItem {
   id: number
@@ -19,7 +19,7 @@ export function TimelinePage() {
   const ref = useRef(false)
   const { t } = useTranslation()
   const siteConfig = useSiteConfig()
-  function fetchFeeds() {
+  const fetchFeeds = useCallback(() => {
     client.feed
       .timeline()
       .then(({ data }) => {
@@ -31,7 +31,10 @@ export function TimelinePage() {
             ? Object.groupBy(arr, ({ createdAt }) => new Date(createdAt).getFullYear())
             : arr.reduce<Record<number, any[]>>((acc, item) => {
                 const key = new Date(item.createdAt).getFullYear()
-                ;(acc[key] ||= []).push(item)
+                if (!acc[key]) {
+                  acc[key] = []
+                }
+                acc[key].push(item)
                 return acc
               }, {})
 
@@ -41,13 +44,13 @@ export function TimelinePage() {
       .catch(err => {
         console.error('fetchFeeds error:', err)
       })
-  }
+  }, [])
 
   useEffect(() => {
     if (ref.current) return
     fetchFeeds()
     ref.current = true
-  }, [])
+  }, [fetchFeeds])
   return (
     <>
       <Helmet>
@@ -68,7 +71,7 @@ export function TimelinePage() {
           </div>
           {feeds &&
             Object.keys(feeds)
-              .sort((a, b) => parseInt(b) - parseInt(a))
+              .sort((a, b) => parseInt(b, 10) - parseInt(a, 10))
               .map(year => (
                 <div key={year} className='wauto flex flex-col justify-center items-start'>
                   <h1 className='flex flex-row items-center space-x-2'>

@@ -1,5 +1,4 @@
-import { describe, it, expect } from 'bun:test'
-import { HyperLogLog } from '../../server/src/utils/hyperloglog'
+import { describe, expect, it } from 'bun:test'
 
 // 模拟 deploy-cf.ts 中的迁移函数
 async function generateHLLData(ips: string[]): Promise<string> {

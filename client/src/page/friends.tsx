@@ -4,14 +4,13 @@ import { Helmet } from 'react-helmet'
 import { useTranslation } from 'react-i18next'
 import Modal from 'react-modal'
 import Select from 'react-select'
-import { ShowAlertType, useAlert, useConfirm } from '../components/dialog'
+import { type ShowAlertType, useAlert, useConfirm } from '../components/dialog'
 import { Input } from '../components/input'
 import { Waiting } from '../components/loading'
+import { useSiteConfig } from '../hooks/useSiteConfig'
 import { client } from '../main'
 import { ClientConfigContext } from '../state/config'
 import { ProfileContext } from '../state/profile'
-
-import { useSiteConfig } from '../hooks/useSiteConfig'
 import { siteName } from '../utils/constants'
 
 type FriendItem = {
@@ -61,7 +60,7 @@ export function FriendsPage() {
   const { t } = useTranslation()
   const siteConfig = useSiteConfig()
   const config = useContext(ClientConfigContext)
-  let [apply] = useState<FriendItem>()
+  const [apply] = useState<FriendItem>()
   const [name, setName] = useState('')
   const [desc, setDesc] = useState('')
   const [avatar, setAvatar] = useState('')
@@ -129,6 +128,7 @@ export function FriendsPage() {
                   <Input value={url} setValue={setUrl} placeholder={t('url')} className='my-2' />
                   <div className='flex flex-row justify-center'>
                     <button
+                      type='button'
                       onClick={publishButton}
                       className='basis-1/2 bg-theme text-white py-4 rounded-full shadow-xl shadow-light'
                     >
@@ -190,7 +190,7 @@ function Friend({ friend }: { friend: FriendItem }) {
         }
       })
     })
-  }, [friend.id])
+  }, [friend.id, showAlert, showConfirm, t])
 
   const updateFriend = useCallback(() => {
     client.friend
@@ -211,7 +211,7 @@ function Friend({ friend }: { friend: FriendItem }) {
           })
         }
       })
-  }, [avatar, name, desc, url, status, sortOrder])
+  }, [avatar, name, desc, url, status, sortOrder, friend.id, showAlert, t])
 
   const statusOption = [
     { value: -1, label: t('friends.review.rejected') },
@@ -228,13 +228,13 @@ function Friend({ friend }: { friend: FriendItem }) {
       >
         <div className='w-16 h-16'>
           <img
-            className={'rounded-full ' + (friend.health.length > 0 ? 'grayscale' : '')}
+            className={`rounded-full ${friend.health.length > 0 ? 'grayscale' : ''}`}
             src={friend.avatar}
             alt={friend.name}
           />
         </div>
         <p className='text-base text-center'>{friend.name}</p>
-        {friend.health.length == 0 && <p className='text-sm text-neutral-500 text-center'>{friend.desc}</p>}
+        {friend.health.length === 0 && <p className='text-sm text-neutral-500 text-center'>{friend.desc}</p>}
         {friend.accepted !== 1 && (
           <p className={`${friend.accepted === 0 ? 't-primary' : 'text-theme'}`}>
             {statusOption[friend.accepted + 1].label}
@@ -244,17 +244,16 @@ function Friend({ friend }: { friend: FriendItem }) {
           <p className='text-sm text-gray-500 text-center'>{errorHumanize(friend.health)}</p>
         )}
         {(profile?.permission || profile?.id === friend.uid) && (
-          <>
-            <button
-              onClick={e => {
-                e.preventDefault()
-                setIsOpen(true)
-              }}
-              className='absolute top-0 right-0 m-2 px-2 py-1 bg-secondary t-primary rounded-full bg-button'
-            >
-              <i className='ri-settings-line'></i>
-            </button>
-          </>
+          <button
+            type='button'
+            onClick={e => {
+              e.preventDefault()
+              setIsOpen(true)
+            }}
+            className='absolute top-0 right-0 m-2 px-2 py-1 bg-secondary t-primary rounded-full bg-button'
+          >
+            <i className='ri-settings-line'></i>
+          </button>
         )}
       </a>
 
@@ -288,7 +287,7 @@ function Friend({ friend }: { friend: FriendItem }) {
         <div className='w-[80vw] sm:w-[60vw] md:w-[50vw] lg:w-[40vw] xl:w-[30vw] bg-w rounded-xl p-4 flex flex-col justify-start items-center relative'>
           <div className='w-16 h-16'>
             <img
-              className={'rounded-xl ' + (friend.health.length > 0 ? 'grayscale' : '')}
+              className={`rounded-xl ${friend.health.length > 0 ? 'grayscale' : ''}`}
               src={friend.avatar}
               alt={friend.name}
             />
@@ -320,7 +319,7 @@ function Friend({ friend }: { friend: FriendItem }) {
                 <div className='flex flex-row items-center justify-center space-x-4'>
                   <Input
                     value={sortOrder.toString()}
-                    setValue={val => setSortOrder(parseInt(val) || 0)}
+                    setValue={val => setSortOrder(parseInt(val, 10) || 0)}
                     placeholder={t('sort_order')}
                   />
                 </div>
@@ -332,10 +331,18 @@ function Friend({ friend }: { friend: FriendItem }) {
           <Input value={avatar} setValue={setAvatar} placeholder={t('avatar.url')} className='mt-2' />
           <Input value={url} setValue={setUrl} placeholder={t('url')} className='my-2' />
           <div className='flex flex-row justify-center space-x-2'>
-            <button onClick={deleteFriend} className='bg-secondary text-theme rounded-full bg-button px-4 py-2 mt-2'>
+            <button
+              type='button'
+              onClick={deleteFriend}
+              className='bg-secondary text-theme rounded-full bg-button px-4 py-2 mt-2'
+            >
               {t('delete.title')}
             </button>
-            <button onClick={updateFriend} className='bg-secondary t-primary rounded-full bg-button px-4 py-2 mt-2'>
+            <button
+              type='button'
+              onClick={updateFriend}
+              className='bg-secondary t-primary rounded-full bg-button px-4 py-2 mt-2'
+            >
               {t('save')}
             </button>
           </div>
@@ -348,9 +355,9 @@ function Friend({ friend }: { friend: FriendItem }) {
 }
 
 function errorHumanize(error: string) {
-  if (error === 'certificate has expired' || error == '526') {
+  if (error === 'certificate has expired' || error === '526') {
     return '证书已过期'
-  } else if (error.includes('Unable to connect') || error == '521' || error == '522') {
+  } else if (error.includes('Unable to connect') || error === '521' || error === '522') {
     return '无法访问'
   }
   return error

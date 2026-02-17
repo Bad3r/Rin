@@ -12,14 +12,12 @@ export function CallbackPage() {
       setAuthToken(token)
     }
     setLocation('/')
-  }, [])
+  }, [setLocation])
   return (
-    <>
-      <div className='w-screen h-screen flex justify-center items-center'>
-        <div className='text-center text-black p-4 text-xl font-bold'>
-          <p>Waiting...</p>
-        </div>
+    <div className='w-screen h-screen flex justify-center items-center'>
+      <div className='text-center text-black p-4 text-xl font-bold'>
+        <p>Waiting...</p>
       </div>
-    </>
+    </div>
   )
 }

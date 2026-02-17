@@ -1,5 +1,5 @@
+import { type AppError, InternalServerError, isAppError } from '../errors'
 import type { Context, Middleware } from './types'
-import { AppError, isAppError, createErrorResponse, InternalServerError } from '../errors'
 
 // ============================================================================
 // Request ID Generation
@@ -16,7 +16,7 @@ export function generateRequestId(): string {
 // ============================================================================
 
 export function errorHandlerMiddleware(): Middleware {
-  return async (context: Context, env: Env): Promise<Response | void> => {
+  return async (_context: Context, _env: Env): Promise<Response | undefined> => {
     // Request ID is generated in the router and passed through context
     // This middleware doesn't need to do anything on the way in
     return undefined
@@ -45,9 +45,9 @@ export class ErrorLogger {
   private static maxLogs = 100
 
   static log(entry: ErrorLogEntry): void {
-    this.logs.push(entry)
-    if (this.logs.length > this.maxLogs) {
-      this.logs.shift()
+    ErrorLogger.logs.push(entry)
+    if (ErrorLogger.logs.length > ErrorLogger.maxLogs) {
+      ErrorLogger.logs.shift()
     }
 
     // Always log to console in development or for serious errors
@@ -62,11 +62,11 @@ export class ErrorLogger {
   }
 
   static getRecentLogs(limit = 50): ErrorLogEntry[] {
-    return this.logs.slice(-limit)
+    return ErrorLogger.logs.slice(-limit)
   }
 
   static clear(): void {
-    this.logs = []
+    ErrorLogger.logs = []
   }
 }
 
@@ -148,12 +148,7 @@ export type RouteHandler = (context: Context) => Promise<any>
 
 export function asyncHandler(handler: RouteHandler): RouteHandler {
   return async (context: Context) => {
-    try {
-      return await handler(context)
-    } catch (error) {
-      // Re-throw to be caught by global error handler
-      throw error
-    }
+    return await handler(context)
   }
 }
 

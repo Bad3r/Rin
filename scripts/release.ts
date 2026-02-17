@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+
 /**
  * Release script for Rin
  *
@@ -18,9 +19,9 @@
  *   --force      Force release even if checks fail
  */
 
-import { $ } from 'bun'
-import { readFile, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
+import { readFile, writeFile } from 'node:fs/promises'
+import { $ } from 'bun'
 
 const VALID_BUMPS = ['patch', 'minor', 'major'] as const
 type BumpType = (typeof VALID_BUMPS)[number]
@@ -110,7 +111,7 @@ async function updatePackageJson(version: string, dryRun: boolean): Promise<void
     if (dryRun) {
       console.log(`  📄 ${file}: ${oldVersion} -> ${version} (dry-run)`)
     } else {
-      await writeFile(file, JSON.stringify(pkg, null, 2) + '\n')
+      await writeFile(file, `${JSON.stringify(pkg, null, 2)}\n`)
       console.log(`  ✅ ${file}: ${oldVersion} -> ${version}`)
     }
   }
@@ -191,7 +192,7 @@ async function runPreReleaseChecks(version: string, options: ReleaseOptions): Pr
     checks.push(true)
   } catch {
     console.error('  ❌ TypeScript check failed')
-    checks.push(options.force ? true : false)
+    checks.push(!!options.force)
   }
 
   // Check 5: Build
@@ -202,7 +203,7 @@ async function runPreReleaseChecks(version: string, options: ReleaseOptions): Pr
     checks.push(true)
   } catch {
     console.error('  ❌ Build failed')
-    checks.push(options.force ? true : false)
+    checks.push(!!options.force)
   }
 
   return checks.every(Boolean)
@@ -288,7 +289,7 @@ async function updateChangelog(version: string, dryRun: boolean): Promise<void> 
   const nextSection = changelog.indexOf('## [', unreleasedSection + 1)
   const insertPosition = nextSection !== -1 ? nextSection : changelog.length
 
-  const newChangelog = changelog.slice(0, insertPosition) + template + '\n' + changelog.slice(insertPosition)
+  const newChangelog = `${changelog.slice(0, insertPosition) + template}\n${changelog.slice(insertPosition)}`
 
   if (dryRun) {
     console.log(`  📄 Would update CHANGELOG.md with v${version} entry (dry-run)`)

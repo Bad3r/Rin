@@ -4,6 +4,7 @@ export function HashTag({ name }: { name: string }) {
   const [_, setLocation] = useLocation()
   return (
     <button
+      type='button'
       onClick={e => {
         e.preventDefault()
         setLocation(`/hashtag/${name}`)

@@ -42,7 +42,7 @@ export class HyperLogLog {
 
     for (let i = 0; i < HLL_REGISTERS; i++) {
       const val = this.registers[i]
-      sum += 1 / Math.pow(2, val)
+      sum += 1 / 2 ** val
       if (val === 0) zeroCount++
     }
 
@@ -58,7 +58,7 @@ export class HyperLogLog {
 
     // Large range correction for 64-bit HLL
     // When rawEstimate > 2^32 / 30, apply 64-bit correction
-    const largeThreshold = Math.pow(2, 32) / 30
+    const largeThreshold = 2 ** 32 / 30
     if (rawEstimate > largeThreshold) {
       // For very large cardinalities, return raw estimate
       // The 50-bit hash space allows accurate estimation up to billions

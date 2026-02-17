@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, expect, it } from 'bun:test'
 
 describe('Security Audit - Mock Implementation Patterns', () => {
   describe('Mock Token Patterns', () => {
@@ -66,7 +66,7 @@ describe('Security Audit - Mock Implementation Patterns', () => {
       const testEnvPatterns = [/test/i, /mock/i, /dummy/i, /fake/i]
 
       // Production should not use these patterns
-      const prodEnvVars = ['DATABASE_URL', 'JWT_SECRET', 'API_KEY']
+      const _prodEnvVars = ['DATABASE_URL', 'JWT_SECRET', 'API_KEY']
 
       // Just verify patterns work
       expect(testEnvPatterns.some(p => p.test('test-secret'))).toBe(true)

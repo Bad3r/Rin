@@ -1,5 +1,5 @@
-import type { Plugin } from 'unified'
 import type { Content, Root } from 'mdast'
+import type { Plugin } from 'unified'
 
 function processNode(child: Content, index: number, siblings: Content[]) {
   if (child.type !== 'code') {

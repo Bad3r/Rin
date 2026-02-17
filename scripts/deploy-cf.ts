@@ -1,5 +1,5 @@
-import { $ } from 'bun'
 import { readdir } from 'node:fs/promises'
+import { $ } from 'bun'
 import stripIndent from 'strip-indent'
 import { fixTopField, getMigrationVersion, isInfoExist, updateMigrationVersion } from './db-fix-top-field'
 
@@ -85,7 +85,7 @@ async function buildClient(): Promise<void> {
 
   // Check if pre-built dist exists (vite.config.ts builds to ../dist/client)
   const artifactDist = './dist/client'
-  const artifactIndexHtml = artifactDist + '/index.html'
+  const artifactIndexHtml = `${artifactDist}/index.html`
   const hasArtifact = await Bun.file(artifactIndexHtml).exists()
 
   if (hasArtifact) {
@@ -231,7 +231,7 @@ mode = "smart"
     const sqlFiles = files
       .filter(name => name.endsWith('.sql'))
       .filter(name => {
-        const version = parseInt(name.split('-')[0])
+        const version = parseInt(name.split('-')[0], 10)
         return version > migrationVersion
       })
       .sort()
@@ -243,7 +243,7 @@ mode = "smart"
     if (sqlFiles.length === 0) {
       console.log('No migration needed.')
     } else {
-      const lastVersion = parseInt(sqlFiles[sqlFiles.length - 1].split('-')[0])
+      const lastVersion = parseInt(sqlFiles[sqlFiles.length - 1].split('-')[0], 10)
       if (lastVersion > migrationVersion) {
         await updateMigrationVersion(typ, DB_NAME, lastVersion)
       }
@@ -312,12 +312,12 @@ function parseWranglerCount(stdout: string): number {
   try {
     const json = JSON.parse(stdout)
     if (Array.isArray(json) && json.length > 0 && json[0].results && json[0].results.length > 0) {
-      return parseInt(json[0].results[0].count) || 0
+      return parseInt(json[0].results[0].count, 10) || 0
     }
-  } catch (e) {
+  } catch (_e) {
     const match = stdout.match(/"count":\s*(\d+)/)
     if (match) {
-      return parseInt(match[1]) || 0
+      return parseInt(match[1], 10) || 0
     }
   }
   return 0
@@ -328,14 +328,14 @@ function parseWranglerFeedIds(stdout: string): number[] {
   try {
     const json = JSON.parse(stdout)
     if (Array.isArray(json) && json.length > 0 && json[0].results) {
-      return json[0].results.map((row: any) => parseInt(row.feed_id)).filter((id: number) => !isNaN(id))
+      return json[0].results.map((row: any) => parseInt(row.feed_id, 10)).filter((id: number) => !Number.isNaN(id))
     }
-  } catch (e) {
+  } catch (_e) {
     return stdout
       .split('\n')
       .map(line => line.trim())
       .filter(line => /^\d+$/.test(line))
-      .map(id => parseInt(id))
+      .map(id => parseInt(id, 10))
   }
   return []
 }
@@ -347,7 +347,7 @@ function parseWranglerIPs(stdout: string): string[] {
     if (json.results) {
       return json.results.map((row: any) => row.ip).filter((ip: string) => ip && typeof ip === 'string')
     }
-  } catch (e) {
+  } catch (_e) {
     return stdout
       .split('\n')
       .map(line => line.trim())
@@ -427,7 +427,6 @@ async function migrateVisitsToHLL(typ: string, dbName: string) {
         }
       } catch (error) {
         console.error(`    ❌ Error processing feed ${feedId}:`, error)
-        continue
       }
     }
 

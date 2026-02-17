@@ -1,18 +1,17 @@
-import { useContext, useEffect, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet'
-import { client } from '../main'
-
-import { useSiteConfig } from '../hooks/useSiteConfig'
-import { siteName } from '../utils/constants'
 import { useTranslation } from 'react-i18next'
-import { ProfileContext } from '../state/profile'
-import { tryInt } from '../utils/int'
+import Modal from 'react-modal'
 import { useSearch } from 'wouter'
 import { useAlert, useConfirm } from '../components/dialog'
-import Modal from 'react-modal'
-import { MarkdownEditor } from '../components/markdown_editor'
 import { Waiting } from '../components/loading'
+import { MarkdownEditor } from '../components/markdown_editor'
 import { MomentItem } from '../components/moment_item'
+import { useSiteConfig } from '../hooks/useSiteConfig'
+import { client } from '../main'
+import { ProfileContext } from '../state/profile'
+import { siteName } from '../utils/constants'
+import { tryInt } from '../utils/int'
 
 interface Moment {
   id: number
@@ -47,43 +46,46 @@ export function MomentsPage() {
 
   const limit = tryInt(10, query.get('limit'), siteConfig.pageSize)
 
-  function fetchMoments(page = 1, append = false) {
-    if (loadingMore) return
+  const fetchMoments = useCallback(
+    (page = 1, append = false) => {
+      if (loadingMore) return
 
-    const isInitialLoad = page === 1 && !append
-    if (isInitialLoad) {
-      setLoading(true)
-    } else {
-      setLoadingMore(true)
-    }
+      const isInitialLoad = page === 1 && !append
+      if (isInitialLoad) {
+        setLoading(true)
+      } else {
+        setLoadingMore(true)
+      }
 
-    client.moments
-      .list({
-        page: page,
-        limit: limit,
-      })
-      .then(({ data }) => {
-        if (data) {
-          setLength(data.data.length)
-          setHasNextPage(data.hasNext)
+      client.moments
+        .list({
+          page: page,
+          limit: limit,
+        })
+        .then(({ data }) => {
+          if (data) {
+            setLength(data.data.length)
+            setHasNextPage(data.hasNext)
 
-          if (append) {
-            setMoments(prev => [...prev, ...data.data] as any)
-          } else {
-            setMoments(data.data as any)
+            if (append) {
+              setMoments(prev => [...prev, ...data.data] as any)
+            } else {
+              setMoments(data.data as any)
+            }
+
+            setCurrentPage(page)
           }
-
-          setCurrentPage(page)
-        }
-      })
-      .finally(() => {
-        if (isInitialLoad) {
-          setLoading(false)
-        } else {
-          setLoadingMore(false)
-        }
-      })
-  }
+        })
+        .finally(() => {
+          if (isInitialLoad) {
+            setLoading(false)
+          } else {
+            setLoadingMore(false)
+          }
+        })
+    },
+    [limit, loadingMore]
+  )
 
   function loadMore() {
     if (hasNextPage && !loadingMore) {
@@ -161,7 +163,7 @@ export function MomentsPage() {
     if (ref.current) return
     fetchMoments(1, false)
     ref.current = true
-  }, [])
+  }, [fetchMoments])
 
   return (
     <>
@@ -181,6 +183,7 @@ export function MomentsPage() {
               <p className='text-sm mt-4 text-neutral-500 font-normal'>{t('moments.total$count', { count: length })}</p>
               {profile?.permission && (
                 <button
+                  type='button'
                   onClick={openCreateModal}
                   className='text-sm font-normal rounded-full px-4 py-2 text-white bg-theme'
                 >
@@ -210,7 +213,11 @@ export function MomentsPage() {
                 {!hasNextPage && moments && moments.length > 0 ? (
                   <div className='text-gray-500 pt-6'>{t('no_more')}</div>
                 ) : hasNextPage ? (
-                  <button onClick={loadMore} className='text-sm font-normal rounded-full px-4 py-2 text-white bg-theme'>
+                  <button
+                    type='button'
+                    onClick={loadMore}
+                    className='text-sm font-normal rounded-full px-4 py-2 text-white bg-theme'
+                  >
                     {t('load_more')}
                   </button>
                 ) : null}
@@ -259,12 +266,14 @@ export function MomentsPage() {
 
           <div className='flex justify-end mt-4 space-x-2'>
             <button
+              type='button'
               onClick={() => setIsModalOpen(false)}
               className='px-4 py-2 bg-gray-200 dark:bg-gray-700 text-black dark:text-white rounded-lg'
             >
               {t('cancel')}
             </button>
             <button
+              type='button'
               onClick={handleSubmit}
               disabled={loading || !content.trim()}
               className='px-4 py-2 bg-theme text-white rounded-lg disabled:opacity-50'

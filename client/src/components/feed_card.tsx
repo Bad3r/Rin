@@ -1,8 +1,8 @@
-import { Link } from 'wouter'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'wouter'
 import { timeago } from '../utils/timeago'
 import { HashTag } from './hashtag'
-import { useMemo } from 'react'
 
 export function FeedCard({
   id,
@@ -62,14 +62,14 @@ export function FeedCard({
           <p className='text-pretty overflow-hidden dark:text-neutral-500'>{summary}</p>
           {hashtags.length > 0 && (
             <div className='mt-2 flex flex-row flex-wrap justify-start gap-x-2'>
-              {hashtags.map(({ name }, index) => (
-                <HashTag key={index} name={name} />
+              {hashtags.map(({ name }) => (
+                <HashTag key={name} name={name} />
               ))}
             </div>
           )}
         </Link>
       </>
     ),
-    [id, title, avatar, draft, listed, top, summary, hashtags, createdAt, updatedAt]
+    [id, title, avatar, draft, listed, top, summary, hashtags, createdAt, updatedAt, t]
   )
 }

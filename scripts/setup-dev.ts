@@ -4,8 +4,8 @@
  * 从 .env.local 加载配置并生成 wrangler.toml 和 client/.env
  */
 
-import * as fs from 'fs'
-import * as path from 'path'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 
 const ROOT_DIR = process.cwd()
 const ENV_FILE = path.join(ROOT_DIR, '.env.local')
@@ -61,7 +61,9 @@ const requiredVars = [
 const missingVars = requiredVars.filter(v => !env[v])
 if (missingVars.length > 0) {
   console.error('❌ 错误：以下必要环境变量未设置：')
-  missingVars.forEach(v => console.error(`   - ${v}`))
+  missingVars.forEach(v => {
+    console.error(`   - ${v}`)
+  })
   console.log('\n请编辑 .env.local 文件并添加这些配置\n')
   process.exit(1)
 }

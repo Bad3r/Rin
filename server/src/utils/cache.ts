@@ -1,6 +1,6 @@
-import { eq, and, like } from 'drizzle-orm'
-import type { DB } from '../server'
+import { and, eq } from 'drizzle-orm'
 import { cache } from '../db/schema'
+import type { DB } from '../server'
 import { path_join } from './path'
 
 // Cache Utils for storing data in memory and persisting to database (with optional S3 backup)
@@ -30,7 +30,7 @@ class DatabaseStorageProvider implements StorageProvider {
       for (const row of rows) {
         try {
           this.cacheMap.set(row.key, JSON.parse(row.value))
-        } catch (e) {
+        } catch (_e) {
           this.cacheMap.set(row.key, row.value)
         }
       }
@@ -135,7 +135,7 @@ class S3StorageProvider implements StorageProvider {
         return
       }
       const data = await response.json<any>()
-      for (let key in data) {
+      for (const key in data) {
         this.cacheMap.set(key, data[key])
       }
     } catch (e: any) {
@@ -221,7 +221,7 @@ export class CacheImpl {
       await this.load()
     }
     const result = []
-    for (let key of this.cache.keys()) {
+    for (const key of this.cache.keys()) {
       if (key.startsWith(prefix)) {
         result.push(this.cache.get(key))
       }
@@ -234,7 +234,7 @@ export class CacheImpl {
       await this.load()
     }
     const result = []
-    for (let key of this.cache.keys()) {
+    for (const key of this.cache.keys()) {
       if (key.endsWith(suffix)) {
         result.push(this.cache.get(key))
       }
@@ -275,7 +275,7 @@ export class CacheImpl {
   }
 
   async deletePrefix(prefix: string) {
-    for (let key of this.cache.keys()) {
+    for (const key of this.cache.keys()) {
       console.log('Cache key', key)
       if (key.startsWith(prefix)) {
         console.log('Cache delete', key)
@@ -286,7 +286,7 @@ export class CacheImpl {
   }
 
   async deleteSuffix(suffix: string) {
-    for (let key of this.cache.keys()) {
+    for (const key of this.cache.keys()) {
       console.log('Cache key', key)
       if (key.endsWith(suffix)) {
         console.log('Cache delete', key)

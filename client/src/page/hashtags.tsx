@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'wouter'
 import { HashTag } from '../components/hashtag'
 import { Waiting } from '../components/loading'
-import { client } from '../main'
 import { useSiteConfig } from '../hooks/useSiteConfig'
+import { client } from '../main'
 import { siteName } from '../utils/constants'
 
 type Hashtag = {
@@ -49,9 +49,9 @@ export function HashtagsPage() {
           <div className='wauto flex flex-col flex-wrap items-start justify-start'>
             {hashtags
               ?.filter(({ feeds }) => feeds > 0)
-              .map((hashtag, index) => {
+              .map(hashtag => {
                 return (
-                  <div key={index} className='w-full flex flex-row'>
+                  <div key={hashtag.id} className='w-full flex flex-row'>
                     <div className='w-full rounded-2xl m-2 duration-300 flex flex-row items-center space-x-4   '>
                       <Link
                         href={`/hashtag/${hashtag.name}`}

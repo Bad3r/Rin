@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { Database } from 'bun:sqlite'
-import { CacheImpl, createPublicCache, createServerConfig, createClientConfig, type CacheStorageMode } from '../cache'
-import { cache } from '../../db/schema'
-import { eq, and } from 'drizzle-orm'
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { eq } from 'drizzle-orm'
+import { drizzle } from 'drizzle-orm/bun-sqlite'
 import * as schema from '../../db/schema'
+import { cache } from '../../db/schema'
+import { CacheImpl, type CacheStorageMode, createClientConfig, createPublicCache, createServerConfig } from '../cache'
+
 /// <reference types="../../../worker-configuration" />
 
 // 测试数据库设置

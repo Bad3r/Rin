@@ -1,11 +1,11 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  parseApiError,
-  isNetworkError,
-  isAuthError,
+  type AppError,
   getUserFriendlyMessage,
-  AppError,
+  isAuthError,
+  isNetworkError,
   isNotFoundError,
+  parseApiError,
 } from '../components/error-boundary'
 
 // ============================================================================
@@ -294,7 +294,7 @@ export function useRetry<T>(fn: () => Promise<T>, options: UseRetryOptions = {})
         }
 
         setIsRetrying(true)
-        const waitTime = delay * Math.pow(backoff, i)
+        const waitTime = delay * backoff ** i
         await new Promise(resolve => setTimeout(resolve, waitTime))
         setIsRetrying(false)
       }

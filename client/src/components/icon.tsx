@@ -13,6 +13,7 @@ export function Icon({
 }) {
   return (
     <button
+      type='button'
       title={label}
       aria-label={label}
       onClick={onClick}
@@ -41,6 +42,7 @@ export function IconSmall({
 }) {
   return (
     <button
+      type='button'
       title={label}
       aria-label={label}
       onClick={onClick}

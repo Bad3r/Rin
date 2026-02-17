@@ -1,23 +1,23 @@
-import { useContext, useEffect, useRef, useState } from 'react'
+import mermaid from 'mermaid'
+import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet'
 import { useTranslation } from 'react-i18next'
 import ReactModal from 'react-modal'
 import Popup from 'reactjs-popup'
 import { Link, useLocation } from 'wouter'
+import { AdjacentSection } from '../components/adjacent_feed.tsx'
+import { Button } from '../components/button'
 import { useAlert, useConfirm } from '../components/dialog'
 import { HashTag } from '../components/hashtag'
 import { Waiting } from '../components/loading'
 import { Markdown } from '../components/markdown'
+import { Tips } from '../components/tips'
+import { useSiteConfig } from '../hooks/useSiteConfig'
 import { client } from '../main'
 import { ClientConfigContext } from '../state/config'
 import { ProfileContext } from '../state/profile'
-import { useSiteConfig } from '../hooks/useSiteConfig'
 import { siteName } from '../utils/constants'
 import { timeago } from '../utils/timeago'
-import { Button } from '../components/button'
-import { Tips } from '../components/tips'
-import mermaid from 'mermaid'
-import { AdjacentSection } from '../components/adjacent_feed.tsx'
 
 type Feed = {
   id: number
@@ -113,7 +113,7 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
     )
   }
   useEffect(() => {
-    if (ref.current == id) return
+    if (ref.current === id) return
     setFeed(undefined)
     setError(undefined)
     setHeadImage(undefined)
@@ -135,7 +135,7 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
       }
     })
     ref.current = id
-  }, [id])
+  }, [id, clean])
   useEffect(() => {
     mermaid.initialize({
       startOnLoad: false,
@@ -156,7 +156,7 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
           nodes: document.querySelectorAll('pre.mermaid_dark'),
         })
       })
-  }, [feed])
+  }, [])
 
   return (
     <Waiting for={feed || error}>
@@ -182,13 +182,11 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
       )}
       <div className='w-full flex flex-row justify-center ani-show'>
         {error && (
-          <>
-            <div className='flex flex-col wauto rounded-2xl bg-w m-2 p-6 items-center justify-center space-y-2'>
-              <h1 className='text-xl font-bold t-primary'>{error}</h1>
-              {error === 'Not found' && id === 'about' && <Tips value={t('about.notfound')} />}
-              <Button title={t('index.back')} onClick={() => (window.location.href = '/')} />
-            </div>
-          </>
+          <div className='flex flex-col wauto rounded-2xl bg-w m-2 p-6 items-center justify-center space-y-2'>
+            <h1 className='text-xl font-bold t-primary'>{error}</h1>
+            {error === 'Not found' && id === 'about' && <Tips value={t('about.notfound')} />}
+            <Button title={t('index.back')} onClick={() => (window.location.href = '/')} />
+          </div>
         )}
         {feed && !error && (
           <>
@@ -230,6 +228,7 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
                     {profile?.permission && (
                       <div className='flex gap-2'>
                         <button
+                          type='button'
                           aria-label={top > 0 ? t('untop.title') : t('top.title')}
                           onClick={topFeed}
                           className={`flex-1 flex flex-col items-end justify-center px-2 py rounded-full transition ${top > 0 ? 'bg-theme text-white hover:bg-theme-hover active:bg-theme-active' : 'bg-secondary bg-button dark:text-neutral-400'}`}
@@ -244,6 +243,7 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
                           <i className='ri-edit-2-line dark:text-neutral-400' />
                         </Link>
                         <button
+                          type='button'
                           aria-label={t('delete.title')}
                           onClick={deleteFeed}
                           className='flex-1 flex flex-col items-end justify-center px-2 py bg-secondary bg-button rounded-full transition'
@@ -269,13 +269,17 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
                 <div className='mt-6 flex flex-col gap-2'>
                   {feed.hashtags.length > 0 && (
                     <div className='flex flex-row flex-wrap gap-x-2'>
-                      {feed.hashtags.map(({ name }, index) => (
-                        <HashTag key={index} name={name} />
+                      {feed.hashtags.map(({ name }) => (
+                        <HashTag key={name} name={name} />
                       ))}
                     </div>
                   )}
                   <div className='flex flex-row items-center'>
-                    <img src={feed.user.avatar || '/avatar.png'} className='w-8 h-8 rounded-full' />
+                    <img
+                      src={feed.user.avatar || '/avatar.png'}
+                      alt={feed.user.username}
+                      className='w-8 h-8 rounded-full'
+                    />
                     <div className='ml-2'>
                       <span className='text-gray-400 text-sm cursor-default'>{feed.user.username}</span>
                     </div>
@@ -306,6 +310,7 @@ export function TOCHeader({ TOC }: { TOC: () => JSX.Element }) {
   return (
     <div className='lg:hidden'>
       <button
+        type='button'
         onClick={() => setIsOpened(true)}
         className='w-10 h-10 rounded-full flex flex-row items-center justify-center'
       >
@@ -362,7 +367,7 @@ function CommentInput({ id, onRefresh }: { id: string; onRefresh: () => void }) 
       setLocation('/login')
       return
     }
-    client.comment.create(parseInt(id), { content }).then(({ error }) => {
+    client.comment.create(parseInt(id, 10), { content }).then(({ error }) => {
       if (error) {
         setError(errorHumanize(error.value as string))
       } else {
@@ -388,13 +393,17 @@ function CommentInput({ id, onRefresh }: { id: string; onRefresh: () => void }) 
             value={content}
             onChange={e => setContent(e.target.value)}
           />
-          <button className='mt-4 bg-theme text-white px-4 py-2 rounded-full' onClick={submit}>
+          <button type='button' className='mt-4 bg-theme text-white px-4 py-2 rounded-full' onClick={submit}>
             {t('comment.submit')}
           </button>
         </>
       ) : (
         <div className='flex flex-row w-full items-center justify-center space-x-2 py-12'>
-          <button className='mt-2 bg-theme text-white px-4 py-2 rounded-full' onClick={() => setLocation('/login')}>
+          <button
+            type='button'
+            className='mt-2 bg-theme text-white px-4 py-2 rounded-full'
+            onClick={() => setLocation('/login')}
+          >
             {t('login.required')}
           </button>
         </div>
@@ -425,34 +434,32 @@ function Comments({ id }: { id: string }) {
   const ref = useRef('')
   const { t } = useTranslation()
 
-  function loadComments() {
-    client.comment.list(parseInt(id)).then(({ data, error }) => {
+  const loadComments = useCallback(() => {
+    client.comment.list(parseInt(id, 10)).then(({ data, error }) => {
       if (error) {
         setError(error.value as string)
       } else if (data && Array.isArray(data)) {
         setComments(data as any)
       }
     })
-  }
+  }, [id])
   useEffect(() => {
-    if (ref.current == id) return
+    if (ref.current === id) return
     loadComments()
     ref.current = id
-  }, [id])
+  }, [id, loadComments])
   return (
     <>
       {config.get<boolean>('comment.enabled') && (
         <div className='m-2 flex flex-col justify-center items-center'>
           <CommentInput id={id} onRefresh={loadComments} />
           {error && (
-            <>
-              <div className='flex flex-col wauto rounded-2xl bg-w t-primary m-2 p-6 items-center justify-center'>
-                <h1 className='text-xl font-bold t-primary'>{error}</h1>
-                <button className='mt-2 bg-theme text-white px-4 py-2 rounded-full' onClick={loadComments}>
-                  {t('reload')}
-                </button>
-              </div>
-            </>
+            <div className='flex flex-col wauto rounded-2xl bg-w t-primary m-2 p-6 items-center justify-center'>
+              <h1 className='text-xl font-bold t-primary'>{error}</h1>
+              <button type='button' className='mt-2 bg-theme text-white px-4 py-2 rounded-full' onClick={loadComments}>
+                {t('reload')}
+              </button>
+            </div>
           )}
           {comments.length > 0 && (
             <div className='w-full'>
@@ -487,7 +494,7 @@ function CommentItem({ comment, onRefresh }: { comment: Comment; onRefresh: () =
   }
   return (
     <div className='flex flex-row items-start rounded-xl mt-2'>
-      <img src={comment.user.avatar || ''} className='w-8 h-8 rounded-full mt-4' />
+      <img src={comment.user.avatar || ''} alt={comment.user.username} className='w-8 h-8 rounded-full mt-4' />
       <div className='flex flex-col flex-1 w-0 ml-2 bg-w rounded-xl p-4'>
         <div className='flex flex-row'>
           <span className='t-primary text-base font-bold'>{comment.user.username}</span>
@@ -498,11 +505,11 @@ function CommentItem({ comment, onRefresh }: { comment: Comment; onRefresh: () =
         </div>
         <p className='t-primary break-words'>{comment.content}</p>
         <div className='flex flex-row justify-end'>
-          {(profile?.permission || profile?.id == comment.user.id) && (
+          {(profile?.permission || profile?.id === comment.user.id) && (
             <Popup
               arrow={false}
               trigger={
-                <button className='px-2 py bg-secondary rounded-full'>
+                <button type='button' className='px-2 py bg-secondary rounded-full'>
                   <i className='ri-more-fill t-secondary'></i>
                 </button>
               }
@@ -510,6 +517,7 @@ function CommentItem({ comment, onRefresh }: { comment: Comment; onRefresh: () =
             >
               <div className='flex flex-row self-end mr-2'>
                 <button
+                  type='button'
                   onClick={deleteComment}
                   aria-label={t('delete.comment.title')}
                   className='px-2 py bg-secondary rounded-full'
