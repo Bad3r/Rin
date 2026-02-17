@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useRef } from 'react'
+import type { MutableRefObject } from 'react'
 
 interface InputProps {
   autofocus?: boolean
@@ -14,7 +15,7 @@ interface InputProps {
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ autofocus, value, setValue, className, placeholder, id, onSubmit, disabled, type = 'text' }, ref) => {
-    const innerRef = useRef<HTMLInputElement>(null)
+    const innerRef = useRef<HTMLInputElement | null>(null)
 
     useEffect(() => {
       if (autofocus) {
@@ -30,7 +31,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           if (typeof ref === 'function') {
             ref(node)
           } else if (ref) {
-            ref.current = node
+            ;(ref as MutableRefObject<HTMLInputElement | null>).current = node
           }
         }}
         type={type}
