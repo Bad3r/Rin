@@ -183,22 +183,64 @@ export class LegacyRouterAdapter extends Router {
     return { valid: true }
   }
 
+  private createContext(request: Request, env: Env, params: Record<string, string>): Context {
+    const url = new URL(request.url)
+    const context: Context = {
+      request,
+      url,
+      params,
+      query: this.parseQuery(url.searchParams),
+      headers: {},
+      body: null,
+      store: Object.fromEntries(this.appState.entries()),
+      set: {
+        status: 200,
+        headers: new Headers(),
+      },
+      cookie: {},
+      jwt: this.appState.get('jwt'),
+      oauth2: this.appState.get('oauth2'),
+      uid: undefined,
+      admin: false,
+      username: undefined,
+      env,
+    }
+
+    request.headers.forEach((value, key) => {
+      context.headers[key.toLowerCase()] = value
+    })
+
+    return context
+  }
+
+  private async runMiddlewares(context: Context, env: Env, requestId: string): Promise<Response | undefined> {
+    try {
+      for (const middleware of this.middlewares) {
+        const result = await middleware(context, env)
+        if (result instanceof Response) {
+          return result
+        }
+      }
+    } catch (error) {
+      return handleError(error, context, requestId)
+    }
+
+    return undefined
+  }
+
   async handle(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
     const method = request.method
     const pathname = url.pathname
     const requestId = generateRequestId()
 
-    // Handle OPTIONS preflight requests before route matching
+    // Route preflight through the shared middleware chain.
     if (method === 'OPTIONS') {
-      const origin = request.headers.get('origin') || '*'
-      const headers = new Headers()
-      headers.set('Access-Control-Allow-Origin', origin)
-      headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-      headers.set('Access-Control-Allow-Headers', 'content-type, authorization, x-csrf-token')
-      headers.set('Access-Control-Max-Age', '600')
-      headers.set('Access-Control-Allow-Credentials', 'true')
-      return new Response(null, { status: 204, headers })
+      const preflightContext = this.createContext(request, env, {})
+      const preflightResponse = await this.runMiddlewares(preflightContext, env, requestId)
+      if (preflightResponse) {
+        return preflightResponse
+      }
     }
 
     // Find matching route
@@ -221,31 +263,7 @@ export class LegacyRouterAdapter extends Router {
     const { route, params } = match
 
     // Build context
-    const context: Context = {
-      request,
-      url,
-      params,
-      query: this.parseQuery(url.searchParams),
-      headers: {},
-      body: null,
-      store: Object.fromEntries(this.appState.entries()),
-      set: {
-        status: 200,
-        headers: new Headers(),
-      },
-      cookie: {},
-      jwt: this.appState.get('jwt'),
-      oauth2: this.appState.get('oauth2'),
-      uid: undefined,
-      admin: false,
-      username: undefined,
-      env,
-    }
-
-    // Parse headers
-    request.headers.forEach((value, key) => {
-      context.headers[key.toLowerCase()] = value
-    })
+    const context = this.createContext(request, env, params)
 
     // Parse body for POST/PUT/PATCH
     if (['POST', 'PUT', 'PATCH'].includes(method)) {
@@ -269,15 +287,9 @@ export class LegacyRouterAdapter extends Router {
     }
 
     // Run middlewares
-    try {
-      for (const middleware of this.middlewares) {
-        const result = await middleware(context, env)
-        if (result instanceof Response) {
-          return result
-        }
-      }
-    } catch (error) {
-      return handleError(error, context, requestId)
+    const middlewareResponse = await this.runMiddlewares(context, env, requestId)
+    if (middlewareResponse) {
+      return middlewareResponse
     }
 
     // Run handler

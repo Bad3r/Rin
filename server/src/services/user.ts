@@ -88,9 +88,6 @@ export function UserService(router: Router): void {
 
       const { db, anyUser } = store
 
-      console.log('param_state', query.state)
-      console.log('cookie_state', cookie.state.value)
-
       // Verify state to prevent CSRF attacks
       if (query.state !== cookie.state.value) {
         throw new BadRequestError('Invalid state parameter')

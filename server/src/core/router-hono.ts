@@ -17,17 +17,6 @@ interface SchemaValidationResult {
   errors?: string[]
 }
 
-function buildPreflightResponse(request: Request): Response {
-  const origin = request.headers.get('origin') || '*'
-  const headers = new Headers()
-  headers.set('Access-Control-Allow-Origin', origin)
-  headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-  headers.set('Access-Control-Allow-Headers', 'content-type, authorization, x-csrf-token')
-  headers.set('Access-Control-Max-Age', '600')
-  headers.set('Access-Control-Allow-Credentials', 'true')
-  return new Response(null, { status: 204, headers })
-}
-
 function buildNotFoundResponse(request: Request): Response {
   const url = new URL(request.url)
   const requestId = generateRequestId()
@@ -174,9 +163,19 @@ export class HonoRouterAdapter extends Router {
 
   private initializeRootHandlers(): void {
     this.rootState.app.use('*', async (c, next) => {
-      if (c.req.method === 'OPTIONS') {
-        return buildPreflightResponse(c.req.raw)
+      if (c.req.method !== 'OPTIONS') {
+        await next()
+        return
       }
+
+      const request = new Request(c.req.raw)
+      const requestId = generateRequestId()
+      const context = this.createContext(request, c.env, {})
+      const middlewareResult = await this.runMiddlewares(context, c.env, requestId)
+      if (middlewareResult) {
+        return middlewareResult
+      }
+
       await next()
     })
 
@@ -229,36 +228,57 @@ export class HonoRouterAdapter extends Router {
     return this.rootState.app.fetch(request, env)
   }
 
+  private createContext(request: Request, env: Env, params: Record<string, string>): Context {
+    const url = new URL(request.url)
+    const context: Context = {
+      request,
+      url,
+      params,
+      query: parseQuery(url.searchParams),
+      headers: {},
+      body: null,
+      store: Object.fromEntries(this.rootState.appState.entries()),
+      set: {
+        status: 200,
+        headers: new Headers(),
+      },
+      cookie: {},
+      jwt: this.rootState.appState.get('jwt') as Context['jwt'],
+      oauth2: this.rootState.appState.get('oauth2') as Context['oauth2'],
+      uid: undefined,
+      admin: false,
+      username: undefined,
+      env,
+    }
+
+    request.headers.forEach((value, key) => {
+      context.headers[key.toLowerCase()] = value
+    })
+
+    return context
+  }
+
+  private async runMiddlewares(context: Context, env: Env, requestId: string): Promise<Response | undefined> {
+    try {
+      for (const middleware of this.rootState.middlewares) {
+        const result = await middleware(context, env)
+        if (result instanceof Response) {
+          return result
+        }
+      }
+    } catch (error) {
+      return handleError(error, context, requestId)
+    }
+
+    return undefined
+  }
+
   private addRoute(method: string, path: string, handler: Handler, schema?: unknown): this {
     const fullPath = joinPaths(this.prefix, path)
 
     const wrappedHandler = async (request: Request, env: Env, params: Record<string, string>): Promise<Response> => {
-      const url = new URL(request.url)
       const requestId = generateRequestId()
-      const context: Context = {
-        request,
-        url,
-        params,
-        query: parseQuery(url.searchParams),
-        headers: {},
-        body: null,
-        store: Object.fromEntries(this.rootState.appState.entries()),
-        set: {
-          status: 200,
-          headers: new Headers(),
-        },
-        cookie: {},
-        jwt: this.rootState.appState.get('jwt') as Context['jwt'],
-        oauth2: this.rootState.appState.get('oauth2') as Context['oauth2'],
-        uid: undefined,
-        admin: false,
-        username: undefined,
-        env,
-      }
-
-      request.headers.forEach((value, key) => {
-        context.headers[key.toLowerCase()] = value
-      })
+      const context = this.createContext(request, env, params)
 
       if (['POST', 'PUT', 'PATCH'].includes(request.method)) {
         try {
@@ -278,15 +298,9 @@ export class HonoRouterAdapter extends Router {
         }
       }
 
-      try {
-        for (const middleware of this.rootState.middlewares) {
-          const result = await middleware(context, env)
-          if (result instanceof Response) {
-            return result
-          }
-        }
-      } catch (error) {
-        return handleError(error, context, requestId)
+      const middlewareResult = await this.runMiddlewares(context, env, requestId)
+      if (middlewareResult) {
+        return middlewareResult
       }
 
       try {

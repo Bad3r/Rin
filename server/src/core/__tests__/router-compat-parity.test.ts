@@ -72,6 +72,22 @@ for (const impl of ROUTER_IMPLS) {
       expect(response.headers.get('Access-Control-Allow-Credentials')).toBe('true')
     })
 
+    it('routes router-level OPTIONS through router middleware', async () => {
+      const rawApp = createRouter(env)
+      rawApp.use(async ctx => {
+        if (ctx.request.method === 'OPTIONS') {
+          ctx.set.headers.set('x-preflight-source', 'middleware')
+          return new Response(null, { status: 204, headers: ctx.set.headers })
+        }
+        return undefined
+      })
+
+      const response = await rawApp.handle(new Request('http://localhost/unknown', { method: 'OPTIONS' }), env)
+
+      expect(response.status).toBe(204)
+      expect(response.headers.get('x-preflight-source')).toBe('middleware')
+    })
+
     it('keeps non-OPTIONS CORS middleware header contract', async () => {
       app.get('/cors', () => ({ ok: true }))
 
