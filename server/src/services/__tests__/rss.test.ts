@@ -184,13 +184,22 @@ describe('RSSService', () => {
     })
 
     it('should fall back to generation when S3 returns 404', async () => {
+      const envWithS3 = createMockEnv({
+        S3_ACCESS_HOST: 'https://test-image-domain.com',
+        S3_BUCKET: 'test-bucket',
+      })
+      const appWithS3 = createBaseApp(envWithS3)
+      appWithS3.state('db', db)
+      appWithS3.state('env', envWithS3)
+      RSSService(appWithS3)
+
       // Mock fetch to return 404
       const originalFetch = global.fetch
       global.fetch = async () => new Response('Not Found', { status: 404 })
 
       try {
         const request = new Request('http://localhost/rss.xml')
-        const response = await app.handle(request, env)
+        const response = await appWithS3.handle(request, envWithS3)
 
         expect(response.status).toBe(200)
       } finally {
@@ -199,6 +208,15 @@ describe('RSSService', () => {
     })
 
     it('should handle S3 fetch errors gracefully', async () => {
+      const envWithS3 = createMockEnv({
+        S3_ACCESS_HOST: 'https://test-image-domain.com',
+        S3_BUCKET: 'test-bucket',
+      })
+      const appWithS3 = createBaseApp(envWithS3)
+      appWithS3.state('db', db)
+      appWithS3.state('env', envWithS3)
+      RSSService(appWithS3)
+
       // Mock fetch to throw error
       const originalFetch = global.fetch
       global.fetch = async () => {
@@ -207,7 +225,7 @@ describe('RSSService', () => {
 
       try {
         const request = new Request('http://localhost/rss.xml')
-        const response = await app.handle(request, env)
+        const response = await appWithS3.handle(request, envWithS3)
 
         // Should still generate feed
         expect(response.status).toBe(200)
@@ -276,28 +294,29 @@ describe('rssCrontab', () => {
   })
 
   it('should generate and save RSS feeds to S3', async () => {
-    // Mock S3 putObject
-    const _putCalls: any[] = []
-    const _originalModule = await import('../rss')
+    let thrown: unknown
 
-    // Since we can't easily mock the module, we'll check that it doesn't throw
     try {
       await rssCrontab(env, db)
-    } catch (e) {
-      // Expected to fail since S3 is not configured in test env
-      console.log('rssCrontab error (expected):', e)
+    } catch (error) {
+      thrown = error
     }
+
+    expect(thrown).toBeUndefined()
   })
 
   it('should handle missing feeds gracefully', async () => {
     // Clear all feeds
     sqlite.exec('DELETE FROM feeds')
 
+    let thrown: unknown
+
     try {
       await rssCrontab(env, db)
-    } catch (e) {
-      // Should not throw
-      console.log('Error:', e)
+    } catch (error) {
+      thrown = error
     }
+
+    expect(thrown).toBeUndefined()
   })
 })

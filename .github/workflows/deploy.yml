@@ -44,8 +44,10 @@ jobs:
 
       - name: Download artifacts from URL
         if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          ARTIFACT_URL: ${{ github.event.inputs.artifact_url }}
         run: |
-          URL="${{ github.event.inputs.artifact_url }}"
+          URL="$ARTIFACT_URL"
           echo "Downloading from: $URL"
 
           mkdir -p ./artifacts
@@ -93,6 +95,8 @@ jobs:
   deploy:
     needs: prepare
     runs-on: ubuntu-latest
+    outputs:
+      deployed_url: ${{ steps.deploy.outputs.url }}
     environment:
       name: ${{ needs.prepare.outputs.is_production == 'true' && 'production' || 'preview' }}
       url: ${{ steps.deploy.outputs.url }}
@@ -227,3 +231,27 @@ jobs:
                 body: body
               });
             }
+
+  remote-integration:
+    name: Remote Integration (Deploy Gate)
+    needs: [prepare, deploy]
+    if: ${{ vars.ENABLE_REMOTE_INTEGRATION_TESTS == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run remote integration tests
+        env:
+          ENABLE_REMOTE_INTEGRATION_TESTS: 'true'
+          RIN_REMOTE_BASE_URL: ${{ needs.deploy.outputs.deployed_url }}
+          RIN_REMOTE_AUTH_TOKEN: ${{ secrets.RIN_REMOTE_AUTH_TOKEN }}
+        run: bun run test:remote

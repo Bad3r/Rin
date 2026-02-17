@@ -12,8 +12,13 @@
     "db:gen": "bun drizzle-kit generate",
     "preview": "wrangler pages dev dist --compatibility-date=2023-12-20",
     "migrate:visits": "bun run scripts/migrate-visits.ts",
-    "test": "bun test",
-    "test:coverage": "bun test --coverage",
+    "test": "bun run test:ci",
+    "test:unit": "bun test --preload ./tests/helpers/no-network.ts src tests/security tests/unit --pass-with-no-tests",
+    "test:integration": "bun test --preload ./tests/helpers/no-network.ts tests/integration --pass-with-no-tests",
+    "test:remote": "bun run scripts/run-remote-tests.ts",
+    "test:ci": "bun run test:unit && bun run test:integration",
+    "test:coverage": "bun run test:coverage:ci",
+    "test:coverage:ci": "bun test --preload ./tests/helpers/no-network.ts --coverage src tests/security tests/unit tests/integration --pass-with-no-tests",
     "check": "tsc --noEmit"
   },
   "devDependencies": {
