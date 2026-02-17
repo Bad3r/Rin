@@ -1,22 +1,22 @@
-import { drizzle } from 'drizzle-orm/bun-sqlite';
-import { Database } from 'bun:sqlite';
-import * as schema from '../../src/db/schema';
+import { Database } from 'bun:sqlite'
+import { drizzle } from 'drizzle-orm/bun-sqlite'
+import * as schema from '../../src/db/schema'
 
 /**
  * Create an in-memory test database with Drizzle ORM
- * 
+ *
  * IMPORTANT: This creates a real SQLite in-memory database that Drizzle ORM can use.
  * The key is that we create tables via raw SQL but use Drizzle for queries.
  */
 export function createMockDB() {
-    const sqlite = new Database(':memory:');
-    
-    // Initialize Drizzle with the database
-    const db = drizzle(sqlite, { schema });
-    
-    // Create all tables using raw SQL
-    // IMPORTANT: Table names must match the schema.ts definitions exactly
-    sqlite.exec(`
+  const sqlite = new Database(':memory:')
+
+  // Initialize Drizzle with the database
+  const db = drizzle(sqlite, { schema })
+
+  // Create all tables using raw SQL
+  // IMPORTANT: Table names must match the schema.ts definitions exactly
+  sqlite.exec(`
         -- Users table
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -141,42 +141,42 @@ export function createMockDB() {
 
         CREATE INDEX IF NOT EXISTS idx_cache_type ON cache(type);
         CREATE INDEX IF NOT EXISTS idx_cache_key ON cache(key);
-    `);
+    `)
 
-    return { db, sqlite };
+  return { db, sqlite }
 }
 
 /**
  * Create a mock environment for testing
  */
 export function createMockEnv(overrides: Partial<Env> = {}): Env {
-    return {
-        DB: {} as D1Database,
-        S3_FOLDER: 'images/',
-        S3_CACHE_FOLDER: 'cache/',
-        S3_REGION: 'auto',
-        S3_ENDPOINT: 'https://test.r2.cloudflarestorage.com',
-        S3_ACCESS_HOST: 'https://test-image-domain.com',
-        S3_BUCKET: 'test-bucket',
-        S3_FORCE_PATH_STYLE: 'false',
-        WEBHOOK_URL: '',
-        RSS_TITLE: 'Test Blog',
-        RSS_DESCRIPTION: 'Test Environment',
-        RIN_GITHUB_CLIENT_ID: 'test-client-id',
-        RIN_GITHUB_CLIENT_SECRET: 'test-client-secret',
-        JWT_SECRET: 'test-jwt-secret',
-        S3_ACCESS_KEY_ID: 'test-access-key',
-        S3_SECRET_ACCESS_KEY: 'test-secret-key',
-        CACHE_STORAGE_MODE: 'database',
-        ...overrides,
-    } as unknown as Env;
+  return {
+    DB: {} as D1Database,
+    S3_FOLDER: 'images/',
+    S3_CACHE_FOLDER: 'cache/',
+    S3_REGION: 'auto',
+    S3_ENDPOINT: 'https://test.r2.cloudflarestorage.com',
+    S3_ACCESS_HOST: 'https://test-image-domain.com',
+    S3_BUCKET: 'test-bucket',
+    S3_FORCE_PATH_STYLE: 'false',
+    WEBHOOK_URL: '',
+    RSS_TITLE: 'Test Blog',
+    RSS_DESCRIPTION: 'Test Environment',
+    RIN_GITHUB_CLIENT_ID: 'test-client-id',
+    RIN_GITHUB_CLIENT_SECRET: 'test-client-secret',
+    JWT_SECRET: 'test-jwt-secret',
+    S3_ACCESS_KEY_ID: 'test-access-key',
+    S3_SECRET_ACCESS_KEY: 'test-secret-key',
+    CACHE_STORAGE_MODE: 'database',
+    ...overrides,
+  } as unknown as Env
 }
 
 /**
  * Clean up test database
  */
 export function cleanupTestDB(sqlite: Database) {
-    sqlite.close();
+  sqlite.close()
 }
 
 /**
@@ -184,10 +184,10 @@ export function cleanupTestDB(sqlite: Database) {
  * Only for initial user creation, all other data should be created via APIs
  */
 export function createTestUser(sqlite: Database) {
-    sqlite.exec(`
+  sqlite.exec(`
         INSERT INTO users (id, username, avatar, openid, permission) 
         VALUES (1, 'testuser', 'avatar.png', 'gh_test', 1)
-    `);
+    `)
 }
 
 /**
@@ -195,39 +195,39 @@ export function createTestUser(sqlite: Database) {
  * Creates a standard set of test data for testing relationships
  */
 export function seedTestData(sqlite: Database) {
-    // Insert test users
-    sqlite.exec(`
+  // Insert test users
+  sqlite.exec(`
         INSERT INTO users (id, username, avatar, permission, openid) VALUES 
             (1, 'testuser1', 'avatar1.png', 0, 'gh_1'),
             (2, 'testuser2', 'avatar2.png', 1, 'gh_2')
-    `);
+    `)
 
-    // Insert test feeds
-    sqlite.exec(`
+  // Insert test feeds
+  sqlite.exec(`
         INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES 
             (1, 'Test Feed 1', 'Content 1', 1, 0, 1),
             (2, 'Test Feed 2', 'Content 2', 1, 0, 1)
-    `);
+    `)
 
-    // Insert test tags
-    sqlite.exec(`
+  // Insert test tags
+  sqlite.exec(`
         INSERT INTO hashtags (id, name) VALUES 
             (1, 'test'),
             (2, 'integration')
-    `);
+    `)
 
-    // Insert feed-tag relationships
-    sqlite.exec(`
+  // Insert feed-tag relationships
+  sqlite.exec(`
         INSERT INTO feed_hashtags (feed_id, hashtag_id) VALUES 
             (1, 1),
             (1, 2),
             (2, 1)
-    `);
+    `)
 
-    // Insert test comments
-    sqlite.exec(`
+  // Insert test comments
+  sqlite.exec(`
         INSERT INTO comments (id, feed_id, user_id, content, created_at) VALUES 
             (1, 1, 2, 'Test comment 1', unixepoch()),
             (2, 1, 1, 'Test comment 2', unixepoch())
-    `);
+    `)
 }

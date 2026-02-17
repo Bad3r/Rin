@@ -29,7 +29,7 @@
     "format:check": "treefmt --fail-on-change",
     "format:write": "treefmt",
     "lint:actions": "actionlint -shellcheck= -ignore 'the runner of \".*\" action is too old to run on GitHub Actions'",
-    "lint:biome": "biome lint --files-ignore-unknown=true client server packages cli docs scripts package.json turbo.json biome.json",
+    "lint:biome": "bunx @biomejs/biome@2.4.0 lint --files-ignore-unknown=true client server packages cli docs scripts package.json turbo.json biome.json",
     "lint:yaml": "yamllint -s -c .yamllint.yaml .",
     "lint": "bun run lint:actions && bun run lint:yaml && bun run lint:biome",
     "release": "bun cli/bin/rin.ts release"

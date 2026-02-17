@@ -1,17 +1,17 @@
-import i18n from "i18next"
+import i18n from 'i18next'
+import Backend from 'i18next-http-backend'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import Backend from 'i18next-http-backend';
-import { initReactI18next } from "react-i18next"
+import { initReactI18next } from 'react-i18next'
 import Modal from 'react-modal'
-import { createClient } from './api/client'
 import App from './App'
+import { createClient } from './api/client'
 import './index.css'
 import './components.css'
-import { listenSystemMode } from './utils/darkModeUtils'
-import LanguageDetector from 'i18next-browser-languagedetector';
+import LanguageDetector from 'i18next-browser-languagedetector'
 import { GlobalErrorBoundary } from './components/error-boundary.tsx'
 import { endpoint, oauth_url } from './config'
+import { listenSystemMode } from './utils/darkModeUtils'
 export { endpoint, oauth_url }
 export const client = createClient(endpoint)
 listenSystemMode()
@@ -26,11 +26,11 @@ i18n
     // the translations
     // (tip move them in a JSON file and import them,
     // or even better, manage them via a UI: https://react.i18next.com/guides/multiple-translation-files#manage-your-translations-with-a-management-gui)
-    fallbackLng: "en",
+    fallbackLng: 'en',
     interpolation: {
-      escapeValue: false // react already safes from xss => https://www.i18next.com/translation-function/interpolation#unescape
-    }
-  });
+      escapeValue: false, // react already safes from xss => https://www.i18next.com/translation-function/interpolation#unescape
+    },
+  })
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <GlobalErrorBoundary>
@@ -38,4 +38,4 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </GlobalErrorBoundary>
   </React.StrictMode>
 )
-Modal.setAppElement('#root');
+Modal.setAppElement('#root')

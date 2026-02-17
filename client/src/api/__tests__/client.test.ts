@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createClient } from '../client'
 
 const api = createClient('http://localhost')
@@ -32,10 +32,7 @@ describe('API Client', () => {
       const result = await api.feed.list({ page: 1, limit: 10 })
 
       expect(result.data).toEqual(mockResponse)
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/feed?page=1&limit=10'),
-        expect.any(Object)
-      )
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/api/feed?page=1&limit=10'), expect.any(Object))
     })
 
     it('should handle feed list error', async () => {
@@ -65,10 +62,7 @@ describe('API Client', () => {
       const result = await api.feed.get(1)
 
       expect(result.data).toEqual(mockResponse)
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost/api/feed/1',
-        expect.any(Object)
-      )
+      expect(mockFetch).toHaveBeenCalledWith('http://localhost/api/feed/1', expect.any(Object))
     })
 
     it('should create feed', async () => {
@@ -130,10 +124,7 @@ describe('API Client', () => {
       const result = await api.tag.get('tag1')
 
       expect(result.data).toEqual(mockResponse)
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost/api/tag/tag1',
-        expect.any(Object)
-      )
+      expect(mockFetch).toHaveBeenCalledWith('http://localhost/api/tag/tag1', expect.any(Object))
     })
   })
 
@@ -153,10 +144,7 @@ describe('API Client', () => {
       const result = await api.comment.list(1)
 
       expect(result.data).toEqual(mockResponse)
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost/api/comment/1',
-        expect.any(Object)
-      )
+      expect(mockFetch).toHaveBeenCalledWith('http://localhost/api/comment/1', expect.any(Object))
     })
 
     it('should create comment', async () => {
@@ -281,7 +269,9 @@ describe('API Client', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         headers: new Map([['content-type', 'application/json']]),
-        json: async () => { throw new Error('Invalid JSON') },
+        json: async () => {
+          throw new Error('Invalid JSON')
+        },
         text: async () => 'Invalid JSON',
       })
 

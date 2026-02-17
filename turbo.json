@@ -14,8 +14,8 @@
       "dependsOn": ["^g"]
     },
     "g": {
-        "cache": false,
-        "dependsOn": ["^db:gen"]
+      "cache": false,
+      "dependsOn": ["^db:gen"]
     },
     "db:gen": {
       "cache": false

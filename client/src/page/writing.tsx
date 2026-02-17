@@ -1,20 +1,20 @@
-import i18n from 'i18next';
-import _ from 'lodash';
-import {Calendar} from 'primereact/calendar';
-import 'primereact/resources/primereact.css';
-import 'primereact/resources/themes/lara-light-indigo/theme.css';
-import {useCallback, useEffect, useState} from "react";
-import {Helmet} from "react-helmet";
-import {useTranslation} from "react-i18next";
-import Loading from 'react-loading';
-import {ShowAlertType, useAlert} from '../components/dialog';
-import {Checkbox, Input} from "../components/input";
-import {client} from "../main";
-import {Cache} from '../utils/cache';
-import {useSiteConfig} from "../hooks/useSiteConfig";
-import {siteName} from "../utils/constants";
-import mermaid from 'mermaid';
-import { MarkdownEditor } from '../components/markdown_editor';
+import i18n from 'i18next'
+import _ from 'lodash'
+import { Calendar } from 'primereact/calendar'
+import 'primereact/resources/primereact.css'
+import 'primereact/resources/themes/lara-light-indigo/theme.css'
+import mermaid from 'mermaid'
+import { useCallback, useEffect, useState } from 'react'
+import { Helmet } from 'react-helmet'
+import { useTranslation } from 'react-i18next'
+import Loading from 'react-loading'
+import { type ShowAlertType, useAlert } from '../components/dialog'
+import { Checkbox, Input } from '../components/input'
+import { MarkdownEditor } from '../components/markdown_editor'
+import { useSiteConfig } from '../hooks/useSiteConfig'
+import { client } from '../main'
+import { Cache } from '../utils/cache'
+import { siteName } from '../utils/constants'
 
 async function publish({
   title,
@@ -26,43 +26,41 @@ async function publish({
   draft,
   createdAt,
   onCompleted,
-  showAlert
+  showAlert,
 }: {
-  title: string;
-  listed: boolean;
-  content: string;
-  summary: string;
-  tags: string[];
-  draft: boolean;
-  alias?: string;
-  createdAt?: Date;
-  onCompleted?: () => void;
-  showAlert: ShowAlertType;
+  title: string
+  listed: boolean
+  content: string
+  summary: string
+  tags: string[]
+  draft: boolean
+  alias?: string
+  createdAt?: Date
+  onCompleted?: () => void
+  showAlert: ShowAlertType
 }) {
   const t = i18n.t
-  const { data, error } = await client.feed.create(
-    {
-      title,
-      alias,
-      content,
-      summary,
-      tags,
-      listed,
-      draft,
-      createdAt: createdAt?.toISOString(),
-    }
-  );
+  const { data, error } = await client.feed.create({
+    title,
+    alias,
+    content,
+    summary,
+    tags,
+    listed,
+    draft,
+    createdAt: createdAt?.toISOString(),
+  })
   if (onCompleted) {
-    onCompleted();
+    onCompleted()
   }
   if (error) {
-    showAlert(error.value as string);
+    showAlert(error.value as string)
   }
   if (data) {
-    showAlert(t("publish.success"), () => {
-      Cache.with().clear();
-      window.location.href = "/feed/" + data.insertedId;
-    });
+    showAlert(t('publish.success'), () => {
+      Cache.with().clear()
+      window.location.href = `/feed/${data.insertedId}`
+    })
   }
 }
 
@@ -77,69 +75,66 @@ async function update({
   draft,
   createdAt,
   onCompleted,
-  showAlert
+  showAlert,
 }: {
-  id: number;
-  listed: boolean;
-  title?: string;
-  alias?: string;
-  content?: string;
-  summary?: string;
-  tags?: string[];
-  draft?: boolean;
-  createdAt?: Date;
-  onCompleted?: () => void;
-  showAlert: ShowAlertType;
+  id: number
+  listed: boolean
+  title?: string
+  alias?: string
+  content?: string
+  summary?: string
+  tags?: string[]
+  draft?: boolean
+  createdAt?: Date
+  onCompleted?: () => void
+  showAlert: ShowAlertType
 }) {
   const t = i18n.t
-  const { error } = await client.feed.update(
-    id,
-    {
-      title,
-      alias,
-      content,
-      summary,
-      tags,
-      listed,
-      draft,
-      createdAt: createdAt?.toISOString(),
-    }
-  );
+  const { error } = await client.feed.update(id, {
+    title,
+    alias,
+    content,
+    summary,
+    tags,
+    listed,
+    draft,
+    createdAt: createdAt?.toISOString(),
+  })
   if (onCompleted) {
-    onCompleted();
+    onCompleted()
   }
   if (error) {
-    showAlert(error.value as string);
+    showAlert(error.value as string)
   } else {
-    showAlert(t("update.success"), () => {
-      Cache.with(id).clear();
-      window.location.href = "/feed/" + id;
-    });
+    showAlert(t('update.success'), () => {
+      Cache.with(id).clear()
+      window.location.href = `/feed/${id}`
+    })
   }
 }
 
 // 写作页面
 export function WritingPage({ id }: { id?: number }) {
-  const { t } = useTranslation();
-  const siteConfig = useSiteConfig();
-  const cache = Cache.with(id);
-  const [title, setTitle] = cache.useCache("title", "");
-  const [summary, setSummary] = cache.useCache("summary", "");
-  const [tags, setTags] = cache.useCache("tags", "");
-  const [alias, setAlias] = cache.useCache("alias", "");
-  const [draft, setDraft] = useState(false);
-  const [listed, setListed] = useState(true);
-  const [content, setContent] = cache.useCache("content", "");
-  const [createdAt, setCreatedAt] = useState<Date | undefined>(new Date());
+  const { t } = useTranslation()
+  const siteConfig = useSiteConfig()
+  const cache = Cache.with(id)
+  const [title, setTitle] = cache.useCache('title', '')
+  const [summary, setSummary] = cache.useCache('summary', '')
+  const [tags, setTags] = cache.useCache('tags', '')
+  const [alias, setAlias] = cache.useCache('alias', '')
+  const [draft, setDraft] = useState(false)
+  const [listed, setListed] = useState(true)
+  const [content, setContent] = cache.useCache('content', '')
+  const [createdAt, setCreatedAt] = useState<Date | undefined>(new Date())
   const [publishing, setPublishing] = useState(false)
   const { showAlert, AlertUI } = useAlert()
   function publishButton() {
-    if (publishing) return;
+    if (publishing) return
     const tagsplit =
       tags
-        .split("#")
-        .filter((tag) => tag !== "")
-        .map((tag) => tag.trim()) || [];
+        .split('#')
+        .filter(tag => tag !== '')
+        .map(tag => tag.trim()) || []
     if (id !== undefined) {
       setPublishing(true)
       update({
@@ -155,16 +150,16 @@ export function WritingPage({ id }: { id?: number }) {
         onCompleted: () => {
           setPublishing(false)
         },
-        showAlert
-      });
+        showAlert,
+      })
     } else {
       if (!title) {
-        showAlert(t("title_empty"))
-        return;
+        showAlert(t('title_empty'))
+        return
       }
       if (!content) {
-        showAlert(t("content.empty"))
-        return;
+        showAlert(t('content.empty'))
+        return
       }
       setPublishing(true)
       publish({
@@ -179,118 +174,89 @@ export function WritingPage({ id }: { id?: number }) {
         onCompleted: () => {
           setPublishing(false)
         },
-        showAlert
-      });
+        showAlert,
+      })
     }
   }
 
   useEffect(() => {
     if (id) {
-      client.feed
-        .get(id)
-        .then(({ data }) => {
-          if (data) {
-            if (title == "" && data.title) setTitle(data.title);
-            if (tags == "" && data.hashtags)
-              setTags(data.hashtags.map(({ name }: {name: string}) => `#${name}`).join(" "));
-            if (alias == "" && (data as any).alias) setAlias((data as any).alias);
-            if (content == "") setContent(data.content);
-            if (summary == "") setSummary((data as any).summary || "");
-            setListed((data as any).listed === 1);
-            setDraft((data as any).draft === 1);
-            setCreatedAt(new Date(data.createdAt));
-          }
-        });
+      client.feed.get(id).then(({ data }) => {
+        if (data) {
+          if (title === '' && data.title) setTitle(data.title)
+          if (tags === '' && data.hashtags)
+            setTags(data.hashtags.map(({ name }: { name: string }) => `#${name}`).join(' '))
+          if (alias === '' && (data as any).alias) setAlias((data as any).alias)
+          if (content === '') setContent(data.content)
+          if (summary === '') setSummary((data as any).summary || '')
+          setListed((data as any).listed === 1)
+          setDraft((data as any).draft === 1)
+          setCreatedAt(new Date(data.createdAt))
+        }
+      })
     }
-  }, []);
+  }, [alias, content, id, setAlias, setContent, setSummary, setTags, setTitle, summary, tags, title])
   const debouncedUpdate = useCallback(
     _.debounce(() => {
       mermaid.initialize({
         startOnLoad: false,
-        theme: "default",
-      });
-      mermaid.run({
-        suppressErrors: true,
-        nodes: document.querySelectorAll("pre.mermaid_default")
-      }).then(()=>{
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: "dark",
-        });
-        mermaid.run({
-          suppressErrors: true,
-          nodes: document.querySelectorAll("pre.mermaid_dark")
-        });
+        theme: 'default',
       })
+      mermaid
+        .run({
+          suppressErrors: true,
+          nodes: document.querySelectorAll('pre.mermaid_default'),
+        })
+        .then(() => {
+          mermaid.initialize({
+            startOnLoad: false,
+            theme: 'dark',
+          })
+          mermaid.run({
+            suppressErrors: true,
+            nodes: document.querySelectorAll('pre.mermaid_dark'),
+          })
+        })
     }, 100),
     []
-  );
+  )
   useEffect(() => {
-    debouncedUpdate();
-  }, [content, debouncedUpdate]);
+    debouncedUpdate()
+  }, [debouncedUpdate])
   function MetaInput({ className }: { className?: string }) {
     return (
-      <>
-        <div className={className}>
-          <Input
-            id={id}
-            value={title}
-            setValue={setTitle}
-            placeholder={t("title")}
+      <div className={className}>
+        <Input id={id} value={title} setValue={setTitle} placeholder={t('title')} />
+        <Input id={id} value={summary} setValue={setSummary} placeholder={t('summary')} className='mt-4' />
+        <Input id={id} value={tags} setValue={setTags} placeholder={t('tags')} className='mt-4' />
+        <Input id={id} value={alias} setValue={setAlias} placeholder={t('alias')} className='mt-4' />
+        <button
+          type='button'
+          className='select-none flex flex-row justify-between items-center mt-6 mb-2 px-4 w-full'
+          onClick={() => setDraft(!draft)}
+        >
+          <p>{t('visible.self_only')}</p>
+          <Checkbox id='draft' value={draft} setValue={setDraft} placeholder={t('draft')} />
+        </button>
+        <button
+          type='button'
+          className='select-none flex flex-row justify-between items-center mt-6 mb-2 px-4 w-full'
+          onClick={() => setListed(!listed)}
+        >
+          <p>{t('listed')}</p>
+          <Checkbox id='listed' value={listed} setValue={setListed} placeholder={t('listed')} />
+        </button>
+        <div className='select-none flex flex-row justify-between items-center mt-4 mb-2 pl-4'>
+          <p className='break-keep mr-2'>{t('created_at')}</p>
+          <Calendar
+            value={createdAt}
+            onChange={e => setCreatedAt(e.value || undefined)}
+            showTime
+            touchUI
+            hourFormat='24'
           />
-          <Input
-            id={id}
-            value={summary}
-            setValue={setSummary}
-            placeholder={t("summary")}
-            className="mt-4"
-          />
-          <Input
-            id={id}
-            value={tags}
-            setValue={setTags}
-            placeholder={t("tags")}
-            className="mt-4"
-          />
-          <Input
-            id={id}
-            value={alias}
-            setValue={setAlias}
-            placeholder={t("alias")}
-            className="mt-4"
-          />
-          <div
-            className="select-none flex flex-row justify-between items-center mt-6 mb-2 px-4"
-            onClick={() => setDraft(!draft)}
-          >
-            <p>{t('visible.self_only')}</p>
-            <Checkbox
-              id="draft"
-              value={draft}
-              setValue={setDraft}
-              placeholder={t('draft')}
-            />
-          </div>
-          <div
-            className="select-none flex flex-row justify-between items-center mt-6 mb-2 px-4"
-            onClick={() => setListed(!listed)}
-          >
-            <p>{t('listed')}</p>
-            <Checkbox
-              id="listed"
-              value={listed}
-              setValue={setListed}
-              placeholder={t('listed')}
-            />
-          </div>
-          <div className="select-none flex flex-row justify-between items-center mt-4 mb-2 pl-4">
-            <p className="break-keep mr-2">
-              {t('created_at')}
-            </p>
-            <Calendar value={createdAt} onChange={(e) => setCreatedAt(e.value || undefined)} showTime touchUI hourFormat="24" />
-          </div>
         </div>
-      </>
+      </div>
     )
   }
 
@@ -298,52 +264,44 @@ export function WritingPage({ id }: { id?: number }) {
     <>
       <Helmet>
         <title>{`${t('writing')} - ${siteConfig.name}`}</title>
-        <meta property="og:site_name" content={siteName} />
-        <meta property="og:title" content={t('writing')} />
-        <meta property="og:image" content={siteConfig.avatar} />
-        <meta property="og:type" content="article" />
-        <meta property="og:url" content={document.URL} />
+        <meta property='og:site_name' content={siteName} />
+        <meta property='og:title' content={t('writing')} />
+        <meta property='og:image' content={siteConfig.avatar} />
+        <meta property='og:type' content='article' />
+        <meta property='og:url' content={document.URL} />
       </Helmet>
-      <div className="grid grid-cols-1 md:grid-cols-3 t-primary mt-2">
-        <div className="col-span-2 pb-8">
-          <div className="bg-w rounded-2xl shadow-xl shadow-light p-4">
-            {MetaInput({ className: "visible md:hidden mb-8" })}
+      <div className='grid grid-cols-1 md:grid-cols-3 t-primary mt-2'>
+        <div className='col-span-2 pb-8'>
+          <div className='bg-w rounded-2xl shadow-xl shadow-light p-4'>
+            {MetaInput({ className: 'visible md:hidden mb-8' })}
             <MarkdownEditor content={content} setContent={setContent} height='600px' />
           </div>
-          <div className="visible md:hidden flex flex-row justify-center mt-8">
+          <div className='visible md:hidden flex flex-row justify-center mt-8'>
             <button
+              type='button'
               onClick={publishButton}
-              className="basis-1/2 bg-theme text-white py-4 rounded-full shadow-xl shadow-light flex flex-row justify-center items-center space-x-2"
+              className='basis-1/2 bg-theme text-white py-4 rounded-full shadow-xl shadow-light flex flex-row justify-center items-center space-x-2'
             >
-              {publishing &&
-                <Loading type="spin" height={16} width={16} />
-              }
-              <span>
-                {t('publish.title')}
-              </span>
+              {publishing && <Loading type='spin' height={16} width={16} />}
+              <span>{t('publish.title')}</span>
             </button>
           </div>
         </div>
-        <div className="hidden md:visible max-w-96 md:flex flex-col">
-          {MetaInput({ className: "bg-w rounded-2xl shadow-xl shadow-light p-4 mx-8" })}
-          <div className="flex flex-row justify-center mt-8">
+        <div className='hidden md:visible max-w-96 md:flex flex-col'>
+          {MetaInput({ className: 'bg-w rounded-2xl shadow-xl shadow-light p-4 mx-8' })}
+          <div className='flex flex-row justify-center mt-8'>
             <button
+              type='button'
               onClick={publishButton}
-              className="basis-1/2 bg-theme text-white py-4 rounded-full shadow-xl shadow-light flex flex-row justify-center items-center space-x-2"
+              className='basis-1/2 bg-theme text-white py-4 rounded-full shadow-xl shadow-light flex flex-row justify-center items-center space-x-2'
             >
-              {publishing &&
-                <Loading type="spin" height={16} width={16} />
-              }
-              <span>
-                {t('publish.title')}
-              </span>
+              {publishing && <Loading type='spin' height={16} width={16} />}
+              <span>{t('publish.title')}</span>
             </button>
           </div>
         </div>
       </div>
       <AlertUI />
     </>
-
-  );
+  )
 }
-
