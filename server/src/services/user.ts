@@ -253,6 +253,12 @@ export function UserService(router: Router): void {
         secure: true,
         sameSite: 'lax',
       })
+      cookie.auth_token.set({
+        value: '',
+        expires: new Date(0),
+        path: '/',
+        sameSite: 'lax',
+      })
       return { success: true }
     })
 

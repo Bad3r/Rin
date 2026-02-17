@@ -332,11 +332,21 @@ describe('UserService', () => {
   })
 
   describe('POST /user/logout - Logout', () => {
-    it('should clear token cookie', async () => {
+    it('should clear token cookie via API client', async () => {
       const result = await api.user.logout()
 
       expect(result.error).toBeUndefined()
       expect(result.data).toBeDefined()
+    })
+
+    it('should clear both auth cookies in response headers', async () => {
+      const response = await app.handle(new Request('http://localhost/user/logout', { method: 'POST' }), env)
+
+      expect(response.status).toBe(200)
+      const setCookie = response.headers.get('Set-Cookie')
+      expect(setCookie).toContain('token=')
+      expect(setCookie).toContain('auth_token=')
+      expect(setCookie).toContain('Expires=')
     })
   })
 })
