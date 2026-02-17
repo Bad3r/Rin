@@ -1,11 +1,11 @@
-import { forwardRef } from 'react'
+import { forwardRef, useEffect, useRef } from 'react'
 
 interface InputProps {
   autofocus?: boolean
   value: string
   className?: string
   placeholder: string
-  id?: number
+  id?: string | number
   setValue: (v: string) => void
   onSubmit?: () => void
   disabled?: boolean
@@ -13,21 +13,20 @@ interface InputProps {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ autofocus, value, setValue, className, placeholder, onSubmit, disabled, type = 'text' }, ref) => {
+  ({ autofocus, value, setValue, className, placeholder, id, onSubmit, disabled, type = 'text' }, ref) => {
     const innerRef = useRef<HTMLInputElement | null>(null)
     useEffect(() => {
       if (autofocus) innerRef.current?.focus()
     }, [autofocus])
+
     return (
       <input
+        id={id !== undefined ? String(id) : undefined}
         ref={node => {
           innerRef.current = node
           if (typeof ref === 'function') ref(node)
-          else if (ref) (ref as React.MutableRefObject<HTMLInputElement | null>).current = node
+          else if (ref) ref.current = node
         }}
-    return (
-      <input
-        ref={ref}
         type={type}
         disabled={disabled}
         placeholder={placeholder}
