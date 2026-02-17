@@ -41,6 +41,8 @@ binding = "AI"
 [placement]
 mode = "smart"
 
+# CI deploy does not use these [env.*] stanzas. Use `bun run deploy`
+# (scripts/deploy-cf.ts) for preview/production deployments.
 [env.production]
 name = "rin-server"
 

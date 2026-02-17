@@ -467,6 +467,7 @@ async function migrateVisitsToHLL(typ: string, dbName: string) {
     let processed = 0
     for (const feedId of feedIds) {
       try {
+        // feedIds are parsed to integers and NaN-filtered in parseWranglerFeedIds.
         const { stdout: ipsResult } =
           await $`bunx wrangler d1 execute ${dbName} --${typ} --json --command="SELECT ip FROM visits WHERE feed_id = ${feedId}"`.quiet()
         const ips = parseWranglerIPs(ipsResult.toString())
