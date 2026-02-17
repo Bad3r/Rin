@@ -184,13 +184,22 @@ describe('RSSService', () => {
     })
 
     it('should fall back to generation when S3 returns 404', async () => {
+      const envWithS3 = createMockEnv({
+        S3_ACCESS_HOST: 'https://test-image-domain.com',
+        S3_BUCKET: 'test-bucket',
+      })
+      const appWithS3 = createBaseApp(envWithS3)
+      appWithS3.state('db', db)
+      appWithS3.state('env', envWithS3)
+      RSSService(appWithS3)
+
       // Mock fetch to return 404
       const originalFetch = global.fetch
       global.fetch = async () => new Response('Not Found', { status: 404 })
 
       try {
         const request = new Request('http://localhost/rss.xml')
-        const response = await app.handle(request, env)
+        const response = await appWithS3.handle(request, envWithS3)
 
         expect(response.status).toBe(200)
       } finally {
@@ -199,6 +208,15 @@ describe('RSSService', () => {
     })
 
     it('should handle S3 fetch errors gracefully', async () => {
+      const envWithS3 = createMockEnv({
+        S3_ACCESS_HOST: 'https://test-image-domain.com',
+        S3_BUCKET: 'test-bucket',
+      })
+      const appWithS3 = createBaseApp(envWithS3)
+      appWithS3.state('db', db)
+      appWithS3.state('env', envWithS3)
+      RSSService(appWithS3)
+
       // Mock fetch to throw error
       const originalFetch = global.fetch
       global.fetch = async () => {
@@ -207,7 +225,7 @@ describe('RSSService', () => {
 
       try {
         const request = new Request('http://localhost/rss.xml')
-        const response = await app.handle(request, env)
+        const response = await appWithS3.handle(request, envWithS3)
 
         // Should still generate feed
         expect(response.status).toBe(200)
