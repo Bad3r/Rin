@@ -48,19 +48,9 @@ name = "rin-server"
 RSS_TITLE = "Rin"
 RSS_DESCRIPTION = "A lightweight personal blogging system"
 
-[[env.production.d1_databases]]
-binding = "DB"
-database_name = "rin"
-database_id = "local"
-
 [env.preview]
 name = "rin-server-preview"
 
 [env.preview.vars]
 RSS_TITLE = "Rin Preview"
 RSS_DESCRIPTION = "Preview environment"
-
-[[env.preview.d1_databases]]
-binding = "DB"
-database_name = "rin-preview"
-database_id = "local"
