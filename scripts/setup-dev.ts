@@ -65,9 +65,9 @@ if (missingVars.length > 0) {
 }
 
 // 生成 client/.env
-const clientEnvContent = `NAME=${env.NAME}
+const clientEnvContent = `NAME=${env.NAME || 'Rin'}
 DESCRIPTION=${env.DESCRIPTION || ''}
-AVATAR=${env.AVATAR}
+AVATAR=${env.AVATAR || ''}
 PAGE_SIZE=${env.PAGE_SIZE || '5'}
 RSS_ENABLE=${env.RSS_ENABLE || 'false'}
 `

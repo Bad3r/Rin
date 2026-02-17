@@ -110,9 +110,27 @@ async function main() {
     strict: true,
   })
 
-  const envArg = String(values.env ?? 'all')
-  const targets: TargetEnv[] =
-    envArg === 'production' ? ['production'] : envArg === 'preview' ? ['preview'] : ['production', 'preview']
+  const rawEnvArg = String(values.env ?? 'all')
+  const envArg = rawEnvArg.toLowerCase()
+  let targets: TargetEnv[]
+
+  switch (envArg) {
+    case 'all':
+      targets = ['production', 'preview']
+      break
+    case 'production':
+    case 'prod':
+      targets = ['production']
+      break
+    case 'preview':
+    case 'prev':
+      targets = ['preview']
+      break
+    default:
+      console.error(`❌ Invalid --env value: ${rawEnvArg}`)
+      console.error('Allowed values: all, production (prod), preview (prev)')
+      process.exit(1)
+  }
 
   const accountId = firstValue(process.env.CLOUDFLARE_ACCOUNT_ID, readSecret('/run/secrets/r2/account-id'))
   const apiToken = firstValue(process.env.CLOUDFLARE_API_TOKEN)
