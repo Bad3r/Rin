@@ -24,6 +24,7 @@ for (const impl of ROUTER_IMPLS) {
         ROUTER_IMPL: impl,
         RIN_GITHUB_CLIENT_ID: '',
         RIN_GITHUB_CLIENT_SECRET: '',
+        RIN_ALLOWED_REDIRECT_ORIGINS: 'https://frontend.example.com',
       })
 
       app = createBaseApp(env)
@@ -119,6 +120,25 @@ for (const impl of ROUTER_IMPLS) {
       }
       expect(payload.error.code).toBe('BAD_REQUEST')
       expect(payload.error.message).toBe('Invalid state parameter')
+    })
+
+    it('GET /user/github/callback rejects redirect targets outside allowlist', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/user/github/callback?state=state-123&code=abc', {
+          headers: {
+            Cookie: 'state=state-123; redirect_to=https%3A%2F%2Fattacker.example%2Fcallback',
+          },
+        }),
+        env
+      )
+
+      expect(response.status).toBe(400)
+      const payload = (await response.json()) as {
+        success: boolean
+        error: { code: string; message: string }
+      }
+      expect(payload.error.code).toBe('BAD_REQUEST')
+      expect(payload.error.message).toBe('Invalid redirect origin')
     })
 
     it('GET /user/github/callback validates state and propagates token to redirect URL', async () => {

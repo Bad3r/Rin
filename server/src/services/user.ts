@@ -4,6 +4,36 @@ import type { Context } from '../core/types'
 import { users } from '../db/schema'
 import { BadRequestError, ForbiddenError, InternalServerError, NotFoundError } from '../errors'
 
+function resolveAllowedRedirectOrigins(ctx: Context): Set<string> {
+  const allowed = new Set<string>([ctx.url.origin])
+  const configured = ctx.env.RIN_ALLOWED_REDIRECT_ORIGINS
+
+  if (!configured) {
+    return allowed
+  }
+
+  for (const rawOrigin of configured.split(',')) {
+    const origin = rawOrigin.trim()
+    if (!origin) {
+      continue
+    }
+    try {
+      allowed.add(new URL(origin).origin)
+    } catch {
+      console.warn(`[auth] Ignoring invalid redirect origin "${origin}" in RIN_ALLOWED_REDIRECT_ORIGINS`)
+    }
+  }
+
+  return allowed
+}
+
+function ensureAllowedRedirectOrigin(ctx: Context, candidateOrigin: string): void {
+  const allowedOrigins = resolveAllowedRedirectOrigins(ctx)
+  if (!allowedOrigins.has(candidateOrigin)) {
+    throw new BadRequestError('Invalid redirect origin')
+  }
+}
+
 export function UserService(router: Router): void {
   router.group('/user', group => {
     group.get('/github', async (ctx: Context) => {
@@ -21,17 +51,24 @@ export function UserService(router: Router): void {
 
       // Build callback URL from referer
       const refererUrl = new URL(referer)
+      ensureAllowedRedirectOrigin(ctx, refererUrl.origin)
       const callbackUrl = new URL('/callback', refererUrl.origin)
 
       cookie.redirect_to.set({
         value: callbackUrl.toString(),
         path: '/',
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
       })
 
       const genState = oauth2.generateState()
       cookie.state.set({
         value: genState,
         path: '/',
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
       })
 
       set.headers.set('Location', oauth2.createRedirectUrl(genState, 'GitHub'))
@@ -60,7 +97,27 @@ export function UserService(router: Router): void {
       }
 
       // Clear state cookie
-      cookie.state.set({ value: '', path: '/' })
+      cookie.state.set({
+        value: '',
+        path: '/',
+        expires: new Date(0),
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+      })
+
+      const redirectTo = cookie.redirect_to.value
+      if (!redirectTo) {
+        throw new BadRequestError('Missing redirect target')
+      }
+
+      let redirect_url: URL
+      try {
+        redirect_url = new URL(redirectTo)
+      } catch {
+        throw new BadRequestError('Invalid redirect target')
+      }
+      ensureAllowedRedirectOrigin(ctx, redirect_url.origin)
 
       // Exchange code for access token
       const gh_token = await oauth2.authorize('GitHub', query.code)
@@ -143,7 +200,15 @@ export function UserService(router: Router): void {
         }
       }
 
-      const redirect_url = new URL(cookie.redirect_to.value)
+      cookie.redirect_to.set({
+        value: '',
+        path: '/',
+        expires: new Date(0),
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+      })
+
       // Add token to URL for frontend to store (for cross-domain auth)
       if (authToken) {
         redirect_url.searchParams.set('token', authToken)
