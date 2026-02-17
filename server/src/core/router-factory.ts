@@ -22,10 +22,10 @@ export function resolveRouterImpl(env?: Partial<Env>): RouterImpl {
 
   const raw = env?.ROUTER_IMPL
   if (raw) {
-    console.warn(`[router] Invalid ROUTER_IMPL "${raw}", falling back to legacy.`)
+    console.warn(`[router] Invalid ROUTER_IMPL "${raw}", falling back to hono.`)
   }
 
-  return 'legacy'
+  return 'hono'
 }
 
 export function createRouterWithFactory(env?: Env): Router {

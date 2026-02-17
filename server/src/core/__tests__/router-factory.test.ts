@@ -22,17 +22,17 @@ describe('resolveRouterImpl', () => {
     expect(resolveRouterImpl({ ROUTER_IMPL: 'hono' })).toBe('hono')
   })
 
-  it('defaults to legacy when ROUTER_IMPL is not set', () => {
-    expect(resolveRouterImpl({})).toBe('legacy')
-    expect(resolveRouterImpl(undefined)).toBe('legacy')
+  it('defaults to hono when ROUTER_IMPL is not set', () => {
+    expect(resolveRouterImpl({})).toBe('hono')
+    expect(resolveRouterImpl(undefined)).toBe('hono')
     expect(warnings.length).toBe(0)
   })
 
-  it('falls back to legacy and warns on invalid values', () => {
-    expect(resolveRouterImpl({ ROUTER_IMPL: 'invalid' as any })).toBe('legacy')
+  it('falls back to hono and warns on invalid values', () => {
+    expect(resolveRouterImpl({ ROUTER_IMPL: 'invalid' as any })).toBe('hono')
     expect(warnings.length).toBe(1)
     expect(warnings[0]).toContain('Invalid ROUTER_IMPL "invalid"')
-    expect(warnings[0]).toContain('falling back to legacy')
+    expect(warnings[0]).toContain('falling back to hono')
   })
 
   it('does not implicitly read process.env', () => {
@@ -44,7 +44,7 @@ describe('resolveRouterImpl', () => {
     process.env.ROUTER_IMPL = 'hono'
 
     try {
-      expect(resolveRouterImpl(undefined)).toBe('legacy')
+      expect(resolveRouterImpl(undefined)).toBe('hono')
     } finally {
       if (originalProcessValue === undefined) {
         delete process.env.ROUTER_IMPL
