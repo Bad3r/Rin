@@ -153,11 +153,11 @@ export function ProfilePage() {
 
           {/* Username section */}
           <div className='space-y-2'>
-            <label htmlFor='profile-username' className='text-sm font-medium t-secondary'>
+            <label htmlFor='profile-username-input' className='text-sm font-medium t-secondary'>
               {t('profile.username')}
             </label>
             <Input
-              id='profile-username'
+              id='profile-username-input'
               value={username}
               setValue={setUsername}
               placeholder={t('profile.username_placeholder')}

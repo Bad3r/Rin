@@ -330,16 +330,18 @@ function UserAvatar({ className, profile }: { className?: string; profile?: Prof
               {profile.avatar ? (
                 <button
                   type='button'
-                  className='w-8 h-8 rounded-full border overflow-hidden'
                   onClick={() => setLocation('/profile')}
+                  aria-label={t('profile.title')}
+                  className='w-8 h-8 rounded-full border cursor-pointer overflow-hidden'
                 >
-                  <img src={profile.avatar} alt='Avatar' className='w-8 h-8 rounded-full' />
+                  <img src={profile.avatar} alt='Avatar' className='w-full h-full rounded-full' />
                 </button>
               ) : (
                 <button
                   type='button'
                   className='w-8 h-8 rounded-full border cursor-pointer bg-secondary flex items-center justify-center'
                   onClick={() => setLocation('/profile')}
+                  aria-label={t('profile.title')}
                 >
                   <i className='ri-user-line text-lg t-secondary'></i>
                 </button>

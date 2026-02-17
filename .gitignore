@@ -37,12 +37,11 @@ dist-ssr
 
 # Bun
 .bun/*
-/.devenv/
-/.devenv.flake.nix
+
 
 # Local generated devenv artifacts
 /.devenv.flake.nix
-/devenv.lock
+/.devenv/
 
 # Wrangler-generated types:
 # keep server/worker-configuration.d.ts as source-of-truth,

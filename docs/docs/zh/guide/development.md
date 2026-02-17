@@ -7,7 +7,7 @@
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/openRin/Rin.git
+git clone https://github.com/Bad3r/Rin.git
 cd Rin
 ```
 
@@ -289,4 +289,4 @@ bun run dev:setup
 
 - 📖 完整文档：https://docs.openrin.org
 - 💬 Discord：https://discord.gg/JWbSTHvAPN
-- 🐛 提交 Issue：https://github.com/openRin/Rin/issues
+- 🐛 提交 Issue：https://github.com/Bad3r/Rin/issues

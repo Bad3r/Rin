@@ -5,11 +5,11 @@
 
 [English](./README.md) | 简体中文
 
-![GitHub commit activity](https://img.shields.io/github/commit-activity/w/openRin/Rin?style=for-the-badge)
-![GitHub branch check runs](https://img.shields.io/github/check-runs/openRin/Rin/main?style=for-the-badge)
-![GitHub top language](https://img.shields.io/github/languages/top/openRin/Rin?style=for-the-badge)
-![GitHub License](https://img.shields.io/github/license/openRin/Rin?style=for-the-badge)
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/openRin/Rin/deploy.yaml?style=for-the-badge)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/w/Bad3r/Rin?style=for-the-badge)
+![GitHub branch check runs](https://img.shields.io/github/check-runs/Bad3r/Rin/main?style=for-the-badge)
+![GitHub top language](https://img.shields.io/github/languages/top/Bad3r/Rin?style=for-the-badge)
+![GitHub License](https://img.shields.io/github/license/Bad3r/Rin?style=for-the-badge)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Bad3r/Rin/deploy.yaml?style=for-the-badge)
 
 ## 项目简介
 
@@ -40,7 +40,7 @@ https://xeu.life
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/openRin/Rin.git && cd Rin
+git clone https://github.com/Bad3r/Rin.git && cd Rin
 
 # 2. 安装依赖
 bun install
@@ -88,11 +88,11 @@ nix fmt
 
 ## Star 历史
 
-<a href="https://star-history.com/#openRin/Rin&Date">
+<a href="https://star-history.com/#Bad3r/Rin&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=openRin/Rin&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=openRin/Rin&type=Date" />
-   <img alt="Star 历史图表" src="https://api.star-history.com/svg?repos=openRin/Rin&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Bad3r/Rin&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Bad3r/Rin&type=Date" />
+   <img alt="Star 历史图表" src="https://api.star-history.com/svg?repos=Bad3r/Rin&type=Date" />
  </picture>
 </a>
 
