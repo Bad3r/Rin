@@ -4,6 +4,16 @@ import { createLegacyRouter } from './router-legacy'
 
 const VALID_IMPLS: RouterImpl[] = ['legacy', 'hono']
 
+type RouterFactoryDeps = {
+  createHono: () => Router
+  createLegacy: () => Router
+}
+
+const defaultDeps: RouterFactoryDeps = {
+  createHono: createHonoRouter,
+  createLegacy: createLegacyRouter,
+}
+
 function normalizeRouterImpl(value?: string): RouterImpl | undefined {
   if (!value) {
     return undefined
@@ -28,10 +38,16 @@ export function resolveRouterImpl(env?: Partial<Env>): RouterImpl {
   return 'hono'
 }
 
-export function createRouterWithFactory(env?: Env): Router {
+export function createRouterWithFactory(env?: Env, deps: RouterFactoryDeps = defaultDeps): Router {
   const impl = resolveRouterImpl(env)
-  if (impl === 'hono') {
-    return createHonoRouter()
+  switch (impl) {
+    case 'hono':
+      return deps.createHono()
+    case 'legacy':
+      return deps.createLegacy()
+    default: {
+      const exhaustiveCheck: never = impl
+      throw new Error(`[router] Unsupported router implementation: ${exhaustiveCheck}`)
+    }
   }
-  return createLegacyRouter()
 }

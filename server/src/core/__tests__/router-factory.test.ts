@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { resolveRouterImpl } from '../router-factory'
+import type { Router } from '../router-contract'
+import { createRouterWithFactory, resolveRouterImpl } from '../router-factory'
 
 describe('resolveRouterImpl', () => {
   let originalWarn: typeof console.warn
@@ -52,5 +53,26 @@ describe('resolveRouterImpl', () => {
         process.env.ROUTER_IMPL = originalProcessValue
       }
     }
+  })
+})
+
+describe('createRouterWithFactory', () => {
+  it('throws when hono router creation fails instead of falling back to legacy', () => {
+    const expected = new Error('hono init failed')
+    let legacyCalled = false
+
+    expect(() =>
+      createRouterWithFactory({ ROUTER_IMPL: 'hono' } as Partial<Env> as Env, {
+        createHono: () => {
+          throw expected
+        },
+        createLegacy: () => {
+          legacyCalled = true
+          return {} as Router
+        },
+      })
+    ).toThrow(expected)
+
+    expect(legacyCalled).toBe(false)
   })
 })
