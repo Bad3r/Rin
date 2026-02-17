@@ -54,6 +54,11 @@ const githubClientId = env('RIN_GITHUB_CLIENT_ID')
 const githubClientSecret = env('RIN_GITHUB_CLIENT_SECRET')
 const adminUsername = env('ADMIN_USERNAME')
 const adminPassword = env('ADMIN_PASSWORD')
+const requiredAuthSecrets: Array<[name: string, value: string | undefined]> = [
+  ['JWT_SECRET', jwtSecret],
+  ['ADMIN_USERNAME', adminUsername],
+  ['ADMIN_PASSWORD', adminPassword],
+]
 
 // Frontend build configuration
 const NAME = env('NAME', 'Rin')
@@ -72,6 +77,17 @@ console.log(`  RSS_ENABLE: ${RSS_ENABLE}`)
 console.log(`  DEPLOY_ENV: ${DEPLOY_ENV}`)
 console.log(`  WORKER_NAME: ${WORKER_NAME}`)
 console.log(`  DB_NAME: ${DB_NAME}`)
+
+function validateRequiredSecrets(secrets: Array<[name: string, value: string | undefined]>) {
+  const missing = secrets.filter(([, value]) => !value).map(([name]) => name)
+  if (missing.length > 0) {
+    console.error('Missing required deployment secrets:')
+    for (const name of missing) {
+      console.error(`  - ${name}`)
+    }
+    process.exit(1)
+  }
+}
 
 async function getR2BucketInfo(): Promise<{ name: string; endpoint: string; accessHost: string } | null> {
   // Only use R2 if explicitly configured via R2_BUCKET_NAME
@@ -116,6 +132,7 @@ async function buildClient(): Promise<void> {
 
 async function deploy(): Promise<string> {
   console.log('🚀 Deploying Rin (Worker + Assets)...')
+  validateRequiredSecrets(requiredAuthSecrets)
 
   // Determine final S3 configuration
   // Priority: 1. Explicit S3 config 2. R2 config (if S3 not set at all) 3. Empty values
