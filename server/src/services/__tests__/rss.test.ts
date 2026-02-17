@@ -294,28 +294,29 @@ describe('rssCrontab', () => {
   })
 
   it('should generate and save RSS feeds to S3', async () => {
-    // Mock S3 putObject
-    const _putCalls: any[] = []
-    const _originalModule = await import('../rss')
+    let thrown: unknown
 
-    // Since we can't easily mock the module, we'll check that it doesn't throw
     try {
       await rssCrontab(env, db)
-    } catch (e) {
-      // Expected to fail since S3 is not configured in test env
-      console.log('rssCrontab error (expected):', e)
+    } catch (error) {
+      thrown = error
     }
+
+    expect(thrown).toBeUndefined()
   })
 
   it('should handle missing feeds gracefully', async () => {
     // Clear all feeds
     sqlite.exec('DELETE FROM feeds')
 
+    let thrown: unknown
+
     try {
       await rssCrontab(env, db)
-    } catch (e) {
-      // Should not throw
-      console.log('Error:', e)
+    } catch (error) {
+      thrown = error
     }
+
+    expect(thrown).toBeUndefined()
   })
 })

@@ -16,7 +16,6 @@ const proc = Bun.spawn(['bun', 'test', 'tests/remote'], {
   env: {
     ...process.env,
     RIN_TEST_TIER: 'remote',
-    RIN_TEST_ALLOW_REMOTE: 'true',
   },
 })
 
