@@ -44,11 +44,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1771271556,
-        "narHash": "sha256-+x10JdxSLyIyVD0hlhtRJj0ATTx8OesD6m4dgeLiH3o=",
+        "lastModified": 1771320406,
+        "narHash": "sha256-PgZXb5OYveFEwEsNsJjh/N/1WMPjqmG1JgLmdT7WIW0=",
         "owner": "cachix",
         "repo": "devenv",
-        "rev": "194360aec439af647b99f69045f12b305d483699",
+        "rev": "559919d5e37df90d47af1a8d2c6484b92a75dd73",
         "type": "github"
       },
       "original": {
