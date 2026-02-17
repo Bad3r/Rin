@@ -55,6 +55,29 @@ bun run dev
 
 访问 http://localhost:5173 开始开发！
 
+### Nix / Flake 快速开始
+
+如果你使用 Nix，现在可以直接使用 flake 工作流：
+
+```bash
+# 1. 进入可复现开发环境（首次需接受仓库 flake 配置）
+nix develop --accept-flake-config -c true
+
+# 2. 启动本地开发
+nix develop --accept-flake-config -c bun run dev
+
+# 3. 运行完整 pre-commit 检查
+nix develop --accept-flake-config -c pre-commit run --all-files
+
+# 4. 使用 treefmt 格式化仓库
+nix fmt
+```
+
+说明：
+- Hook 定义仍以 `devenv.nix` 为唯一来源，并生成 `.devenv/pre-commit-config.yaml`。
+- 仓库根目录的 `.pre-commit-config.yaml` 用于兼容 `pre-commit` 默认配置路径。
+- 如果你的主机策略限制 IFD，可使用 `devenv shell --nix-option allow-import-from-derivation true`。
+
 完整文档请访问 https://docs.openrin.org。
 
 ## 社区与支持
