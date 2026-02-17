@@ -26,6 +26,8 @@
     "db:migrate": "bun cli/bin/rin.ts db migrate",
     "db:generate": "bun --filter './server' db:gen",
     "db:fix": "bun scripts/db-fix-top-field.ts",
+    "cf:preflight": "bun scripts/cloudflare/preflight.ts",
+    "cf:bootstrap": "bun scripts/cloudflare/bootstrap.ts --env all",
     "check": "turbo check",
     "deploy": "bun cli/bin/rin.ts deploy",
     "build": "turbo build",
