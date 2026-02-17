@@ -28,14 +28,15 @@ export function SearchPage({ keyword }: { keyword: string }) {
   useEffect(() => {
     const key = `${page} ${limit} ${keyword}`
     if (ref.current === key || !keyword) return
+    ref.current = key
     setStatus('loading')
     client.search.search(keyword).then(({ data }) => {
+      if (ref.current !== key) return
       if (data) {
         setFeeds(data)
       }
       setStatus('idle')
     })
-    ref.current = key
   }, [page, limit, keyword])
   const title = t('article.search.title$keyword', { keyword })
   return (
