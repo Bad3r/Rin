@@ -8,7 +8,7 @@ export const corsMiddleware = (): Middleware => {
     // Set CORS headers
     set.headers.set('Access-Control-Allow-Origin', origin)
     set.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-    set.headers.set('Access-Control-Allow-Headers', 'content-type, x-csrf-token')
+    set.headers.set('Access-Control-Allow-Headers', 'content-type, authorization, x-csrf-token')
     set.headers.set('Access-Control-Max-Age', '600')
     set.headers.set('Access-Control-Allow-Credentials', 'true')
 

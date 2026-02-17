@@ -47,12 +47,12 @@ for (const impl of ROUTER_IMPLS) {
       expect(payload).toEqual({ name: 'hello%20world' })
     })
 
-    it('returns router-level OPTIONS preflight with fixed header contract', async () => {
+    it('returns router-level OPTIONS preflight with shared CORS header contract', async () => {
       const response = await app.handle(new Request('http://localhost/unknown', { method: 'OPTIONS' }), env)
 
       expect(response.status).toBe(204)
       expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, PUT, DELETE, PATCH, OPTIONS')
-      expect(response.headers.get('Access-Control-Allow-Headers')).toBe('content-type, authorization')
+      expect(response.headers.get('Access-Control-Allow-Headers')).toBe('content-type, authorization, x-csrf-token')
       expect(response.headers.get('Access-Control-Max-Age')).toBe('600')
       expect(response.headers.get('Access-Control-Allow-Credentials')).toBe('true')
     })
@@ -69,7 +69,7 @@ for (const impl of ROUTER_IMPLS) {
 
       expect(response.status).toBe(200)
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://example.com')
-      expect(response.headers.get('Access-Control-Allow-Headers')).toBe('content-type, x-csrf-token')
+      expect(response.headers.get('Access-Control-Allow-Headers')).toBe('content-type, authorization, x-csrf-token')
       expect(response.headers.get('Access-Control-Allow-Credentials')).toBe('true')
     })
 
