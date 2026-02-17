@@ -287,6 +287,6 @@ bun run dev:setup
 
 ## 获取帮助
 
-- 📖 完整文档：https://docs.openrin.org
-- 💬 Discord：https://discord.gg/JWbSTHvAPN
+- 📖 完整文档：../../index.md
+- 💬 GitHub Discussions：https://github.com/Bad3r/Rin/discussions
 - 🐛 提交 Issue：https://github.com/Bad3r/Rin/issues

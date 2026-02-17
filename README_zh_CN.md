@@ -78,12 +78,12 @@ nix fmt
 - 仓库根目录的 `.pre-commit-config.yaml` 用于兼容 `pre-commit` 默认配置路径。
 - 如果你的主机策略限制 IFD，可使用 `devenv shell --nix-option allow-import-from-derivation true`。
 
-完整文档请访问 https://docs.openrin.org。
+完整文档请访问仓库内文档目录：`docs/docs`。
 
 ## 社区与支持
 
-- 加入我们的 https://discord.gg/JWbSTHvAPN 参与讨论或获取帮助。
-- 关注 https://t.me/openRin 频道获取最新动态。
+- 使用 GitHub Discussions 参与讨论或获取帮助：https://github.com/Bad3r/Rin/discussions 。
+- 通过 GitHub Releases 获取最新发布动态：https://github.com/Bad3r/Rin/releases 。
 - 发现 Bug 或有功能建议？欢迎在 GitHub 上提交 Issue。
 
 ## Star 历史

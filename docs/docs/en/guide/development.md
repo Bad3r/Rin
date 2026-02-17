@@ -287,6 +287,6 @@ Please refer to the [Deployment Guide](./deploy.mdx) for production deployment p
 
 ## Getting Help
 
-- 📖 Full documentation: https://docs.openrin.org
-- 💬 Discord: https://discord.gg/JWbSTHvAPN
+- 📖 Full documentation: ../index.md
+- 💬 GitHub Discussions: https://github.com/Bad3r/Rin/discussions
 - 🐛 Submit Issue: https://github.com/Bad3r/Rin/issues
