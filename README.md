@@ -57,6 +57,29 @@ bun run dev
 
 Visit http://localhost:5173 to start hacking!
 
+### Nix / Flake Quick Start
+
+If you use Nix, Rin now exposes a flake-first workflow:
+
+```bash
+# 1. Enter the reproducible shell and accept repo flake settings
+nix develop --accept-flake-config -c true
+
+# 2. Start local development
+nix develop --accept-flake-config -c bun run dev
+
+# 3. Run the full pre-commit suite
+nix develop --accept-flake-config -c pre-commit run --all-files
+
+# 4. Format the repository with treefmt
+nix fmt
+```
+
+Notes:
+- Hook definitions stay source-of-truth in `devenv.nix` and generate `.devenv/pre-commit-config.yaml`.
+- `.pre-commit-config.yaml` at repo root is a compatibility entrypoint for default `pre-commit` behavior.
+- If your host policy blocks IFD outside flake config acceptance, use `devenv shell --nix-option allow-import-from-derivation true`.
+
 ### Testing
 
 Run the test suite to ensure everything works:
