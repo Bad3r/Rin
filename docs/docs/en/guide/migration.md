@@ -14,10 +14,10 @@ Version 0.3.0 includes significant architectural changes:
 
 ## Migration Steps
 
-### Step 1: Sync Fork
+### Step 1: Sync Branch
 
-1. Go to your forked repository on GitHub
-2. Click the **"Sync fork"** button
+1. Go to your repository on GitHub
+2. Click the **"Sync branch"** button
 3. Click **"Update branch"** to merge changes
 
 ### Step 2: Update Environment Variables

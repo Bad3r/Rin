@@ -1,4 +1,4 @@
-import { readdir } from 'node:fs/promises'
+import { appendFile, readdir } from 'node:fs/promises'
 import { $ } from 'bun'
 import stripIndent from 'strip-indent'
 import { fixTopField, getMigrationVersion, isInfoExist, updateMigrationVersion } from './db-fix-top-field'
@@ -15,8 +15,20 @@ function env(name: string, defaultValue?: string, required = false) {
 // must be defined
 const renv = (name: string, defaultValue?: string) => env(name, defaultValue, true)!
 
-const DB_NAME = renv('DB_NAME', 'rin')
-const WORKER_NAME = renv('WORKER_NAME', 'rin-server')
+function tomlString(value: string): string {
+  return JSON.stringify(value)
+}
+
+const DEPLOY_ENV = env('DEPLOY_ENV', 'production')
+const isPreview = DEPLOY_ENV === 'preview'
+if (DEPLOY_ENV !== 'production' && DEPLOY_ENV !== 'preview') {
+  throw new Error(`DEPLOY_ENV must be production or preview, got: ${DEPLOY_ENV}`)
+}
+
+const DB_NAME = renv('DB_NAME', isPreview ? 'rin-preview' : 'rin')
+const WORKER_NAME = renv('WORKER_NAME', isPreview ? 'rin-server-preview' : 'rin-server')
+const D1_DATABASE_ID = env('D1_DATABASE_ID', '')
+const GENERATED_WRANGLER_PATH = '.wrangler/deploy.generated.toml'
 
 // R2 bucket name (optional, only used if S3 is not explicitly configured)
 const R2_BUCKET_NAME = env('R2_BUCKET_NAME', '')
@@ -32,7 +44,7 @@ const S3_FORCE_PATH_STYLE = env('S3_FORCE_PATH_STYLE', 'false')
 const WEBHOOK_URL = env('WEBHOOK_URL', '')
 const RSS_TITLE = env('RSS_TITLE', '')
 const RSS_DESCRIPTION = env('RSS_DESCRIPTION', '')
-const CACHE_STORAGE_MODE = env('CACHE_STORAGE_MODE', 's3')
+const CACHE_STORAGE_MODE = env('CACHE_STORAGE_MODE', 'database')
 
 // Secrets
 const accessKeyId = env('S3_ACCESS_KEY_ID')
@@ -42,6 +54,11 @@ const githubClientId = env('RIN_GITHUB_CLIENT_ID')
 const githubClientSecret = env('RIN_GITHUB_CLIENT_SECRET')
 const adminUsername = env('ADMIN_USERNAME')
 const adminPassword = env('ADMIN_PASSWORD')
+const requiredAuthSecrets: Array<[name: string, value: string | undefined]> = [
+  ['JWT_SECRET', jwtSecret],
+  ['ADMIN_USERNAME', adminUsername],
+  ['ADMIN_PASSWORD', adminPassword],
+]
 
 // Frontend build configuration
 const NAME = env('NAME', 'Rin')
@@ -57,6 +74,20 @@ console.log(`  DESCRIPTION: ${DESCRIPTION}`)
 console.log(`  AVATAR: ${AVATAR}`)
 console.log(`  PAGE_SIZE: ${PAGE_SIZE}`)
 console.log(`  RSS_ENABLE: ${RSS_ENABLE}`)
+console.log(`  DEPLOY_ENV: ${DEPLOY_ENV}`)
+console.log(`  WORKER_NAME: ${WORKER_NAME}`)
+console.log(`  DB_NAME: ${DB_NAME}`)
+
+function validateRequiredSecrets(secrets: Array<[name: string, value: string | undefined]>) {
+  const missing = secrets.filter(([, value]) => !value).map(([name]) => name)
+  if (missing.length > 0) {
+    console.error('Missing required deployment secrets:')
+    for (const name of missing) {
+      console.error(`  - ${name}`)
+    }
+    process.exit(1)
+  }
+}
 
 async function getR2BucketInfo(): Promise<{ name: string; endpoint: string; accessHost: string } | null> {
   // Only use R2 if explicitly configured via R2_BUCKET_NAME
@@ -101,6 +132,7 @@ async function buildClient(): Promise<void> {
 
 async function deploy(): Promise<string> {
   console.log('🚀 Deploying Rin (Worker + Assets)...')
+  validateRequiredSecrets(requiredAuthSecrets)
 
   // Determine final S3 configuration
   // Priority: 1. Explicit S3 config 2. R2 config (if S3 not set at all) 3. Empty values
@@ -124,7 +156,8 @@ async function deploy(): Promise<string> {
   // Determine server entry point - use built dist if available, otherwise use source
   const serverDistIndex = './dist/server/_worker.js'
   const hasServerBuild = await Bun.file(serverDistIndex).exists()
-  const serverMain = hasServerBuild ? 'dist/server/_worker.js' : 'server/src/_worker.ts'
+  // Wrangler resolves relative paths from the config file directory (.wrangler/)
+  const serverMain = hasServerBuild ? '../dist/server/_worker.js' : '../server/src/_worker.ts'
 
   if (hasServerBuild) {
     console.log(`✅ Using pre-built server from ${serverMain}`)
@@ -132,39 +165,42 @@ async function deploy(): Promise<string> {
     console.log(`⚠️ No server build found, using source: ${serverMain}`)
   }
 
-  // Create wrangler.toml with assets configuration
-  Bun.write(
-    'wrangler.toml',
+  // Create a deploy-specific wrangler config so repository source-of-truth remains untouched
+  await $`mkdir -p .wrangler`
+  await Bun.write(
+    GENERATED_WRANGLER_PATH,
     stripIndent(`
 #:schema node_modules/wrangler/config-schema.json
-name = "${WORKER_NAME}"
-main = "${serverMain}"
+name = ${tomlString(WORKER_NAME)}
+main = ${tomlString(serverMain)}
 compatibility_date = "2026-01-20"
 
 [assets]
-directory = "./dist/client"
+directory = "../dist/client"
 binding = "ASSETS"
+run_worker_first = true
+not_found_handling = "single-page-application"
 
 [triggers]
 crons = ["*/20 * * * *"]
 
 [vars]
-S3_FOLDER = "${S3_FOLDER}"
-S3_CACHE_FOLDER="${S3_CACHE_FOLDER}"
-S3_REGION = "${S3_REGION}"
-S3_ENDPOINT = "${finalS3Endpoint}"
-S3_ACCESS_HOST = "${finalS3AccessHost}"
-S3_BUCKET = "${finalS3Bucket}"
-S3_FORCE_PATH_STYLE = "${S3_FORCE_PATH_STYLE}"
-WEBHOOK_URL = "${WEBHOOK_URL}"
-RSS_TITLE = "${RSS_TITLE}"
-RSS_DESCRIPTION = "${RSS_DESCRIPTION}"
-CACHE_STORAGE_MODE = "${CACHE_STORAGE_MODE}"
-NAME = "${NAME}"
-DESCRIPTION = "${DESCRIPTION}"
-AVATAR = "${AVATAR}"
-PAGE_SIZE = "${PAGE_SIZE}"
-RSS_ENABLE = "${RSS_ENABLE}"
+S3_FOLDER = ${tomlString(S3_FOLDER)}
+S3_CACHE_FOLDER = ${tomlString(S3_CACHE_FOLDER)}
+S3_REGION = ${tomlString(S3_REGION)}
+S3_ENDPOINT = ${tomlString(finalS3Endpoint)}
+S3_ACCESS_HOST = ${tomlString(finalS3AccessHost)}
+S3_BUCKET = ${tomlString(finalS3Bucket)}
+S3_FORCE_PATH_STYLE = ${tomlString(S3_FORCE_PATH_STYLE)}
+WEBHOOK_URL = ${tomlString(WEBHOOK_URL)}
+RSS_TITLE = ${tomlString(RSS_TITLE)}
+RSS_DESCRIPTION = ${tomlString(RSS_DESCRIPTION)}
+CACHE_STORAGE_MODE = ${tomlString(CACHE_STORAGE_MODE)}
+NAME = ${tomlString(NAME)}
+DESCRIPTION = ${tomlString(DESCRIPTION)}
+AVATAR = ${tomlString(AVATAR)}
+PAGE_SIZE = ${tomlString(PAGE_SIZE)}
+RSS_ENABLE = ${tomlString(RSS_ENABLE)}
 
 [placement]
 mode = "smart"
@@ -194,30 +230,35 @@ mode = "smart"
     console.log(`Created D1 "${DB_NAME}"`)
   }
 
-  // Get D1 database info
-  console.log(`Searching D1 "${DB_NAME}"`)
-  const listJsonString = await $`bunx wrangler d1 list --json`.quiet().text()
-  const listJson = (JSON.parse(listJsonString) as D1Item[]) ?? []
-  const existing = listJson.find((x: D1Item) => x.name === DB_NAME)
-  if (existing) {
-    console.log(`Found: ${existing.name}:${existing.uuid}`)
-    const configText = stripIndent(`
-    [[d1_databases]]
-    binding = "DB"
-    database_name = "${existing.name}"
-    database_id = "${existing.uuid}"`)
-    await $`echo ${configText} >> wrangler.toml`.quiet()
-    console.log(`Appended to wrangler.toml`)
+  // Resolve D1 database id (prefer explicit D1_DATABASE_ID from CI env)
+  let databaseId = D1_DATABASE_ID
+  if (!databaseId) {
+    console.log(`Searching D1 "${DB_NAME}"`)
+    const listJsonString = await $`bunx wrangler d1 list --json`.quiet().text()
+    const listJson = (JSON.parse(listJsonString) as D1Item[]) ?? []
+    const existing = listJson.find((x: D1Item) => x.name === DB_NAME)
+    if (!existing) {
+      console.error(`Could not resolve D1 database id for "${DB_NAME}"`)
+      process.exit(1)
+    }
+    databaseId = existing.uuid
   }
 
-  // Add AI binding for Cloudflare Worker AI
-  console.log(`----------------------------`)
-  console.log(`Adding AI binding`)
-  const aiConfigText = stripIndent(`
-    [ai]
-    binding = "AI"`)
-  await $`echo ${aiConfigText} >> wrangler.toml`.quiet()
-  console.log(`AI binding appended to wrangler.toml`)
+  await appendFile(
+    GENERATED_WRANGLER_PATH,
+    stripIndent(`
+      
+      [[d1_databases]]
+      binding = "DB"
+      database_name = ${tomlString(DB_NAME)}
+      database_id = ${tomlString(databaseId)}
+      
+      [ai]
+      binding = "AI"
+    `)
+  )
+  console.log(`Using D1 database id: ${databaseId}`)
+  console.log(`Generated config: ${GENERATED_WRANGLER_PATH}`)
 
   // Run migrations
   console.log(`----------------------------`)
@@ -268,7 +309,21 @@ mode = "smart"
   async function putSecret(name: string, value?: string) {
     if (value) {
       console.log(`Put ${name}`)
-      await $`echo "${value}" | bun wrangler secret put ${name}`
+      const proc = Bun.spawn(['bunx', 'wrangler', 'secret', 'put', name, '--config', GENERATED_WRANGLER_PATH], {
+        stdin: 'pipe',
+        stdout: 'inherit',
+        stderr: 'inherit',
+      })
+
+      const writer = proc.stdin.getWriter()
+      await writer.write(new TextEncoder().encode(`${value}\n`))
+      await writer.close()
+
+      const exitCode = await proc.exited
+      if (exitCode !== 0) {
+        console.error(`Failed to put ${name}.`)
+        process.exit(exitCode)
+      }
     } else {
       console.log(`Skip ${name}, value is not defined.`)
     }
@@ -285,12 +340,33 @@ mode = "smart"
   console.log(`Put Done.`)
   console.log(`----------------------------`)
   console.log(`Deploying Worker with Assets`)
+  console.log(`Environment: ${DEPLOY_ENV}`)
 
   // Deploy worker with assets
-  const { stdout: deployOutput, stderr: deployStderr } = await $`echo -e "n\ny\n" | bunx wrangler deploy`
+  const deployProc = Bun.spawn(['bunx', 'wrangler', 'deploy', '--config', GENERATED_WRANGLER_PATH], {
+    stdin: 'pipe',
+    stdout: 'pipe',
+    stderr: 'pipe',
+  })
+  const deployWriter = deployProc.stdin.getWriter()
+  await deployWriter.write(new TextEncoder().encode('n\ny\n'))
+  await deployWriter.close()
+
+  const deployOutputPromise = deployProc.stdout ? new Response(deployProc.stdout).text() : Promise.resolve('')
+  const deployStderrPromise = deployProc.stderr ? new Response(deployProc.stderr).text() : Promise.resolve('')
+  const [deployOutput, deployStderr, deployExitCode] = await Promise.all([
+    deployOutputPromise,
+    deployStderrPromise,
+    deployProc.exited,
+  ])
+  if (deployExitCode !== 0) {
+    console.error('wrangler deploy failed:')
+    console.error(deployStderr || deployOutput)
+    process.exit(deployExitCode)
+  }
 
   // Extract worker URL from deploy output
-  const fullOutput = deployOutput.toString() + deployStderr.toString()
+  const fullOutput = deployOutput + deployStderr
   const urlMatch = fullOutput.match(/https:\/\/[^\s]+\.workers\.dev/)
   const workerUrl = urlMatch ? urlMatch[0] : null
 
@@ -391,6 +467,7 @@ async function migrateVisitsToHLL(typ: string, dbName: string) {
     let processed = 0
     for (const feedId of feedIds) {
       try {
+        // feedIds are parsed to integers and NaN-filtered in parseWranglerFeedIds.
         const { stdout: ipsResult } =
           await $`bunx wrangler d1 execute ${dbName} --${typ} --json --command="SELECT ip FROM visits WHERE feed_id = ${feedId}"`.quiet()
         const ips = parseWranglerIPs(ipsResult.toString())

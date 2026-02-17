@@ -146,12 +146,12 @@ GitHub Releases will contain:
 ...
 ```
 
-## For Fork Users
+## Repository Update
 
-### Option 1: Sync Fork (Recommended)
+### Option 1: Sync Branch (Recommended)
 
-1. Go to your forked repository on GitHub
-2. Click **"Sync fork"** button
+1. Go to your repository on GitHub
+2. Click **"Sync branch"** button
 3. Review the [CHANGELOG.md](./changelog.md) for migration steps
 4. Update environment variables if needed
 5. The deployment will run automatically if configured
@@ -159,17 +159,11 @@ GitHub Releases will contain:
 ### Option 2: Manual Update
 
 ```bash
-# Add upstream remote
-git remote add upstream https://github.com/Bad3r/Rin.git
-
-# Fetch latest changes
-git fetch upstream
-
-# Merge into your main branch
+# Update your main branch
 git checkout main
-git merge upstream/main
+git pull --ff-only origin main
 
-# Push to your fork
+# Push to origin
 git push origin main
 ```
 

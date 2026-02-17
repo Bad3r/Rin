@@ -220,24 +220,26 @@ When you create a Pull Request, a preview deployment will be automatically gener
 
 When a new version is released:
 
-1. Click **"Sync fork"** on your forked repository page
+1. Click **"Sync branch"** on your repository page
 2. Click **"Update branch"**
 3. Deployment will be triggered automatically
 
 Or update manually:
 
 ```bash
-git remote add upstream https://github.com/Bad3r/Rin.git
-git fetch upstream
 git checkout main
-git merge upstream/main
+git pull --ff-only origin main
 git push origin main
 ```
 
 ---
 
+> Current deployment remains `Worker + Assets`. Future split to `Pages + Worker` is tracked in [issue #14](https://github.com/Bad3r/Rin/issues/14).
+
+---
+
 ## Need Help?
 
-- 📖 [Full Documentation](https://docs.openrin.org)
+- 📖 [Full Documentation](../../index.md)
 - 🐛 [GitHub Issues](https://github.com/Bad3r/Rin/issues)
 - 💬 [GitHub Discussions](https://github.com/Bad3r/Rin/discussions)

@@ -9,7 +9,6 @@ test.ts
 *.log
 .env.production
 .wrangler
-wrangler.toml
 # Logs
 logs
 npm-debug.log*

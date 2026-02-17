@@ -221,24 +221,26 @@ Rin 支持两种存储方式：**Cloudflare R2**（推荐）或 **S3 兼容存�
 
 当有新版本发布时：
 
-1. 在您的 fork 仓库页面点击 **"Sync fork"**
+1. 在仓库页面点击 **"Sync branch"**
 2. 点击 **"Update branch"**
 3. 部署会自动触发
 
 或者手动更新：
 
 ```bash
-git remote add upstream https://github.com/Bad3r/Rin.git
-git fetch upstream
 git checkout main
-git merge upstream/main
+git pull --ff-only origin main
 git push origin main
 ```
 
 ---
 
+> 当前部署架构仍为 `Worker + Assets`。未来拆分为 `Pages + Worker` 的工作已记录在 [issue #14](https://github.com/Bad3r/Rin/issues/14)。
+
+---
+
 ## 需要帮助？
 
-- 📖 [完整文档](https://docs.openrin.org)
+- 📖 [完整文档](../../index.md)
 - 🐛 [GitHub Issues](https://github.com/Bad3r/Rin/issues)
 - 💬 [GitHub Discussions](https://github.com/Bad3r/Rin/discussions)

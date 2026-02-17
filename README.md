@@ -1,16 +1,19 @@
+> [!CAUTION]
+> This fork will include a major rewrite, it is not ready to be used by other users
+
 ![Cover](./docs/docs/public/rin-logo.png)
 
 English | [简体中文](./README_zh_CN.md)
 
 
-![GitHub commit activity](https://img.shields.io/github/commit-activity/w/openRin/Rin?style=for-the-badge)
-![GitHub branch check runs](https://img.shields.io/github/check-runs/openRin/Rin/main?style=for-the-badge)
-![GitHub top language](https://img.shields.io/github/languages/top/openRin/Rin?style=for-the-badge)
-![GitHub License](https://img.shields.io/github/license/openRin/Rin?style=for-the-badge)
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/openRin/Rin/deploy.yml?style=for-the-badge)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/w/Bad3r/Rin?style=for-the-badge)
+![GitHub branch check runs](https://img.shields.io/github/check-runs/Bad3r/Rin/main?style=for-the-badge)
+![GitHub top language](https://img.shields.io/github/languages/top/Bad3r/Rin?style=for-the-badge)
+![GitHub License](https://img.shields.io/github/license/Bad3r/Rin?style=for-the-badge)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Bad3r/Rin/deploy.yml?style=for-the-badge)
 
-[![Discord](https://img.shields.io/badge/Discord-openRin-red?style=for-the-badge&color=%236e7acc)](https://discord.gg/JWbSTHvAPN)
-[![Telegram](https://img.shields.io/badge/Telegram-openRin-red?style=for-the-badge&color=%233390EC)](https://t.me/openRin)
+[![GitHub Issues](https://img.shields.io/github/issues/Bad3r/Rin?style=for-the-badge)](https://github.com/Bad3r/Rin/issues)
+[![GitHub Discussions](https://img.shields.io/github/discussions/Bad3r/Rin?style=for-the-badge)](https://github.com/Bad3r/Rin/discussions)
 
 ## Introduction
 
@@ -42,7 +45,7 @@ https://xeu.life
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/openRin/Rin.git && cd Rin
+git clone https://github.com/Bad3r/Rin.git && cd Rin
 
 # 2. Install dependencies
 bun install
@@ -161,27 +164,27 @@ The repository includes several automated workflows:
 **Optional secrets for remote smoke checks:**
 - `RIN_REMOTE_AUTH_TOKEN` - Token used by remote integration tests when protected endpoints are checked
 
-Full documentation is available at https://docs.openrin.org.
+Full documentation is available in [`docs/docs`](./docs/docs).
 
 ## Community & Support
 
-- Join our https://discord.gg/JWbSTHvAPN for discussions and help.
-- Follow updates on https://t.me/openRin.
+- Join GitHub Discussions for usage and deployment help: https://github.com/Bad3r/Rin/discussions.
+- Follow release updates on GitHub: https://github.com/Bad3r/Rin/releases.
 - Found a bug or have a feature request? Please open an issue on GitHub.
 
 ## Star History
 
-<a href="https://star-history.com/#openRin/Rin&Date">
+<a href="https://star-history.com/#Bad3r/Rin&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=openRin/Rin&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=openRin/Rin&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=openRin/Rin&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Bad3r/Rin&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Bad3r/Rin&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Bad3r/Rin&type=Date" />
  </picture>
 </a>
 
 ## Contributing
 
-We welcome contributions of all kinds—code, documentation, design, and ideas. Please check out our [contributing guidelines](https://docs.openrin.org/en/guide/contribution.html) and join us in building Rin together!
+We welcome contributions of all kinds—code, documentation, design, and ideas. Please check out our [contributing guidelines](./CONTRIBUTING.md) and join us in building Rin together!
 
 ## License
 

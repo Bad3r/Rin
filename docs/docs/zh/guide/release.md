@@ -146,12 +146,12 @@ GitHub Releases 将包含：
 ...
 ```
 
-## 对于 Fork 用户
+## 仓库更新
 
-### 选项 1：同步 Fork（推荐）
+### 选项 1：同步分支（推荐）
 
-1. 转到您在 GitHub 上的 fork 仓库
-2. 点击 **"Sync fork"** 按钮
+1. 转到您在 GitHub 上的仓库
+2. 点击 **"Sync branch"** 按钮
 3. 查看 [CHANGELOG.md](./changelog.md) 了解迁移步骤
 4. 如果需要，更新环境变量
 5. 如果已配置，部署将自动运行
@@ -159,17 +159,11 @@ GitHub Releases 将包含：
 ### 选项 2：手动更新
 
 ```bash
-# 添加上游远程
-git remote add upstream https://github.com/Bad3r/Rin.git
-
-# 获取最新更改
-git fetch upstream
-
-# 合并到您的 main 分支
+# 更新本地 main 分支
 git checkout main
-git merge upstream/main
+git pull --ff-only origin main
 
-# 推送到您的 fork
+# 推送到 origin
 git push origin main
 ```
 

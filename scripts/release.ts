@@ -94,6 +94,20 @@ async function getCurrentVersion(): Promise<string> {
   return pkg.version
 }
 
+async function getRepositorySlug(): Promise<string> {
+  try {
+    const originUrl = (await $`git config --get remote.origin.url`.quiet().text()).trim()
+    const match = originUrl.match(/github\.com[:/]([^/\s]+\/[^/\s]+?)(?:\.git)?$/)
+    if (match?.[1]) {
+      return match[1]
+    }
+  } catch {
+    // Fall back to default repository slug
+  }
+
+  return 'Bad3r/Rin'
+}
+
 async function updatePackageJson(version: string, dryRun: boolean): Promise<void> {
   const files = ['package.json', 'client/package.json', 'server/package.json']
 
@@ -211,6 +225,8 @@ async function runPreReleaseChecks(version: string, options: ReleaseOptions): Pr
 
 async function generateChangelogTemplate(version: string): Promise<string> {
   const today = new Date().toISOString().split('T')[0]
+  const repositorySlug = await getRepositorySlug()
+  const previousTag = (await $`git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "HEAD"`.quiet().text()).trim()
 
   // Get commits since last tag
   let commits = ''
@@ -255,8 +271,8 @@ async function generateChangelogTemplate(version: string): Promise<string> {
 ### Commits in this release
 ${commits || '- See commit history'}
 
-[Unreleased]: https://github.com/Bad3r/Rin/compare/v${version}...HEAD
-[v${version}]: https://github.com/Bad3r/Rin/compare/v${await $`git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "HEAD"`.quiet().text()}...v${version}
+[Unreleased]: https://github.com/${repositorySlug}/compare/v${version}...HEAD
+[v${version}]: https://github.com/${repositorySlug}/compare/v${previousTag}...v${version}
 `
 }
 
