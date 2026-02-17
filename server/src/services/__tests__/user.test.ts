@@ -16,7 +16,9 @@ describe('UserService', () => {
     const mockDB = createMockDB()
     db = mockDB.db
     sqlite = mockDB.sqlite
-    env = createMockEnv()
+    env = createMockEnv({
+      RIN_ALLOWED_REDIRECT_ORIGINS: 'http://localhost:5173',
+    })
 
     // Setup app with mock db and auth utilities
     app = createBaseApp(env)
@@ -118,6 +120,18 @@ describe('UserService', () => {
       expect(setCookie).toContain('redirect_to')
       // Cookie contains URL-encoded path, check for the encoded callback
       expect(setCookie).toContain('callback')
+    })
+
+    it('should reject referer origin outside allowlist', async () => {
+      const request = new Request('http://localhost/user/github', {
+        headers: { Referer: 'https://attacker.example/feed/123' },
+      })
+
+      const response = await app.handle(request, env)
+
+      expect(response.status).toBe(400)
+      const data = (await response.json()) as { error: { message: string } }
+      expect(data.error.message).toBe('Invalid redirect origin')
     })
   })
 
@@ -318,11 +332,21 @@ describe('UserService', () => {
   })
 
   describe('POST /user/logout - Logout', () => {
-    it('should clear token cookie', async () => {
+    it('should clear token cookie via API client', async () => {
       const result = await api.user.logout()
 
       expect(result.error).toBeUndefined()
       expect(result.data).toBeDefined()
+    })
+
+    it('should clear both auth cookies in response headers', async () => {
+      const response = await app.handle(new Request('http://localhost/user/logout', { method: 'POST' }), env)
+
+      expect(response.status).toBe(200)
+      const setCookie = response.headers.get('Set-Cookie')
+      expect(setCookie).toContain('token=')
+      expect(setCookie).toContain('auth_token=')
+      expect(setCookie).toContain('Expires=')
     })
   })
 })

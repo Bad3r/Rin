@@ -5,7 +5,7 @@ import type { Context, OAuth2Utils } from './types'
 
 // Lazy initialization container
 class LazyInitContainer {
-  private env: Env
+  private readonly env: Env
   private instances: Map<string, any> = new Map()
   private initializing: Map<string, Promise<any>> = new Map()
 
@@ -38,14 +38,14 @@ class LazyInitContainer {
 
 export function createBaseApp(env: Env): Router {
   const container = new LazyInitContainer(env)
-  const app = createRouter()
+  const app = createRouter(env)
 
   // Add middlewares
   app.use(corsMiddleware())
   app.use(timingMiddleware())
 
   // Add auth derivation with lazy initialization
-  app.use(async (context: Context) => {
+  app.use(async (context: Context, _env: Env) => {
     // Initialize cookies
     context.cookie = createCookieHelpers(context)
 
@@ -142,6 +142,7 @@ export function createBaseApp(env: Env): Router {
 
     // Derive auth
     await deriveAuth(context)
+    return undefined
   })
 
   return app

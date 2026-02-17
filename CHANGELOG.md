@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 This file contains **detailed** changelog information for each release.
-For a quick overview of changes, see the [GitHub Releases](https://github.com/openRin/Rin/releases) page
+For a quick overview of changes, see the [GitHub Releases](https://github.com/Bad3r/Rin/releases) page
 which automatically generates release notes from commit messages.
 
 ## [Unreleased]
@@ -14,12 +14,15 @@ which automatically generates release notes from commit messages.
 ### Added
 
 ### Changed
+- Server routing now supports a dual-adapter architecture (`legacy` and `hono`) behind `ROUTER_IMPL`, with parity coverage to enable staged rollout and rollback.
+- Added router compatibility, OAuth redirect/cookie regression, and worker API prefix routing tests for the Hono migration.
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+- Normalized friend service route mounting to `/friend` so worker `/api/*` prefix stripping resolves to the correct service paths.
 
 ### Security
 
@@ -115,6 +118,6 @@ If you're upgrading from v0.1.0, follow these steps:
 - Dark mode support
 - Scheduled tasks via Cloudflare Cron Triggers
 
-[Unreleased]: https://github.com/openRin/Rin/compare/v0.2.0...HEAD
-[v0.2.0]: https://github.com/openRin/Rin/compare/v0.1.0...v0.2.0
-[v0.1.0]: https://github.com/openRin/Rin/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Bad3r/Rin/compare/v0.2.0...HEAD
+[v0.2.0]: https://github.com/Bad3r/Rin/compare/v0.1.0...v0.2.0
+[v0.1.0]: https://github.com/Bad3r/Rin/releases/tag/v0.1.0
