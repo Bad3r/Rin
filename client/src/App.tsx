@@ -14,7 +14,7 @@ import { FeedsPage } from './page/feeds'
 import { FriendsPage } from './page/friends'
 import { HashtagPage } from './page/hashtag.tsx'
 import { HashtagsPage } from './page/hashtags.tsx'
-import { Settings } from "./page/settings.tsx"
+import { Settings } from './page/settings.tsx'
 import { TimelinePage } from './page/timeline'
 import { WritingPage } from './page/writing'
 import { ClientConfigContext, ConfigWrapper, defaultClientConfig } from './state/config.tsx'
@@ -33,15 +33,15 @@ function App() {
   const [config, setConfig] = useState<ConfigWrapper>(new ConfigWrapper({}, new Map()))
   useEffect(() => {
     // --- 自动缩放逻辑开始 ---
-    const HIGH_RES_THRESHOLD = 2560; // 定义高分屏阈值
+    const HIGH_RES_THRESHOLD = 2560 // 定义高分屏阈值
     const applyScaling = () => {
       if (window.screen.width >= HIGH_RES_THRESHOLD) {
-        document.documentElement.style.fontSize = '125%'; // 应用 125% 缩放
+        document.documentElement.style.fontSize = '125%' // 应用 125% 缩放
       } else {
-        document.documentElement.style.fontSize = '100%'; // 恢复默认
+        document.documentElement.style.fontSize = '100%' // 恢复默认
       }
-    };
-    applyScaling();
+    }
+    applyScaling()
     // --- 自动缩放逻辑结束 ---
     if (ref.current) return
     client.user.profile().then(({ data, error }) => {
@@ -50,7 +50,7 @@ function App() {
           id: data.id,
           avatar: data.avatar || '',
           permission: data.permission,
-          name: data.username
+          name: data.username,
         })
       } else if (error) {
         // User not authenticated
@@ -63,7 +63,7 @@ function App() {
       const configWrapper = new ConfigWrapper(configObj, defaultClientConfig)
       setConfig(configWrapper)
     } else {
-      client.config.get("client").then(({ data }) => {
+      client.config.get('client').then(({ data }) => {
         if (data) {
           sessionStorage.setItem('config', JSON.stringify(data))
           const config = new ConfigWrapper(data, defaultClientConfig)
@@ -73,93 +73,85 @@ function App() {
     }
     ref.current = true
   }, [])
-  const favicon = '/favicon';
+  const favicon = '/favicon'
   return (
     <>
       <ClientConfigContext.Provider value={config}>
         <ProfileContext.Provider value={profile}>
-          <Helmet>
-            {favicon &&
-              <link rel="icon" href={favicon} />}
-          </Helmet>
+          <Helmet>{favicon && <link rel='icon' href={favicon} />}</Helmet>
           <Switch>
-            <RouteMe path="/">
+            <RouteMe path='/'>
               <FeedsPage />
             </RouteMe>
 
-            <RouteMe path="/timeline">
+            <RouteMe path='/timeline'>
               <TimelinePage />
             </RouteMe>
-            
-            <RouteMe path="/moments">
+
+            <RouteMe path='/moments'>
               <MomentsPage />
             </RouteMe>
 
-            <RouteMe path="/friends">
+            <RouteMe path='/friends'>
               <FriendsPage />
             </RouteMe>
 
-            <RouteMe path="/hashtags">
+            <RouteMe path='/hashtags'>
               <HashtagsPage />
             </RouteMe>
 
-            <RouteMe path="/hashtag/:name">
+            <RouteMe path='/hashtag/:name'>
               {params => {
-                return (<HashtagPage name={params.name || ""} />)
+                return <HashtagPage name={params.name || ''} />
               }}
             </RouteMe>
 
-            <RouteMe path="/search/:keyword">
+            <RouteMe path='/search/:keyword'>
               {params => {
-                return (<SearchPage keyword={params.keyword || ""} />)
+                return <SearchPage keyword={params.keyword || ''} />
               }}
             </RouteMe>
 
-            <RouteMe path="/settings" paddingClassName='mx-4' requirePermission>
+            <RouteMe path='/settings' paddingClassName='mx-4' requirePermission>
               <Settings />
             </RouteMe>
 
-
-            <RouteMe path="/writing" paddingClassName='mx-4' requirePermission>
+            <RouteMe path='/writing' paddingClassName='mx-4' requirePermission>
               <WritingPage />
             </RouteMe>
 
-            <RouteMe path="/writing/:id" paddingClassName='mx-4' requirePermission>
+            <RouteMe path='/writing/:id' paddingClassName='mx-4' requirePermission>
               {({ id }) => {
                 const id_num = tryInt(0, id)
-                return (
-                  <WritingPage id={id_num} />
-                )
+                return <WritingPage id={id_num} />
               }}
             </RouteMe>
 
-            <RouteMe path="/callback" >
+            <RouteMe path='/callback'>
               <CallbackPage />
             </RouteMe>
 
-            <RouteMe path="/login" >
+            <RouteMe path='/login'>
               <LoginPage />
             </RouteMe>
 
-            <RouteMe path="/profile" >
+            <RouteMe path='/profile'>
               <ProfilePage />
             </RouteMe>
 
-            <RouteWithIndex path="/feed/:id">
+            <RouteWithIndex path='/feed/:id'>
               {(params, TOC, clean) => {
-                return (<FeedPage id={params.id || ""} TOC={TOC} clean={clean} />)
+                return <FeedPage id={params.id || ''} TOC={TOC} clean={clean} />
               }}
             </RouteWithIndex>
 
-            <RouteWithIndex path="/:alias">
+            <RouteWithIndex path='/:alias'>
               {(params, TOC, clean) => {
-                return (
-                  <FeedPage id={params.alias || ""} TOC={TOC} clean={clean} />
-                )
+                return <FeedPage id={params.alias || ''} TOC={TOC} clean={clean} />
               }}
             </RouteWithIndex>
 
-            <RouteMe path="/user/github">
+            <RouteMe path='/user/github'>
               {_ => (
                 <TipsPage>
                   <Tips value={t('error.api_url')} type='error' />
@@ -167,7 +159,7 @@ function App() {
               )}
             </RouteMe>
 
-            <RouteMe path="/*/user/github">
+            <RouteMe path='/*/user/github'>
               {_ => (
                 <TipsPage>
                   <Tips value={t('error.api_url_slash')} type='error' />
@@ -175,7 +167,7 @@ function App() {
               )}
             </RouteMe>
 
-            <RouteMe path="/user/github/callback">
+            <RouteMe path='/user/github/callback'>
               {_ => (
                 <TipsPage>
                   <Tips value={t('error.github_callback')} type='error' />
@@ -194,40 +186,56 @@ function App() {
   )
 }
 
-function RouteMe({ path, children, headerComponent, paddingClassName, requirePermission }:
-  { path?: PathPattern, children: React.ReactNode | ((params: DefaultParams) => React.ReactNode), headerComponent?: React.ReactNode, paddingClassName?: string, requirePermission?: boolean }) {
+function RouteMe({
+  path,
+  children,
+  headerComponent,
+  paddingClassName,
+  requirePermission,
+}: {
+  path?: PathPattern
+  children: React.ReactNode | ((params: DefaultParams) => React.ReactNode)
+  headerComponent?: React.ReactNode
+  paddingClassName?: string
+  requirePermission?: boolean
+}) {
   if (requirePermission) {
-    const profile = useContext(ProfileContext);
-    const { t } = useTranslation();
-    if (!profile?.permission)
-      children = <ErrorPage error={t('error.permission_denied')} />;
+    const profile = useContext(ProfileContext)
+    const { t } = useTranslation()
+    if (!profile?.permission) children = <ErrorPage error={t('error.permission_denied')} />
   }
   return (
-    <Route path={path} >
+    <Route path={path}>
       {params => {
-        return (<>
-          <Header>
-            {headerComponent}
-          </Header>
-          <Padding className={paddingClassName}>
-            {typeof children === 'function' ? children(params) : children}
-          </Padding>
-          <Footer />
-        </>)
+        return (
+          <>
+            <Header>{headerComponent}</Header>
+            <Padding className={paddingClassName}>
+              {typeof children === 'function' ? children(params) : children}
+            </Padding>
+            <Footer />
+          </>
+        )
       }}
     </Route>
   )
 }
 
-
-function RouteWithIndex({ path, children }:
-  { path: PathPattern, children: (params: DefaultParams, TOC: () => JSX.Element, clean: (id: string) => void) => React.ReactNode }) {
-  const { TOC, cleanup } = useTableOfContents(".toc-content");
-  return (<RouteMe path={path} headerComponent={TOCHeader({ TOC: TOC })} paddingClassName='mx-4'>
-    {params => {
-      return children(params, TOC, cleanup)
-    }}
-  </RouteMe>)
+function RouteWithIndex({
+  path,
+  children,
+}: {
+  path: PathPattern
+  children: (params: DefaultParams, TOC: () => JSX.Element, clean: (id: string) => void) => React.ReactNode
+}) {
+  const { TOC, cleanup } = useTableOfContents('.toc-content')
+  return (
+    <RouteMe path={path} headerComponent={TOCHeader({ TOC: TOC })} paddingClassName='mx-4'>
+      {params => {
+        return children(params, TOC, cleanup)
+      }}
+    </RouteMe>
+  )
 }
 
 export default App

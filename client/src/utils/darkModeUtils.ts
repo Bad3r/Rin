@@ -1,55 +1,49 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react'
 
 export function listenSystemMode() {
-  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 
   function darkModeHandler() {
-    const mode = localStorage.getItem("theme");
-    if (mode === null || mode === "system") {
+    const mode = localStorage.getItem('theme')
+    if (mode === null || mode === 'system') {
       if (mediaQuery.matches) {
-        document.documentElement.setAttribute("data-color-mode", "dark");
+        document.documentElement.setAttribute('data-color-mode', 'dark')
       } else {
-        document.documentElement.setAttribute("data-color-mode", "light");
+        document.documentElement.setAttribute('data-color-mode', 'light')
       }
-      window.dispatchEvent(new Event("colorSchemeChange"));
+      window.dispatchEvent(new Event('colorSchemeChange'))
     }
   }
 
   // 判断当前模式
-  darkModeHandler();
+  darkModeHandler()
   // 监听模式变化
-  mediaQuery.addEventListener("change", darkModeHandler);
+  mediaQuery.addEventListener('change', darkModeHandler)
 }
 
-export function getCurrentColorMode(): "light" | "dark" {
-  return (
-    (document.documentElement.getAttribute("data-color-mode") as
-      | "light"
-      | "dark") || "light"
-  );
+export function getCurrentColorMode(): 'light' | 'dark' {
+  return (document.documentElement.getAttribute('data-color-mode') as 'light' | 'dark') || 'light'
 }
 
 export function useColorMode() {
-  const [colorMode, setColorMode] = useState<"light" | "dark">(
-    getCurrentColorMode()
-  );
+  const [colorMode, setColorMode] = useState<'light' | 'dark'>(getCurrentColorMode())
 
   useEffect(() => {
     const updateColorMode = () => {
-      setColorMode(getCurrentColorMode());
-    };
+      setColorMode(getCurrentColorMode())
+    }
 
     // 初始设置
-    updateColorMode();
+    updateColorMode()
 
     // 监听颜色模式变化事件
-    window.addEventListener("colorSchemeChange", updateColorMode);
+    window.addEventListener('colorSchemeChange', updateColorMode)
 
     // 清理函数
     return () => {
-      window.removeEventListener("colorSchemeChange", updateColorMode);
-    };
-  }, []);
+      window.removeEventListener('colorSchemeChange', updateColorMode)
+    }
+  }, [])
 
-  return colorMode;
+  return colorMode
 }

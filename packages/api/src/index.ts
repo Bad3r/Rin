@@ -2,10 +2,10 @@
 // Used by both client and server
 
 // Types
-export * from './types';
+export * from './types'
 
 // Schemas for server-side validation
-export * from './schemas';
+export * from './schemas'
 
 // Schema validator
-export { t } from './schema-validator';
+export { t } from './schema-validator'

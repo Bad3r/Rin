@@ -1,251 +1,245 @@
-import { getAIConfig } from "./db-config";
+import { getAIConfig } from './db-config'
 
 // AI Provider presets with their default API URLs
 const AI_PROVIDER_URLS: Record<string, string> = {
-    openai: "https://api.openai.com/v1",
-    claude: "https://api.anthropic.com/v1",
-    gemini: "https://generativelanguage.googleapis.com/v1beta/openai",
-    deepseek: "https://api.deepseek.com/v1",
-};
+  openai: 'https://api.openai.com/v1',
+  claude: 'https://api.anthropic.com/v1',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta/openai',
+  deepseek: 'https://api.deepseek.com/v1',
+}
 
 // Cloudflare Worker AI models mapping (short name -> full model ID)
 export const WORKER_AI_MODELS: Record<string, string> = {
-    "llama-3-8b": "@cf/meta/llama-3-8b-instruct",
-    "llama-3-1-8b": "@cf/meta/llama-3.1-8b-instruct",
-    "llama-2-7b": "@cf/meta/llama-2-7b-chat-int8",
-    "mistral-7b": "@cf/mistral/mistral-7b-instruct-v0.1",
-    "mistral-7b-v2": "@cf/mistral/mistral-7b-instruct-v0.2-lora",
-    "gemma-2b": "@cf/google/gemma-2b-it-lora",
-    "gemma-7b": "@cf/google/gemma-7b-it-lora",
-    "deepseek-coder": "@cf/deepseek-ai/deepseek-coder-6.7b-base-awq",
-    "qwen-7b": "@cf/qwen/qwen1.5-7b-chat-awq",
-};
+  'llama-3-8b': '@cf/meta/llama-3-8b-instruct',
+  'llama-3-1-8b': '@cf/meta/llama-3.1-8b-instruct',
+  'llama-2-7b': '@cf/meta/llama-2-7b-chat-int8',
+  'mistral-7b': '@cf/mistral/mistral-7b-instruct-v0.1',
+  'mistral-7b-v2': '@cf/mistral/mistral-7b-instruct-v0.2-lora',
+  'gemma-2b': '@cf/google/gemma-2b-it-lora',
+  'gemma-7b': '@cf/google/gemma-7b-it-lora',
+  'deepseek-coder': '@cf/deepseek-ai/deepseek-coder-6.7b-base-awq',
+  'qwen-7b': '@cf/qwen/qwen1.5-7b-chat-awq',
+}
 
 /**
  * Get full Worker AI model ID from short name
  */
 export function getWorkerAIModelId(shortName: string): string {
-    return WORKER_AI_MODELS[shortName] || shortName;
+  return WORKER_AI_MODELS[shortName] || shortName
 }
 
 /**
  * Execute Worker AI request
  */
-async function executeWorkerAI(
-    env: Env,
-    modelId: string,
-    input: string
-): Promise<string | null> {
-    // Worker AI uses messages format for chat models
-    const response = await env.AI.run(modelId as any, {
-        messages: [
-            { role: "user", content: input }
-        ]
-    } as any);
+async function executeWorkerAI(env: Env, modelId: string, input: string): Promise<string | null> {
+  // Worker AI uses messages format for chat models
+  const response = await env.AI.run(
+    modelId as any,
+    {
+      messages: [{ role: 'user', content: input }],
+    } as any
+  )
 
-    const responseObj = response as any;
-    if (responseObj && typeof responseObj === 'object') {
-        // Worker AI response structure: { response: string }
-        if ('response' in responseObj) return responseObj.response;
-        if ('content' in responseObj) return responseObj.content;
-        if ('output' in responseObj) return responseObj.output;
-        if ('result' in responseObj) return responseObj.result;
-        return JSON.stringify(responseObj);
-    }
+  const responseObj = response as any
+  if (responseObj && typeof responseObj === 'object') {
+    // Worker AI response structure: { response: string }
+    if ('response' in responseObj) return responseObj.response
+    if ('content' in responseObj) return responseObj.content
+    if ('output' in responseObj) return responseObj.output
+    if ('result' in responseObj) return responseObj.result
+    return JSON.stringify(responseObj)
+  }
 
-    if (typeof responseObj === 'string') {
-        return responseObj;
-    }
+  if (typeof responseObj === 'string') {
+    return responseObj
+  }
 
-    return null;
+  return null
 }
 
 /**
  * Execute external AI API request
  */
 async function executeExternalAI(
-    config: {
-        provider: string;
-        model: string;
-        api_key: string;
-        api_url: string;
-    },
-    input: string
+  config: {
+    provider: string
+    model: string
+    api_key: string
+    api_url: string
+  },
+  input: string
 ): Promise<string | null> {
-    const { provider, model, api_key, api_url } = config;
+  const { provider, model, api_key, api_url } = config
 
-    if (!api_key) {
-        throw new Error("API key not configured");
-    }
+  if (!api_key) {
+    throw new Error('API key not configured')
+  }
 
-    const finalApiUrl = api_url || AI_PROVIDER_URLS[provider];
-    if (!finalApiUrl) {
-        throw new Error("API URL not configured");
-    }
+  const finalApiUrl = api_url || AI_PROVIDER_URLS[provider]
+  if (!finalApiUrl) {
+    throw new Error('API URL not configured')
+  }
 
-    const response = await fetch(`${finalApiUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${api_key}`,
-        },
-        body: JSON.stringify({
-            model: model,
-            messages: [{ role: "user", content: input }],
-            max_tokens: 500,
-            temperature: 0.3,
-        }),
-    });
+  const response = await fetch(`${finalApiUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${api_key}`,
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: [{ role: 'user', content: input }],
+      max_tokens: 500,
+      temperature: 0.3,
+    }),
+  })
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API error ${response.status}: ${errorText}`);
-    }
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`API error ${response.status}: ${errorText}`)
+  }
 
-    const data = await response.json() as any;
-    return data.choices?.[0]?.message?.content?.trim() || null;
+  const data = (await response.json()) as any
+  return data.choices?.[0]?.message?.content?.trim() || null
 }
 
 /**
  * Test AI model configuration
  */
 export async function testAIModel(
-    env: Env,
-    config: {
-        provider: string;
-        model: string;
-        api_key?: string;
-        api_url?: string;
-    },
-    testPrompt: string
+  env: Env,
+  config: {
+    provider: string
+    model: string
+    api_key?: string
+    api_url?: string
+  },
+  testPrompt: string
 ): Promise<{ success: boolean; response?: string; error?: string; details?: string }> {
-    try {
-        let result: string | null;
+  try {
+    let result: string | null
 
-        if (config.provider === 'worker-ai') {
-            const fullModelName = getWorkerAIModelId(config.model);
-            console.log(`[Test AI] Using Worker AI model: ${fullModelName}`);
-            result = await executeWorkerAI(env, fullModelName, testPrompt);
-        } else {
-            result = await executeExternalAI({
-                provider: config.provider,
-                model: config.model,
-                api_key: config.api_key || '',
-                api_url: config.api_url || '',
-            }, testPrompt);
-        }
-
-        if (result) {
-            return { 
-                success: true, 
-                response: result,
-            };
-        } else {
-            return { 
-                success: false, 
-                error: 'Empty response from AI' 
-            };
-        }
-    } catch (error: any) {
-        return processAIError(error, config.model, config.provider);
+    if (config.provider === 'worker-ai') {
+      const fullModelName = getWorkerAIModelId(config.model)
+      console.log(`[Test AI] Using Worker AI model: ${fullModelName}`)
+      result = await executeWorkerAI(env, fullModelName, testPrompt)
+    } else {
+      result = await executeExternalAI(
+        {
+          provider: config.provider,
+          model: config.model,
+          api_key: config.api_key || '',
+          api_url: config.api_url || '',
+        },
+        testPrompt
+      )
     }
+
+    if (result) {
+      return {
+        success: true,
+        response: result,
+      }
+    } else {
+      return {
+        success: false,
+        error: 'Empty response from AI',
+      }
+    }
+  } catch (error: any) {
+    return processAIError(error, config.model, config.provider)
+  }
 }
 
 /**
  * Generate AI summary for article content
  */
-export async function generateAISummary(
-    env: Env, 
-    db: any, 
-    content: string
-): Promise<string | null> {
-    const config = await getAIConfig(db);
+export async function generateAISummary(env: Env, db: any, content: string): Promise<string | null> {
+  const config = await getAIConfig(db)
 
-    if (!config.enabled) {
-        return null;
+  if (!config.enabled) {
+    return null
+  }
+
+  const { provider, model } = config
+  const maxContentLength = 8000
+  const truncatedContent = content.length > maxContentLength ? content.slice(0, maxContentLength) + '...' : content
+
+  try {
+    let result: string | null
+
+    if (provider === 'worker-ai') {
+      const fullModelName = getWorkerAIModelId(model)
+      result = await executeWorkerAI(
+        env,
+        fullModelName,
+        `请用简洁的中文总结以下内容，不超过200字：\n\n${truncatedContent}`
+      )
+    } else {
+      result = await executeExternalAI(config, truncatedContent)
     }
 
-    const { provider, model } = config;
-    const maxContentLength = 8000;
-    const truncatedContent = content.length > maxContentLength
-        ? content.slice(0, maxContentLength) + "..."
-        : content;
-
-    try {
-        let result: string | null;
-
-        if (provider === 'worker-ai') {
-            const fullModelName = getWorkerAIModelId(model);
-            result = await executeWorkerAI(
-                env, 
-                fullModelName, 
-                `请用简洁的中文总结以下内容，不超过200字：\n\n${truncatedContent}`
-            );
-        } else {
-            result = await executeExternalAI(config, truncatedContent);
-        }
-
-        return result;
-    } catch (error) {
-        console.error("[AI Summary] Failed to generate summary:", error);
-        return null;
-    }
+    return result
+  } catch (error) {
+    console.error('[AI Summary] Failed to generate summary:', error)
+    return null
+  }
 }
 
 /**
  * Process AI error and return user-friendly message
  */
 function processAIError(
-    error: any, 
-    model: string, 
-    provider: string
+  error: any,
+  model: string,
+  provider: string
 ): { success: false; error: string; details?: string } {
-    const originalMessage = error.message || 'Unknown error';
-    console.error('[AI] Error:', error);
+  const originalMessage = error.message || 'Unknown error'
+  console.error('[AI] Error:', error)
 
-    let errorMessage = originalMessage;
-    let errorDetails = '';
+  let errorMessage = originalMessage
+  let errorDetails = ''
 
-    if (originalMessage.includes('fetch failed') || originalMessage.includes('NetworkError')) {
-        errorMessage = 'Network error: Unable to connect to AI service';
-        errorDetails = 'Please check your API URL and network connection.';
-    } else if (originalMessage.includes('401') || originalMessage.includes('Unauthorized')) {
-        errorMessage = 'Authentication failed: Invalid API key';
-        errorDetails = 'Please check your API key is correct and not expired.';
-    } else if (originalMessage.includes('429')) {
-        errorMessage = 'Rate limit exceeded';
-        errorDetails = 'Too many requests. Please wait a moment.';
-    } else if (originalMessage.includes('404')) {
-        errorMessage = 'Model not found';
-        errorDetails = `Model "${model}" not found for provider "${provider}".`;
-    } else if (originalMessage.includes('500') || originalMessage.includes('503')) {
-        errorMessage = 'AI service temporarily unavailable';
-        errorDetails = 'Service is experiencing issues. Please try again later.';
-    } else if (originalMessage.includes('Invalid')) {
-        errorMessage = `AI model error: ${originalMessage}`;
-        errorDetails = `Model "${model}" may not be supported. Please verify the model ID.`;
-    }
+  if (originalMessage.includes('fetch failed') || originalMessage.includes('NetworkError')) {
+    errorMessage = 'Network error: Unable to connect to AI service'
+    errorDetails = 'Please check your API URL and network connection.'
+  } else if (originalMessage.includes('401') || originalMessage.includes('Unauthorized')) {
+    errorMessage = 'Authentication failed: Invalid API key'
+    errorDetails = 'Please check your API key is correct and not expired.'
+  } else if (originalMessage.includes('429')) {
+    errorMessage = 'Rate limit exceeded'
+    errorDetails = 'Too many requests. Please wait a moment.'
+  } else if (originalMessage.includes('404')) {
+    errorMessage = 'Model not found'
+    errorDetails = `Model "${model}" not found for provider "${provider}".`
+  } else if (originalMessage.includes('500') || originalMessage.includes('503')) {
+    errorMessage = 'AI service temporarily unavailable'
+    errorDetails = 'Service is experiencing issues. Please try again later.'
+  } else if (originalMessage.includes('Invalid')) {
+    errorMessage = `AI model error: ${originalMessage}`
+    errorDetails = `Model "${model}" may not be supported. Please verify the model ID.`
+  }
 
-    return { 
-        success: false, 
-        error: errorMessage,
-        details: errorDetails || `Original: ${originalMessage}`
-    };
+  return {
+    success: false,
+    error: errorMessage,
+    details: errorDetails || `Original: ${originalMessage}`,
+  }
 }
 
 /**
  * Get available models for a provider
  */
 export function getAvailableModels(provider: string): string[] {
-    if (provider === 'worker-ai') {
-        return Object.keys(WORKER_AI_MODELS);
-    }
-    return [];
+  if (provider === 'worker-ai') {
+    return Object.keys(WORKER_AI_MODELS)
+  }
+  return []
 }
 
 /**
  * Check if provider requires API key
  */
 export function requiresApiKey(provider: string): boolean {
-    return provider !== 'worker-ai';
+  return provider !== 'worker-ai'
 }

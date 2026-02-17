@@ -1,2 +1,2 @@
-import './index.css';
-export * from '@rspress/core/theme-original';
+import './index.css'
+export * from '@rspress/core/theme-original'

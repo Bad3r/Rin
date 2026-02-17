@@ -23,7 +23,8 @@
     ];
   };
 
-  outputs = { nixpkgs, devenv, ... }@inputs:
+  outputs =
+    { nixpkgs, devenv, ... }@inputs:
     let
       systems = [
         "x86_64-linux"
@@ -32,10 +33,7 @@
         "aarch64-darwin"
       ];
 
-      forEachSystem = f:
-        nixpkgs.lib.genAttrs systems (
-          system: f system nixpkgs.legacyPackages.${system}
-        );
+      forEachSystem = f: nixpkgs.lib.genAttrs systems (system: f system nixpkgs.legacyPackages.${system});
     in
     {
       devShells = forEachSystem (
