@@ -149,15 +149,20 @@ export function createMockDB() {
 /**
  * Create a mock environment for testing
  */
-export function createMockEnv(overrides: Partial<Env> = {}): Env {
+type MockEnvOverrides = {
+  [K in keyof Env]?: Env[K] extends string ? string : Env[K]
+}
+
+export function createMockEnv(overrides: MockEnvOverrides = {}): Env {
   return {
     DB: {} as D1Database,
     S3_FOLDER: 'images/',
     S3_CACHE_FOLDER: 'cache/',
     S3_REGION: 'auto',
     S3_ENDPOINT: 'https://test.r2.cloudflarestorage.com',
-    S3_ACCESS_HOST: 'https://test-image-domain.com',
-    S3_BUCKET: 'test-bucket',
+    // Defaults intentionally use placeholder values so local tests don't rely on remote S3.
+    S3_ACCESS_HOST: 'https://your-image-domain.com',
+    S3_BUCKET: 'your-bucket-name',
     S3_FORCE_PATH_STYLE: 'false',
     WEBHOOK_URL: '',
     RSS_TITLE: 'Test Blog',

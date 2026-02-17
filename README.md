@@ -85,15 +85,25 @@ Notes:
 Run the test suite to ensure everything works:
 
 ```bash
-# Run all tests (client + server)
-bun run test
+# Run deterministic local CI suite (unit + local integration)
+bun run test:ci
 
-# Run server tests only
-bun run test:server
+# Run local unit tests only
+bun run test:unit
 
-# Run tests with coverage
-bun run test:coverage
+# Run local integration tests only
+bun run test:integration
+
+# Run local coverage suite (no remote deployment dependency)
+bun run test:coverage:ci
+
+# Run remote deployment smoke tests (opt-in)
+ENABLE_REMOTE_INTEGRATION_TESTS=true \
+RIN_REMOTE_BASE_URL="https://your-deployment.example.com" \
+bun run test:remote
 ```
+
+Detailed test policy and tier definitions are documented in `docs/testing.md`.
 
 ### One-Command Deployment
 
@@ -132,9 +142,10 @@ The deployment script will automatically:
 The repository includes several automated workflows:
 
 - **`ci.yml`** - Runs type checking and formatting validation on every push/PR
-- **`test.yml`** - Runs comprehensive tests (server + client) with coverage reporting
+- **`test.yml`** - Runs deterministic local tests (unit + local integration) with coverage reporting
 - **`build.yml`** - Builds the project and triggers deployment
 - **`deploy.yml`** - Deploys to Cloudflare Pages and Workers
+- **`remote-integration.yml`** - Runs deployed-environment smoke tests (nightly + manual, gated)
 
 **Required secrets (Repository Settings → Secrets and variables → Actions):**
 - `CLOUDFLARE_API_TOKEN` - Your Cloudflare API token with Workers and Pages permissions
@@ -144,6 +155,11 @@ The repository includes several automated workflows:
 - `WORKER_NAME`, `PAGES_NAME`, `DB_NAME` - Resource names
 - `NAME`, `DESCRIPTION`, `AVATAR` - Site configuration
 - `R2_BUCKET_NAME` - Specific R2 bucket to use
+- `ENABLE_REMOTE_INTEGRATION_TESTS` - Enable remote smoke workflow/deploy gate (`true`/`false`)
+- `RIN_REMOTE_BASE_URL` - Default base URL for nightly remote integration workflow
+
+**Optional secrets for remote smoke checks:**
+- `RIN_REMOTE_AUTH_TOKEN` - Token used by remote integration tests when protected endpoints are checked
 
 Full documentation is available at https://docs.openrin.org.
 

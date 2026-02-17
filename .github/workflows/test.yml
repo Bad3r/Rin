@@ -21,7 +21,7 @@ jobs:
         run: bun install
 
       - name: Run server tests
-        run: bun run test
+        run: bun run test:ci
         working-directory: ./server
 
       - name: Type check server
@@ -83,7 +83,7 @@ jobs:
         run: bun install
 
       - name: Run tests with coverage
-        run: bun run test:coverage
+        run: bun run test:coverage:ci
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
