@@ -53,7 +53,7 @@ export class LegacyRouterAdapter extends Router {
   group(prefix: string, callback: (router: Router) => void): this {
     const groupRouter = new LegacyRouterAdapter()
     groupRouter.middlewares = [...this.middlewares]
-    groupRouter.appState = new Map(this.appState)
+    groupRouter.appState = this.appState
     callback(groupRouter)
 
     // Merge group routes with prefix

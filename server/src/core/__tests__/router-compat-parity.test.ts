@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'bun:test'
 import { createMockEnv } from '../../../tests/fixtures'
 import { createBaseApp } from '../base'
+import { createRouter } from '../router'
 
 type RouterImpl = 'legacy' | 'hono'
 
@@ -36,6 +37,20 @@ for (const impl of ROUTER_IMPLS) {
         tag: ['security', 'edge'],
         limit: '5',
       })
+    })
+
+    it('propagates state mutations made after group registration', async () => {
+      const rawApp = createRouter(env)
+      rawApp.group('/state', group => {
+        group.get('/check', ctx => ({ routerMode: ctx.store.routerMode }))
+      })
+
+      rawApp.state('routerMode', 'after-group')
+
+      const response = await rawApp.handle(new Request('http://localhost/state/check'), env)
+      expect(response.status).toBe(200)
+      const payload = (await response.json()) as { routerMode: string }
+      expect(payload).toEqual({ routerMode: 'after-group' })
     })
 
     it('decodes encoded path values consistently across adapters', async () => {
