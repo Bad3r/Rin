@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   cleanup-preview:
+    if: ${{ vars.PREVIEW_DEPLOYMENT_MODE == 'per-pr' }}
     runs-on: ubuntu-latest
     environment:
       name: preview

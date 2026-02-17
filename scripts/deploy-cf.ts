@@ -1,4 +1,4 @@
-import { readdir } from 'node:fs/promises'
+import { appendFile, readdir } from 'node:fs/promises'
 import { $ } from 'bun'
 import stripIndent from 'strip-indent'
 import { fixTopField, getMigrationVersion, isInfoExist, updateMigrationVersion } from './db-fix-top-field'
@@ -15,8 +15,16 @@ function env(name: string, defaultValue?: string, required = false) {
 // must be defined
 const renv = (name: string, defaultValue?: string) => env(name, defaultValue, true)!
 
-const DB_NAME = renv('DB_NAME', 'rin')
-const WORKER_NAME = renv('WORKER_NAME', 'rin-server')
+const DEPLOY_ENV = env('DEPLOY_ENV', 'production')
+const isPreview = DEPLOY_ENV === 'preview'
+if (DEPLOY_ENV !== 'production' && DEPLOY_ENV !== 'preview') {
+  throw new Error(`DEPLOY_ENV must be production or preview, got: ${DEPLOY_ENV}`)
+}
+
+const DB_NAME = renv('DB_NAME', isPreview ? 'rin-preview' : 'rin')
+const WORKER_NAME = renv('WORKER_NAME', isPreview ? 'rin-server-preview' : 'rin-server')
+const D1_DATABASE_ID = env('D1_DATABASE_ID', '')
+const GENERATED_WRANGLER_PATH = '.wrangler/deploy.generated.toml'
 
 // R2 bucket name (optional, only used if S3 is not explicitly configured)
 const R2_BUCKET_NAME = env('R2_BUCKET_NAME', '')
@@ -57,6 +65,9 @@ console.log(`  DESCRIPTION: ${DESCRIPTION}`)
 console.log(`  AVATAR: ${AVATAR}`)
 console.log(`  PAGE_SIZE: ${PAGE_SIZE}`)
 console.log(`  RSS_ENABLE: ${RSS_ENABLE}`)
+console.log(`  DEPLOY_ENV: ${DEPLOY_ENV}`)
+console.log(`  WORKER_NAME: ${WORKER_NAME}`)
+console.log(`  DB_NAME: ${DB_NAME}`)
 
 async function getR2BucketInfo(): Promise<{ name: string; endpoint: string; accessHost: string } | null> {
   // Only use R2 if explicitly configured via R2_BUCKET_NAME
@@ -132,9 +143,10 @@ async function deploy(): Promise<string> {
     console.log(`⚠️ No server build found, using source: ${serverMain}`)
   }
 
-  // Create wrangler.toml with assets configuration
-  Bun.write(
-    'wrangler.toml',
+  // Create a deploy-specific wrangler config so repository source-of-truth remains untouched
+  await $`mkdir -p .wrangler`
+  await Bun.write(
+    GENERATED_WRANGLER_PATH,
     stripIndent(`
 #:schema node_modules/wrangler/config-schema.json
 name = "${WORKER_NAME}"
@@ -194,30 +206,35 @@ mode = "smart"
     console.log(`Created D1 "${DB_NAME}"`)
   }
 
-  // Get D1 database info
-  console.log(`Searching D1 "${DB_NAME}"`)
-  const listJsonString = await $`bunx wrangler d1 list --json`.quiet().text()
-  const listJson = (JSON.parse(listJsonString) as D1Item[]) ?? []
-  const existing = listJson.find((x: D1Item) => x.name === DB_NAME)
-  if (existing) {
-    console.log(`Found: ${existing.name}:${existing.uuid}`)
-    const configText = stripIndent(`
-    [[d1_databases]]
-    binding = "DB"
-    database_name = "${existing.name}"
-    database_id = "${existing.uuid}"`)
-    await $`echo ${configText} >> wrangler.toml`.quiet()
-    console.log(`Appended to wrangler.toml`)
+  // Resolve D1 database id (prefer explicit D1_DATABASE_ID from CI env)
+  let databaseId = D1_DATABASE_ID
+  if (!databaseId) {
+    console.log(`Searching D1 "${DB_NAME}"`)
+    const listJsonString = await $`bunx wrangler d1 list --json`.quiet().text()
+    const listJson = (JSON.parse(listJsonString) as D1Item[]) ?? []
+    const existing = listJson.find((x: D1Item) => x.name === DB_NAME)
+    if (!existing) {
+      console.error(`Could not resolve D1 database id for "${DB_NAME}"`)
+      process.exit(1)
+    }
+    databaseId = existing.uuid
   }
 
-  // Add AI binding for Cloudflare Worker AI
-  console.log(`----------------------------`)
-  console.log(`Adding AI binding`)
-  const aiConfigText = stripIndent(`
-    [ai]
-    binding = "AI"`)
-  await $`echo ${aiConfigText} >> wrangler.toml`.quiet()
-  console.log(`AI binding appended to wrangler.toml`)
+  await appendFile(
+    GENERATED_WRANGLER_PATH,
+    stripIndent(`
+      
+      [[d1_databases]]
+      binding = "DB"
+      database_name = "${DB_NAME}"
+      database_id = "${databaseId}"
+      
+      [ai]
+      binding = "AI"
+    `)
+  )
+  console.log(`Using D1 database id: ${databaseId}`)
+  console.log(`Generated config: ${GENERATED_WRANGLER_PATH}`)
 
   // Run migrations
   console.log(`----------------------------`)
@@ -268,7 +285,7 @@ mode = "smart"
   async function putSecret(name: string, value?: string) {
     if (value) {
       console.log(`Put ${name}`)
-      await $`echo "${value}" | bun wrangler secret put ${name}`
+      await $`echo "${value}" | bunx wrangler secret put ${name} --config ${GENERATED_WRANGLER_PATH}`
     } else {
       console.log(`Skip ${name}, value is not defined.`)
     }
@@ -285,9 +302,11 @@ mode = "smart"
   console.log(`Put Done.`)
   console.log(`----------------------------`)
   console.log(`Deploying Worker with Assets`)
+  console.log(`Environment: ${DEPLOY_ENV}`)
 
   // Deploy worker with assets
-  const { stdout: deployOutput, stderr: deployStderr } = await $`echo -e "n\ny\n" | bunx wrangler deploy`
+  const { stdout: deployOutput, stderr: deployStderr } =
+    await $`echo -e "n\ny\n" | bunx wrangler deploy --config ${GENERATED_WRANGLER_PATH}`
 
   // Extract worker URL from deploy output
   const fullOutput = deployOutput.toString() + deployStderr.toString()
