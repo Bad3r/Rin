@@ -84,6 +84,12 @@ describe('Integration Tests - API Flow', () => {
         `)
   }
 
+  function requireInsertedId(result: { data?: { insertedId?: number } }): number {
+    const insertedId = result.data?.insertedId
+    expect(insertedId).toBeDefined()
+    return insertedId as number
+  }
+
   describe('Full blog post workflow', () => {
     it('should create a post with tags and comments', async () => {
       // 1. Create a new feed using the type-safe API client
@@ -103,7 +109,7 @@ describe('Integration Tests - API Flow', () => {
       expect(createResult.data).toBeDefined()
       expect(createResult.data?.insertedId).toBeDefined()
 
-      const feedId = createResult.data?.insertedId
+      const feedId = requireInsertedId(createResult)
 
       // 2. Get the created feed
       const getResult = await api.feed.get(feedId)

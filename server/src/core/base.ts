@@ -5,6 +5,7 @@ import type { Context, OAuth2Utils } from './types'
 
 // Lazy initialization container
 class LazyInitContainer {
+  private env: Env
   private instances: Map<string, any> = new Map()
   private initializing: Map<string, Promise<any>> = new Map()
 

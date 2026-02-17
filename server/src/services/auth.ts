@@ -20,6 +20,10 @@ export function PasswordAuthService(router: Router): void {
       const { jwt, set, store, body, cookie } = ctx
       const { db, anyUser, env } = store
 
+      if (!jwt) {
+        throw new InternalServerError('JWT is not configured')
+      }
+
       // Check if admin credentials are configured
       const adminUsername = env.ADMIN_USERNAME
       const adminPassword = env.ADMIN_PASSWORD
@@ -82,7 +86,7 @@ export function PasswordAuthService(router: Router): void {
         }
 
         // Generate JWT token
-        const token = await jwt?.sign({ id: user.id })
+        const token = await jwt.sign({ id: user.id })
 
         // Set JWT cookie (for backward compatibility)
         cookie.token.set({
@@ -120,7 +124,7 @@ export function PasswordAuthService(router: Router): void {
       }
 
       // Generate JWT token
-      const token = await jwt?.sign({ id: user.id })
+      const token = await jwt.sign({ id: user.id })
 
       // Set JWT cookie (for backward compatibility)
       cookie.token.set({

@@ -45,7 +45,7 @@ export function MarkdownEditor({
       })
   }
 
-  const handlePaste = async (event: React.ClipboardEvent<HTMLDivElement>) => {
+  const handlePaste = async (event: React.ClipboardEvent<HTMLFormElement>) => {
     const clipboardData = event.clipboardData
     if (clipboardData.files.length === 1) {
       const editor = editorRef.current

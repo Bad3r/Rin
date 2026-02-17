@@ -63,6 +63,12 @@ describe('FeedService', () => {
         `)
   }
 
+  function requireInsertedId(result: { data?: { insertedId?: number } }): number {
+    const insertedId = result.data?.insertedId
+    expect(insertedId).toBeDefined()
+    return insertedId as number
+  }
+
   describe('GET /feed - List feeds', () => {
     it('should list published feeds', async () => {
       // Create feeds via API using type-safe client
@@ -161,7 +167,7 @@ describe('FeedService', () => {
       )
 
       expect(createResult.error).toBeUndefined()
-      const feedId = createResult.data?.insertedId
+      const feedId = requireInsertedId(createResult)
 
       const getResult = await api.feed.get(feedId)
 
@@ -252,7 +258,7 @@ describe('FeedService', () => {
       )
 
       expect(createResult.error).toBeUndefined()
-      const feedId = createResult.data?.insertedId
+      const feedId = requireInsertedId(createResult)
 
       const updateResult = await api.feed.update(
         feedId,
@@ -285,7 +291,7 @@ describe('FeedService', () => {
       )
 
       expect(createResult.error).toBeUndefined()
-      const feedId = createResult.data?.insertedId
+      const feedId = requireInsertedId(createResult)
 
       const updateResult = await api.feed.update(feedId, {
         title: 'New Title',
@@ -312,7 +318,7 @@ describe('FeedService', () => {
       )
 
       expect(createResult.error).toBeUndefined()
-      const feedId = createResult.data?.insertedId
+      const feedId = requireInsertedId(createResult)
 
       const deleteResult = await api.feed.delete(feedId, { token: 'mock_token_1' })
 
@@ -337,7 +343,7 @@ describe('FeedService', () => {
       )
 
       expect(createResult.error).toBeUndefined()
-      const feedId = createResult.data?.insertedId
+      const feedId = requireInsertedId(createResult)
 
       const deleteResult = await api.feed.delete(feedId)
 

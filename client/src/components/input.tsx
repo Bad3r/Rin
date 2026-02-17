@@ -18,6 +18,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       <input
         id={id?.toString()}
         ref={ref}
+        autoFocus={autofocus}
         type={type}
         disabled={disabled}
         placeholder={placeholder}
