@@ -153,6 +153,7 @@ describe('Router', () => {
       app.use(async (ctx: Context, _env: Env) => {
         middlewareRan = true
         ctx.store.testValue = 'from middleware'
+        return undefined
       })
 
       const handler: Handler = (ctx: Context) => ({ value: ctx.store.testValue })

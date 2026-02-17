@@ -10,7 +10,7 @@ import { Config } from '../utils/config'
 import { notify } from '../utils/webhook'
 
 export function FriendService(router: Router): void {
-  router.group('/api/friend', group => {
+  router.group('/friend', group => {
     // GET /friend
     group.get('/', async (ctx: Context) => {
       const {

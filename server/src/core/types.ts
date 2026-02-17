@@ -54,7 +54,7 @@ export type Middleware = (
   context: Context,
   env: Env,
   container?: any
-) => Promise<Response | void | undefined> | Response | void | undefined
+) => Promise<Response | undefined | undefined> | Response | undefined | undefined
 
 export interface RouteDefinition {
   path: string
