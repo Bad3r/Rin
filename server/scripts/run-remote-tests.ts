@@ -1,4 +1,4 @@
-const enabled = (process.env.ENABLE_REMOTE_INTEGRATION_TESTS || process.env.REMOTE_TESTS_ENABLED || '').toLowerCase()
+const enabled = (process.env.ENABLE_REMOTE_INTEGRATION_TESTS || '').toLowerCase()
 
 if (enabled !== 'true') {
   console.log('[remote-tests] Skipping: ENABLE_REMOTE_INTEGRATION_TESTS is not true.')

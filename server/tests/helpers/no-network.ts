@@ -37,6 +37,8 @@ if (!allowRemote && !globalState.__rin_no_network_guard_installed__) {
   const originalFetch = globalThis.fetch.bind(globalThis)
 
   globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    // NOTE: This guard only intercepts `fetch`. Other network primitives
+    // (for example WebSocket/Bun.connect/Node http|https) are not blocked here.
     const url = resolveUrl(input)
 
     if (url && (url.protocol === 'http:' || url.protocol === 'https:')) {

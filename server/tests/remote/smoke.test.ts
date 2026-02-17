@@ -1,18 +1,13 @@
-import { describe, expect, it } from 'bun:test'
+import { beforeAll, describe, expect, it } from 'bun:test'
 
 const baseUrlEnv = process.env.RIN_REMOTE_BASE_URL
-
-if (!baseUrlEnv) {
-  throw new Error(
-    '[remote-tests] RIN_REMOTE_BASE_URL is required. ' +
-      'Set ENABLE_REMOTE_INTEGRATION_TESTS=true and provide a deployment URL.'
-  )
-}
-
-const baseUrl = new URL(baseUrlEnv)
+let baseUrl: URL | null = null
 const timeoutMs = Number(process.env.RIN_REMOTE_TIMEOUT_MS || '10000')
 
 function makeUrl(path: string): string {
+  if (!baseUrl) {
+    throw new Error('[remote-tests] Base URL is not initialized.')
+  }
   return new URL(path, baseUrl).toString()
 }
 
@@ -28,6 +23,17 @@ async function fetchWithTimeout(path: string, init?: RequestInit): Promise<Respo
 }
 
 describe('Remote smoke', () => {
+  beforeAll(() => {
+    if (!baseUrlEnv) {
+      throw new Error(
+        '[remote-tests] RIN_REMOTE_BASE_URL is required. ' +
+          'Set ENABLE_REMOTE_INTEGRATION_TESTS=true and provide a deployment URL.'
+      )
+    }
+
+    baseUrl = new URL(baseUrlEnv)
+  })
+
   it('serves rss.xml with xml content type', async () => {
     const response = await fetchWithTimeout('/rss.xml')
 
