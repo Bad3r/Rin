@@ -343,11 +343,30 @@ mode = "smart"
   console.log(`Environment: ${DEPLOY_ENV}`)
 
   // Deploy worker with assets
-  const { stdout: deployOutput, stderr: deployStderr } =
-    await $`echo -e "n\ny\n" | bunx wrangler deploy --config ${GENERATED_WRANGLER_PATH}`
+  const deployProc = Bun.spawn(['bunx', 'wrangler', 'deploy', '--config', GENERATED_WRANGLER_PATH], {
+    stdin: 'pipe',
+    stdout: 'pipe',
+    stderr: 'pipe',
+  })
+  const deployWriter = deployProc.stdin.getWriter()
+  await deployWriter.write(new TextEncoder().encode('n\ny\n'))
+  await deployWriter.close()
+
+  const deployOutputPromise = deployProc.stdout ? new Response(deployProc.stdout).text() : Promise.resolve('')
+  const deployStderrPromise = deployProc.stderr ? new Response(deployProc.stderr).text() : Promise.resolve('')
+  const [deployOutput, deployStderr, deployExitCode] = await Promise.all([
+    deployOutputPromise,
+    deployStderrPromise,
+    deployProc.exited,
+  ])
+  if (deployExitCode !== 0) {
+    console.error('wrangler deploy failed:')
+    console.error(deployStderr || deployOutput)
+    process.exit(deployExitCode)
+  }
 
   // Extract worker URL from deploy output
-  const fullOutput = deployOutput.toString() + deployStderr.toString()
+  const fullOutput = deployOutput + deployStderr
   const urlMatch = fullOutput.match(/https:\/\/[^\s]+\.workers\.dev/)
   const workerUrl = urlMatch ? urlMatch[0] : null
 
