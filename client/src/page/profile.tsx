@@ -121,7 +121,9 @@ export function ProfilePage() {
         <div className='space-y-6'>
           {/* Avatar section */}
           <div className='flex flex-col items-center space-y-4'>
-            <p className='text-sm font-medium t-secondary'>{t('profile.avatar')}</p>
+            <label htmlFor='profile-avatar-input' className='text-sm font-medium t-secondary'>
+              {t('profile.avatar')}
+            </label>
             <button
               type='button'
               className='relative w-32 h-32 rounded-full overflow-hidden cursor-pointer border-4 border-theme hover:opacity-80 transition-opacity'
@@ -138,14 +140,24 @@ export function ProfilePage() {
                 <i className='ri-camera-line text-white text-2xl'></i>
               </div>
             </button>
-            <input ref={fileInputRef} type='file' accept='image/*' className='hidden' onChange={handleFileChange} />
+            <input
+              id='profile-avatar-input'
+              ref={fileInputRef}
+              type='file'
+              accept='image/*'
+              className='hidden'
+              onChange={handleFileChange}
+            />
             <p className='text-xs t-secondary'>{t('profile.avatar_hint')}</p>
           </div>
 
           {/* Username section */}
           <div className='space-y-2'>
-            <p className='text-sm font-medium t-secondary'>{t('profile.username')}</p>
+            <label htmlFor='profile-username-input' className='text-sm font-medium t-secondary'>
+              {t('profile.username')}
+            </label>
             <Input
+              id='profile-username-input'
               value={username}
               setValue={setUsername}
               placeholder={t('profile.username_placeholder')}
