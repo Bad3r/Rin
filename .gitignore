@@ -38,3 +38,7 @@ dist-ssr
 # Bun
 .bun/*
 /.devenv/
+
+# Local generated devenv/Wrangler artifacts
+/.devenv.flake.nix
+/worker-configuration.d.ts
