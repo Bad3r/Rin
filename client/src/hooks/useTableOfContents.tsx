@@ -83,7 +83,7 @@ const useTableOfContents = (selector: string) => {
             <li key={`toc$${item.index}`} style={{ marginLeft: item.marginLeft }}>
               <button
                 type='button'
-                className={`hover:opacity-50 ${activeIndex === item.index ? 'text-theme' : ''}`}
+                className={`w-full text-left cursor-pointer hover:opacity-50 ${activeIndex === item.index ? 'text-theme' : ''}`}
                 onClick={() => {
                   item.element.scrollIntoView({
                     behavior: 'smooth',
