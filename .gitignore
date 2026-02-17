@@ -38,3 +38,16 @@ dist-ssr
 # Bun
 .bun/*
 /.devenv/
+
+# Local generated devenv artifacts
+/.devenv.flake.nix
+/devenv.lock
+
+# Wrangler-generated types:
+# keep server/worker-configuration.d.ts as source-of-truth,
+# ignore any other generated copies (including repository root)
+worker-configuration.d.ts
+!server/worker-configuration.d.ts
+
+# Local planning scratch docs
+*plan*.md
