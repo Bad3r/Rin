@@ -20,7 +20,7 @@ export const corsMiddleware = (): Middleware => {
 }
 
 export const timingMiddleware = (): Middleware => {
-  return async context => {
+  return async (context, _env) => {
     const start = Date.now()
 
     // Store original set.status setter
@@ -30,5 +30,6 @@ export const timingMiddleware = (): Middleware => {
     const end = Date.now()
     const duration = end - start
     context.set.headers.set('Server-Timing', `total;dur=${duration}`)
+    return undefined
   }
 }

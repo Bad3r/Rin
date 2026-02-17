@@ -17,9 +17,8 @@ export function PasswordAuthService(router: Router): void {
   router.group('/auth', group => {
     // Login with username and password
     group.post('/login', async (ctx: Context) => {
-      const { jwt, set, store, body, cookie } = ctx
+      const { jwt, store, body, cookie } = ctx
       const { db, anyUser, env } = store
-
       if (!jwt) {
         throw new InternalServerError('JWT is not configured')
       }
