@@ -25,6 +25,7 @@ for (const impl of ROUTER_IMPLS) {
 
       const response = await worker.fetch(new Request('http://localhost/api/nope'), env)
       expect(response.status).toBe(404)
+      // This assertion covers worker-level routing fallback, not router-level JSON NOT_FOUND payloads.
       expect(await response.text()).toBe('Not Found')
     })
 
