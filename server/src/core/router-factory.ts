@@ -20,17 +20,12 @@ export function resolveRouterImpl(env?: Partial<Env>): RouterImpl {
     return envImpl
   }
 
-  const processImpl = normalizeRouterImpl(typeof process !== 'undefined' ? process.env.ROUTER_IMPL : undefined)
-  if (processImpl) {
-    return processImpl
-  }
-
-  const raw = env?.ROUTER_IMPL ?? (typeof process !== 'undefined' ? process.env.ROUTER_IMPL : undefined)
+  const raw = env?.ROUTER_IMPL
   if (raw) {
-    console.warn(`[router] Invalid ROUTER_IMPL "${raw}", falling back to hono.`)
+    console.warn(`[router] Invalid ROUTER_IMPL "${raw}", falling back to legacy.`)
   }
 
-  return 'hono'
+  return 'legacy'
 }
 
 export function createRouterWithFactory(env?: Env): Router {
