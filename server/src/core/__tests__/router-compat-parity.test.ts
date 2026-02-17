@@ -38,13 +38,13 @@ for (const impl of ROUTER_IMPLS) {
       })
     })
 
-    it('keeps parameter extraction semantics for encoded path values', async () => {
+    it('decodes encoded path values consistently across adapters', async () => {
       app.get('/tag/:name', ctx => ({ name: ctx.params.name }))
 
       const response = await app.handle(new Request('http://localhost/tag/hello%20world'), env)
       expect(response.status).toBe(200)
       const payload = (await response.json()) as { name: string }
-      expect(payload).toEqual({ name: 'hello%20world' })
+      expect(payload).toEqual({ name: 'hello world' })
     })
 
     it('returns router-level OPTIONS preflight with shared CORS header contract', async () => {

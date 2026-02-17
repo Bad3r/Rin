@@ -100,7 +100,11 @@ export class LegacyRouterAdapter extends Router {
       const pathPart = pathParts[i]
 
       if (routePart.startsWith(':')) {
-        params[routePart.slice(1)] = pathPart
+        try {
+          params[routePart.slice(1)] = decodeURIComponent(pathPart)
+        } catch {
+          params[routePart.slice(1)] = pathPart
+        }
       } else if (routePart !== pathPart) {
         return null
       }

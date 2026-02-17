@@ -151,38 +151,6 @@ function joinPaths(prefix: string, path: string): string {
   return `${normalizedPrefix}${normalizedPath}`
 }
 
-function extractParams(routePath: string, pathname: string): Record<string, string> {
-  const routeParts = routePath.split('/').filter(Boolean)
-  const pathParts = pathname.split('/').filter(Boolean)
-
-  const params: Record<string, string> = {}
-  let routeIndex = 0
-  let pathIndex = 0
-
-  while (routeIndex < routeParts.length && pathIndex < pathParts.length) {
-    const routePart = routeParts[routeIndex]
-
-    if (routePart === '*') {
-      params['*'] = pathParts.slice(pathIndex).join('/')
-      return params
-    }
-
-    const pathPart = pathParts[pathIndex]
-    if (routePart.startsWith(':')) {
-      params[routePart.slice(1)] = pathPart
-    }
-
-    routeIndex += 1
-    pathIndex += 1
-  }
-
-  if (routeIndex < routeParts.length && routeParts[routeIndex] === '*') {
-    params['*'] = ''
-  }
-
-  return params
-}
-
 export class HonoRouterAdapter extends Router {
   private rootState: HonoRootState
   private prefix: string
@@ -264,13 +232,13 @@ export class HonoRouterAdapter extends Router {
   private addRoute(method: string, path: string, handler: Handler, schema?: unknown): this {
     const fullPath = joinPaths(this.prefix, path)
 
-    const wrappedHandler = async (request: Request, env: Env): Promise<Response> => {
+    const wrappedHandler = async (request: Request, env: Env, params: Record<string, string>): Promise<Response> => {
       const url = new URL(request.url)
       const requestId = generateRequestId()
       const context: Context = {
         request,
         url,
-        params: extractParams(fullPath, url.pathname),
+        params,
         query: parseQuery(url.searchParams),
         headers: {},
         body: null,
@@ -339,27 +307,39 @@ export class HonoRouterAdapter extends Router {
     }
 
     if (method === 'GET') {
-      this.rootState.app.get(fullPath, async c => wrappedHandler(new Request(c.req.raw), c.env))
+      this.rootState.app.get(fullPath, async c =>
+        wrappedHandler(new Request(c.req.raw), c.env, Object.fromEntries(Object.entries(c.req.param())))
+      )
       return this
     }
     if (method === 'POST') {
-      this.rootState.app.post(fullPath, async c => wrappedHandler(new Request(c.req.raw), c.env))
+      this.rootState.app.post(fullPath, async c =>
+        wrappedHandler(new Request(c.req.raw), c.env, Object.fromEntries(Object.entries(c.req.param())))
+      )
       return this
     }
     if (method === 'PUT') {
-      this.rootState.app.put(fullPath, async c => wrappedHandler(new Request(c.req.raw), c.env))
+      this.rootState.app.put(fullPath, async c =>
+        wrappedHandler(new Request(c.req.raw), c.env, Object.fromEntries(Object.entries(c.req.param())))
+      )
       return this
     }
     if (method === 'DELETE') {
-      this.rootState.app.delete(fullPath, async c => wrappedHandler(new Request(c.req.raw), c.env))
+      this.rootState.app.delete(fullPath, async c =>
+        wrappedHandler(new Request(c.req.raw), c.env, Object.fromEntries(Object.entries(c.req.param())))
+      )
       return this
     }
     if (method === 'PATCH') {
-      this.rootState.app.patch(fullPath, async c => wrappedHandler(new Request(c.req.raw), c.env))
+      this.rootState.app.patch(fullPath, async c =>
+        wrappedHandler(new Request(c.req.raw), c.env, Object.fromEntries(Object.entries(c.req.param())))
+      )
       return this
     }
 
-    this.rootState.app.on(method, fullPath, async c => wrappedHandler(new Request(c.req.raw), c.env))
+    this.rootState.app.on(method, fullPath, async c =>
+      wrappedHandler(new Request(c.req.raw), c.env, Object.fromEntries(Object.entries(c.req.param())))
+    )
     return this
   }
 }
