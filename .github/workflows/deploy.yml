@@ -42,8 +42,7 @@ jobs:
           github.event.workflow_run.conclusion == 'success' &&
           (
             github.event.workflow_run.head_branch == 'main' ||
-            github.event.workflow_run.head_branch == 'dev' ||
-            startsWith(github.event.workflow_run.head_branch, 'dev/')
+            github.event.workflow_run.head_branch == 'dev'
           )
         ) ||
         (
@@ -130,8 +129,8 @@ jobs:
             # Manual deployment
             if [ "${{ github.event.inputs.environment }}" == "production" ]; then
               REF=$(cat ./artifacts/build-meta/ref 2>/dev/null || echo "unknown")
-              if [[ "$REF" != "refs/heads/main" && "$REF" != "refs/heads/dev" && "$REF" != refs/heads/dev/* ]]; then
-                echo "::error::Production deploys require artifacts from main or dev branches. Found ref: ${REF}"
+              if [[ "$REF" != "refs/heads/main" && "$REF" != "refs/heads/dev" ]]; then
+                echo "::error::Production deploys require artifacts from the main or dev branch. Found ref: ${REF}"
                 exit 1
               fi
               echo "is_production=true" >> $GITHUB_OUTPUT
@@ -145,7 +144,7 @@ jobs:
           else
             # Auto deployment from workflow_run - check ref
             REF=$(cat ./artifacts/build-meta/ref 2>/dev/null || echo "unknown")
-            if [[ "$REF" == "refs/heads/main" || "$REF" == "refs/heads/dev" || "$REF" == refs/heads/dev/* ]]; then
+            if [[ "$REF" == "refs/heads/main" || "$REF" == "refs/heads/dev" ]]; then
               echo "is_production=true" >> $GITHUB_OUTPUT
             else
               echo "is_production=false" >> $GITHUB_OUTPUT
