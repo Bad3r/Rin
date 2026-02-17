@@ -42,3 +42,4 @@ dist-ssr
 # Local generated devenv/Wrangler artifacts
 /.devenv.flake.nix
 /worker-configuration.d.ts
+*plan*.md
