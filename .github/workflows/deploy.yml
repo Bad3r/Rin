@@ -250,25 +250,54 @@ jobs:
 
       - name: Determine deployment config
         id: config
+        env:
+          IS_PRODUCTION: ${{ needs.prepare.outputs.is_production }}
+          VAR_WORKER_NAME: ${{ vars.WORKER_NAME || '' }}
+          VAR_DB_NAME: ${{ vars.DB_NAME || '' }}
+          VAR_R2_BUCKET_NAME: ${{ vars.R2_BUCKET_NAME || '' }}
+          VAR_NAME: ${{ vars.NAME || '' }}
+          VAR_DESCRIPTION: ${{ vars.DESCRIPTION || '' }}
+          VAR_AVATAR: ${{ vars.AVATAR || '' }}
+          VAR_PAGE_SIZE: ${{ vars.PAGE_SIZE || '' }}
+          VAR_RSS_ENABLE: ${{ vars.RSS_ENABLE || '' }}
+          VAR_D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID || '' }}
         run: |
-          if [[ "${{ needs.prepare.outputs.is_production }}" == "true" ]]; then
-            echo "deploy_env=production" >> $GITHUB_OUTPUT
-            echo "worker_name=${{ vars.WORKER_NAME || 'rin-server' }}" >> $GITHUB_OUTPUT
-            echo "db_name=${{ vars.DB_NAME || 'rin' }}" >> $GITHUB_OUTPUT
-            echo "r2_bucket_name=${{ vars.R2_BUCKET_NAME || 'rin-images' }}" >> $GITHUB_OUTPUT
-            echo "name=${{ vars.NAME || 'Rin' }}" >> $GITHUB_OUTPUT
+          set -euo pipefail
+
+          set_output() {
+            local key="$1"
+            local value="$2"
+            local delimiter
+            delimiter="EOF_$(date +%s%N)_$RANDOM"
+            while [[ "$value" == *"$delimiter"* ]]; do
+              delimiter="${delimiter}_X"
+            done
+
+            {
+              printf '%s<<%s\n' "$key" "$delimiter"
+              printf '%s\n' "$value"
+              printf '%s\n' "$delimiter"
+            } >> "$GITHUB_OUTPUT"
+          }
+
+          if [[ "$IS_PRODUCTION" == "true" ]]; then
+            set_output deploy_env "production"
+            set_output worker_name "${VAR_WORKER_NAME:-rin-server}"
+            set_output db_name "${VAR_DB_NAME:-rin}"
+            set_output r2_bucket_name "${VAR_R2_BUCKET_NAME:-rin-images}"
+            set_output name "${VAR_NAME:-Rin}"
           else
-            echo "deploy_env=preview" >> $GITHUB_OUTPUT
-            echo "worker_name=${{ vars.WORKER_NAME || 'rin-server-preview' }}" >> $GITHUB_OUTPUT
-            echo "db_name=${{ vars.DB_NAME || 'rin-preview' }}" >> $GITHUB_OUTPUT
-            echo "r2_bucket_name=${{ vars.R2_BUCKET_NAME || 'rin-images-preview' }}" >> $GITHUB_OUTPUT
-            echo "name=${{ vars.NAME || 'Rin (Preview)' }}" >> $GITHUB_OUTPUT
+            set_output deploy_env "preview"
+            set_output worker_name "${VAR_WORKER_NAME:-rin-server-preview}"
+            set_output db_name "${VAR_DB_NAME:-rin-preview}"
+            set_output r2_bucket_name "${VAR_R2_BUCKET_NAME:-rin-images-preview}"
+            set_output name "${VAR_NAME:-Rin (Preview)}"
           fi
-          echo "description=${{ vars.DESCRIPTION || '' }}" >> $GITHUB_OUTPUT
-          echo "avatar=${{ vars.AVATAR || '' }}" >> $GITHUB_OUTPUT
-          echo "page_size=${{ vars.PAGE_SIZE || '5' }}" >> $GITHUB_OUTPUT
-          echo "rss_enable=${{ vars.RSS_ENABLE || 'false' }}" >> $GITHUB_OUTPUT
-          echo "d1_database_id=${{ vars.D1_DATABASE_ID || '' }}" >> $GITHUB_OUTPUT
+          set_output description "${VAR_DESCRIPTION:-}"
+          set_output avatar "${VAR_AVATAR:-}"
+          set_output page_size "${VAR_PAGE_SIZE:-5}"
+          set_output rss_enable "${VAR_RSS_ENABLE:-false}"
+          set_output d1_database_id "${VAR_D1_DATABASE_ID:-}"
 
       - name: Validate deployment inputs
         env:
