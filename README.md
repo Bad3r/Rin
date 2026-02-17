@@ -1,3 +1,6 @@
+> [!CAUTION]
+> This fork will include a major rewrite, it is not ready to be used by other users
+
 ![Cover](./docs/docs/public/rin-logo.png)
 
 English | [简体中文](./README_zh_CN.md)
