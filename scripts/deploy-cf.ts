@@ -44,7 +44,7 @@ const S3_FORCE_PATH_STYLE = env('S3_FORCE_PATH_STYLE', 'false')
 const WEBHOOK_URL = env('WEBHOOK_URL', '')
 const RSS_TITLE = env('RSS_TITLE', '')
 const RSS_DESCRIPTION = env('RSS_DESCRIPTION', '')
-const CACHE_STORAGE_MODE = env('CACHE_STORAGE_MODE', 's3')
+const CACHE_STORAGE_MODE = env('CACHE_STORAGE_MODE', 'database')
 
 // Secrets
 const accessKeyId = env('S3_ACCESS_KEY_ID')
