@@ -15,6 +15,10 @@ function env(name: string, defaultValue?: string, required = false) {
 // must be defined
 const renv = (name: string, defaultValue?: string) => env(name, defaultValue, true)!
 
+function tomlString(value: string): string {
+  return JSON.stringify(value)
+}
+
 const DEPLOY_ENV = env('DEPLOY_ENV', 'production')
 const isPreview = DEPLOY_ENV === 'preview'
 if (DEPLOY_ENV !== 'production' && DEPLOY_ENV !== 'preview') {
@@ -150,8 +154,8 @@ async function deploy(): Promise<string> {
     GENERATED_WRANGLER_PATH,
     stripIndent(`
 #:schema node_modules/wrangler/config-schema.json
-name = "${WORKER_NAME}"
-main = "${serverMain}"
+name = ${tomlString(WORKER_NAME)}
+main = ${tomlString(serverMain)}
 compatibility_date = "2026-01-20"
 
 [assets]
@@ -162,22 +166,22 @@ binding = "ASSETS"
 crons = ["*/20 * * * *"]
 
 [vars]
-S3_FOLDER = "${S3_FOLDER}"
-S3_CACHE_FOLDER="${S3_CACHE_FOLDER}"
-S3_REGION = "${S3_REGION}"
-S3_ENDPOINT = "${finalS3Endpoint}"
-S3_ACCESS_HOST = "${finalS3AccessHost}"
-S3_BUCKET = "${finalS3Bucket}"
-S3_FORCE_PATH_STYLE = "${S3_FORCE_PATH_STYLE}"
-WEBHOOK_URL = "${WEBHOOK_URL}"
-RSS_TITLE = "${RSS_TITLE}"
-RSS_DESCRIPTION = "${RSS_DESCRIPTION}"
-CACHE_STORAGE_MODE = "${CACHE_STORAGE_MODE}"
-NAME = "${NAME}"
-DESCRIPTION = "${DESCRIPTION}"
-AVATAR = "${AVATAR}"
-PAGE_SIZE = "${PAGE_SIZE}"
-RSS_ENABLE = "${RSS_ENABLE}"
+S3_FOLDER = ${tomlString(S3_FOLDER)}
+S3_CACHE_FOLDER = ${tomlString(S3_CACHE_FOLDER)}
+S3_REGION = ${tomlString(S3_REGION)}
+S3_ENDPOINT = ${tomlString(finalS3Endpoint)}
+S3_ACCESS_HOST = ${tomlString(finalS3AccessHost)}
+S3_BUCKET = ${tomlString(finalS3Bucket)}
+S3_FORCE_PATH_STYLE = ${tomlString(S3_FORCE_PATH_STYLE)}
+WEBHOOK_URL = ${tomlString(WEBHOOK_URL)}
+RSS_TITLE = ${tomlString(RSS_TITLE)}
+RSS_DESCRIPTION = ${tomlString(RSS_DESCRIPTION)}
+CACHE_STORAGE_MODE = ${tomlString(CACHE_STORAGE_MODE)}
+NAME = ${tomlString(NAME)}
+DESCRIPTION = ${tomlString(DESCRIPTION)}
+AVATAR = ${tomlString(AVATAR)}
+PAGE_SIZE = ${tomlString(PAGE_SIZE)}
+RSS_ENABLE = ${tomlString(RSS_ENABLE)}
 
 [placement]
 mode = "smart"
@@ -227,8 +231,8 @@ mode = "smart"
       
       [[d1_databases]]
       binding = "DB"
-      database_name = "${DB_NAME}"
-      database_id = "${databaseId}"
+      database_name = ${tomlString(DB_NAME)}
+      database_id = ${tomlString(databaseId)}
       
       [ai]
       binding = "AI"
@@ -286,7 +290,21 @@ mode = "smart"
   async function putSecret(name: string, value?: string) {
     if (value) {
       console.log(`Put ${name}`)
-      await $`echo "${value}" | bunx wrangler secret put ${name} --config ${GENERATED_WRANGLER_PATH}`
+      const proc = Bun.spawn(['bunx', 'wrangler', 'secret', 'put', name, '--config', GENERATED_WRANGLER_PATH], {
+        stdin: 'pipe',
+        stdout: 'inherit',
+        stderr: 'inherit',
+      })
+
+      const writer = proc.stdin.getWriter()
+      await writer.write(new TextEncoder().encode(`${value}\n`))
+      await writer.close()
+
+      const exitCode = await proc.exited
+      if (exitCode !== 0) {
+        console.error(`Failed to put ${name}.`)
+        process.exit(exitCode)
+      }
     } else {
       console.log(`Skip ${name}, value is not defined.`)
     }
