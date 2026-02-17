@@ -51,7 +51,7 @@ function Footer() {
       </Helmet>
       <div className='flex flex-col mb-8 space-y-2 justify-center items-center t-primary ani-show'>
         {/* biome-ignore lint/security/noDangerouslySetInnerHtml: footer is explicitly configured by trusted blog owners */}
-        {footerHtml && <div dangerouslySetInnerHTML={{ __html: footerHtml }} />}
+        {footerHtml && <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(footerHtml) }} />}
         <p className='text-sm text-neutral-500 font-normal link-line'>
           <button
             type='button'
