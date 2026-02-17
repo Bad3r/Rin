@@ -41,7 +41,7 @@ describe('resolveRouterImpl', () => {
     }
 
     const originalProcessValue = process.env.ROUTER_IMPL
-    process.env.ROUTER_IMPL = 'hono'
+    process.env.ROUTER_IMPL = 'legacy'
 
     try {
       expect(resolveRouterImpl(undefined)).toBe('hono')
