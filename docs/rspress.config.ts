@@ -1,11 +1,12 @@
-import * as path from 'path';
-import { defineConfig } from '@rspress/core';
+import * as path from 'node:path'
+import { defineConfig } from '@rspress/core'
 
 export default defineConfig({
   root: path.join(__dirname, 'docs'),
   lang: 'zh',
   title: 'Rin',
-  description: '️Rin 是一个基于 Cloudflare Pages + Workers + D1 + R2 全家桶的博客，无需服务器无需备案，只需要一个解析到 Cloudflare 的域名即可部署。 ',
+  description:
+    '️Rin 是一个基于 Cloudflare Pages + Workers + D1 + R2 全家桶的博客，无需服务器无需备案，只需要一个解析到 Cloudflare 的域名即可部署。 ',
   icon: '/rin-icon.png',
   locales: [
     {
@@ -22,9 +23,7 @@ export default defineConfig({
     },
   ],
   themeConfig: {
-    socialLinks: [
-      { icon: 'github', mode: 'link', content: 'https://github.com/openRin/Rin' },
-    ],
+    socialLinks: [{ icon: 'github', mode: 'link', content: 'https://github.com/openRin/Rin' }],
   },
   i18nSource: {
     outlineTitle: {
@@ -32,4 +31,4 @@ export default defineConfig({
       en: 'ON THIS Page',
     },
   },
-});
+})

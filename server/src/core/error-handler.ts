@@ -1,19 +1,14 @@
-import type { Context, Middleware } from "./types";
-import {
-  AppError,
-  isAppError,
-  createErrorResponse,
-  InternalServerError,
-} from "../errors";
+import { type AppError, InternalServerError, isAppError } from '../errors'
+import type { Context, Middleware } from './types'
 
 // ============================================================================
 // Request ID Generation
 // ============================================================================
 
 export function generateRequestId(): string {
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substring(2, 8);
-  return `${timestamp}-${random}`;
+  const timestamp = Date.now().toString(36)
+  const random = Math.random().toString(36).substring(2, 8)
+  return `${timestamp}-${random}`
 }
 
 // ============================================================================
@@ -21,11 +16,11 @@ export function generateRequestId(): string {
 // ============================================================================
 
 export function errorHandlerMiddleware(): Middleware {
-  return async (context: Context, env: Env): Promise<Response | void> => {
+  return async (_context: Context, _env: Env): Promise<Response | undefined> => {
     // Request ID is generated in the router and passed through context
     // This middleware doesn't need to do anything on the way in
-    return undefined;
-  };
+    return undefined
+  }
 }
 
 // ============================================================================
@@ -33,26 +28,26 @@ export function errorHandlerMiddleware(): Middleware {
 // ============================================================================
 
 export interface ErrorLogEntry {
-  requestId: string;
-  timestamp: string;
-  method: string;
-  path: string;
-  statusCode: number;
-  errorCode: string;
-  message: string;
-  stack?: string;
-  userAgent?: string;
-  ip?: string;
+  requestId: string
+  timestamp: string
+  method: string
+  path: string
+  statusCode: number
+  errorCode: string
+  message: string
+  stack?: string
+  userAgent?: string
+  ip?: string
 }
 
 export class ErrorLogger {
-  private static logs: ErrorLogEntry[] = [];
-  private static maxLogs = 100;
+  private static logs: ErrorLogEntry[] = []
+  private static maxLogs = 100
 
   static log(entry: ErrorLogEntry): void {
-    this.logs.push(entry);
-    if (this.logs.length > this.maxLogs) {
-      this.logs.shift();
+    ErrorLogger.logs.push(entry)
+    if (ErrorLogger.logs.length > ErrorLogger.maxLogs) {
+      ErrorLogger.logs.shift()
     }
 
     // Always log to console in development or for serious errors
@@ -62,33 +57,29 @@ export class ErrorLogger {
         errorCode: entry.errorCode,
         message: entry.message,
         stack: entry.stack,
-      });
+      })
     }
   }
 
   static getRecentLogs(limit = 50): ErrorLogEntry[] {
-    return this.logs.slice(-limit);
+    return ErrorLogger.logs.slice(-limit)
   }
 
   static clear(): void {
-    this.logs = [];
+    ErrorLogger.logs = []
   }
 }
 
-export function handleError(
-  error: unknown,
-  context: Context,
-  requestId: string
-): Response {
-  let appError: AppError;
+export function handleError(error: unknown, context: Context, requestId: string): Response {
+  let appError: AppError
 
   if (isAppError(error)) {
-    appError = error;
+    appError = error
   } else if (error instanceof Error) {
     // Convert standard errors to AppError
-    appError = new InternalServerError(error.message);
+    appError = new InternalServerError(error.message)
   } else {
-    appError = new InternalServerError();
+    appError = new InternalServerError()
   }
 
   // Log the error
@@ -101,29 +92,29 @@ export function handleError(
     errorCode: appError.code,
     message: appError.message,
     stack: appError.stack,
-    userAgent: context.headers["user-agent"],
-    ip: context.headers["cf-connecting-ip"],
-  };
+    userAgent: context.headers['user-agent'],
+    ip: context.headers['cf-connecting-ip'],
+  }
 
-  ErrorLogger.log(logEntry);
+  ErrorLogger.log(logEntry)
 
   // Build response
-  const errorResponse = appError.toJSON(requestId);
+  const errorResponse = appError.toJSON(requestId)
   const headers = new Headers({
-    "Content-Type": "application/json",
-  });
+    'Content-Type': 'application/json',
+  })
 
   // Copy CORS headers from context if present
   context.set.headers.forEach((value, key) => {
-    if (key.toLowerCase().startsWith("access-control")) {
-      headers.set(key, value);
+    if (key.toLowerCase().startsWith('access-control')) {
+      headers.set(key, value)
     }
-  });
+  })
 
   return new Response(JSON.stringify(errorResponse), {
     status: appError.statusCode,
     headers,
-  });
+  })
 }
 
 // ============================================================================
@@ -132,52 +123,44 @@ export function handleError(
 
 export function createNotFoundHandler(): Middleware {
   return async (context: Context): Promise<Response> => {
-    const requestId = generateRequestId();
+    const requestId = generateRequestId()
     const errorResponse = {
       success: false,
       error: {
-        code: "NOT_FOUND",
+        code: 'NOT_FOUND',
         message: `Route ${context.request.method} ${context.url.pathname} not found`,
         requestId,
       },
-    };
+    }
 
     return new Response(JSON.stringify(errorResponse), {
       status: 404,
-      headers: { "Content-Type": "application/json" },
-    });
-  };
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
 }
 
 // ============================================================================
 // Async Handler Wrapper for Routes
 // ============================================================================
 
-export type RouteHandler = (context: Context) => Promise<any>;
+export type RouteHandler = (context: Context) => Promise<any>
 
 export function asyncHandler(handler: RouteHandler): RouteHandler {
   return async (context: Context) => {
-    try {
-      return await handler(context);
-    } catch (error) {
-      // Re-throw to be caught by global error handler
-      throw error;
-    }
-  };
+    return await handler(context)
+  }
 }
 
 // ============================================================================
 // Safe Async Function Wrapper
 // ============================================================================
 
-export async function safeAsync<T>(
-  fn: () => Promise<T>,
-  errorHandler?: (error: unknown) => void
-): Promise<T | null> {
+export async function safeAsync<T>(fn: () => Promise<T>, errorHandler?: (error: unknown) => void): Promise<T | null> {
   try {
-    return await fn();
+    return await fn()
   } catch (error) {
-    errorHandler?.(error);
-    return null;
+    errorHandler?.(error)
+    return null
   }
 }

@@ -1,46 +1,80 @@
-import { forwardRef } from "react";
+import { forwardRef, useEffect, useRef } from 'react'
+import type { MutableRefObject } from 'react'
 
 interface InputProps {
-    autofocus?: boolean;
-    value: string;
-    className?: string;
-    placeholder: string;
-    id?: number;
-    setValue: (v: string) => void;
-    onSubmit?: () => void;
-    disabled?: boolean;
-    type?: string;
+  autofocus?: boolean
+  value: string
+  className?: string
+  placeholder: string
+  id?: string | number
+  setValue: (v: string) => void
+  onSubmit?: () => void
+  disabled?: boolean
+  type?: string
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-    ({ autofocus, value, setValue, className, placeholder, onSubmit, disabled, type = "text" }, ref) => {
-        return (<input
-            ref={ref}
-            type={type}
-            disabled={disabled}
-            autoFocus={autofocus}
-            placeholder={placeholder}
-            value={value}
-            onKeyDown={(event) => {
-                if (event.key === 'Enter' && onSubmit) {
-                    onSubmit()
-                }
-            }}
-            onChange={(event) => {
-                setValue(event.target.value)
-            }}
-            className={'focus-visible:outline-none bg-secondary focus-visible:outline-theme w-full py-2 px-4 rounded-xl bg-w t-primary disabled:opacity-50 disabled:cursor-not-allowed ' + className} />
-        )
-    }
-);
-export function Checkbox({ value, setValue, className, placeholder }:
-    { value: boolean, className?: string, placeholder: string, id: string, setValue: React.Dispatch<React.SetStateAction<boolean>> }) {
-    return (<input type='checkbox'
-        placeholder={placeholder}
-        checked={value}
-        onChange={(event) => {
-            setValue(event.target.checked)
+  ({ autofocus, value, setValue, className, placeholder, id, onSubmit, disabled, type = 'text' }, ref) => {
+    const innerRef = useRef<HTMLInputElement | null>(null)
+
+    useEffect(() => {
+      if (autofocus) {
+        innerRef.current?.focus()
+      }
+    }, [autofocus])
+
+    return (
+      <input
+        id={id?.toString()}
+        ref={node => {
+          innerRef.current = node
+          if (typeof ref === 'function') {
+            ref(node)
+          } else if (ref) {
+            ;(ref as MutableRefObject<HTMLInputElement | null>).current = node
+          }
         }}
-        className={className} />
+        type={type}
+        disabled={disabled}
+        placeholder={placeholder}
+        value={value}
+        onKeyDown={event => {
+          if (event.key === 'Enter' && onSubmit) {
+            onSubmit()
+          }
+        }}
+        onChange={event => {
+          setValue(event.target.value)
+        }}
+        className={
+          'focus-visible:outline-none bg-secondary focus-visible:outline-theme w-full py-2 px-4 rounded-xl bg-w t-primary disabled:opacity-50 disabled:cursor-not-allowed ' +
+          className
+        }
+      />
     )
+  }
+)
+export function Checkbox({
+  value,
+  setValue,
+  className,
+  placeholder,
+}: {
+  value: boolean
+  className?: string
+  placeholder: string
+  id: string
+  setValue: React.Dispatch<React.SetStateAction<boolean>>
+}) {
+  return (
+    <input
+      type='checkbox'
+      placeholder={placeholder}
+      checked={value}
+      onChange={event => {
+        setValue(event.target.checked)
+      }}
+      className={className}
+    />
+  )
 }

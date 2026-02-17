@@ -5,7 +5,7 @@ export const t = {
   Object: (properties: Record<string, any>, options?: { additionalProperties?: boolean }) => ({
     type: 'object',
     properties,
-    ...options
+    ...options,
   }),
   String: (options?: { optional?: boolean }) => ({ type: 'string', optional: options?.optional }),
   Number: (options?: { optional?: boolean }) => ({ type: 'number', optional: options?.optional }),
@@ -16,4 +16,4 @@ export const t = {
   File: (options?: { optional?: boolean }) => ({ type: 'file', optional: options?.optional }),
   Optional: (schema: any) => ({ ...schema, optional: true }),
   Numeric: (options?: { optional?: boolean }) => ({ type: 'number', optional: options?.optional }),
-};
+}

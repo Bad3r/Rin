@@ -1,31 +1,34 @@
+/* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind directives are resolved at build time. */
 @tailwind base;
+/* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind directives are resolved at build time. */
 @tailwind components;
+/* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind directives are resolved at build time. */
 @tailwind utilities;
 
-.SwitchRoot[data-state='checked'] {
-    @apply bg-theme;
+.SwitchRoot[data-state="checked"] {
+  @apply bg-theme;
 }
 
 .SwitchRoot {
-    width: 42px;
-    height: 25px;
-    border-radius: 9999px;
-    position: relative;
-    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
-    @apply bg-neutral-300 dark:bg-neutral-500;
+  width: 42px;
+  height: 25px;
+  border-radius: 9999px;
+  position: relative;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  @apply bg-neutral-300 dark:bg-neutral-500;
 }
 
 .SwitchThumb {
-    display: block;
-    width: 21px;
-    height: 21px;
-    border-radius: 9999px;
-    transition: transform 100ms;
-    transform: translateX(2px);
-    will-change: transform;
-    background-color: white;
+  display: block;
+  width: 21px;
+  height: 21px;
+  border-radius: 9999px;
+  transition: transform 100ms;
+  transform: translateX(2px);
+  will-change: transform;
+  background-color: white;
 }
 
-.SwitchThumb[data-state='checked'] {
-    transform: translateX(19px);
+.SwitchThumb[data-state="checked"] {
+  transform: translateX(19px);
 }

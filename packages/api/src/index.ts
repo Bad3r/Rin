@@ -1,11 +1,10 @@
 // Rin API - Shared API types and schemas
 // Used by both client and server
 
-// Types
-export * from './types';
+// Schema validator
+export { t } from './schema-validator'
 
 // Schemas for server-side validation
-export * from './schemas';
-
-// Schema validator
-export { t } from './schema-validator';
+export * from './schemas'
+// Types
+export * from './types'

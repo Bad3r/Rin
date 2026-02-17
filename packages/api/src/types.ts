@@ -4,15 +4,15 @@
 
 // Common types
 export interface ApiResponse<T> {
-  data?: T;
+  data?: T
   error?: {
-    status: number;
-    value: string;
-  };
+    status: number
+    value: string
+  }
 }
 
 export interface RequestOptions {
-  headers?: Record<string, string>;
+  headers?: Record<string, string>
 }
 
 // ============================================================================
@@ -20,86 +20,86 @@ export interface RequestOptions {
 // ============================================================================
 
 export interface Feed {
-  id: number;
-  title: string | null;
-  content: string;
-  uid: number;
-  createdAt: string;
-  updatedAt: string;
-  ai_summary: string;
-  hashtags: Array<{ id: number; name: string }>;
+  id: number
+  title: string | null
+  content: string
+  uid: number
+  createdAt: string
+  updatedAt: string
+  ai_summary: string
+  hashtags: Array<{ id: number; name: string }>
   user: {
-    avatar: string | null;
-    id: number;
-    username: string;
-  };
-  pv: number;
-  uv: number;
-  top?: number;
+    avatar: string | null
+    id: number
+    username: string
+  }
+  pv: number
+  uv: number
+  top?: number
 }
 
 export interface FeedListResponse {
-  size: number;
+  size: number
   data: Array<{
-    id: number;
-    title: string | null;
-    summary: string;
-    hashtags: Array<{ id: number; name: string }>;
+    id: number
+    title: string | null
+    summary: string
+    hashtags: Array<{ id: number; name: string }>
     user: {
-      avatar: string | null;
-      id: number;
-      username: string;
-    };
-    avatar: string | null;
-    createdAt: string;
-    updatedAt: string;
-    pv: number;
-    uv: number;
-  }>;
-  hasNext: boolean;
+      avatar: string | null
+      id: number
+      username: string
+    }
+    avatar: string | null
+    createdAt: string
+    updatedAt: string
+    pv: number
+    uv: number
+  }>
+  hasNext: boolean
 }
 
 export interface TimelineItem {
-  id: number;
-  title: string | null;
-  createdAt: string;
+  id: number
+  title: string | null
+  createdAt: string
 }
 
 export interface CreateFeedRequest {
-  title: string;
-  content: string;
-  summary?: string;
-  alias?: string;
-  draft: boolean;
-  listed: boolean;
-  createdAt?: string;
-  tags: string[];
+  title: string
+  content: string
+  summary?: string
+  alias?: string
+  draft: boolean
+  listed: boolean
+  createdAt?: string
+  tags: string[]
 }
 
 export interface UpdateFeedRequest {
-  title?: string;
-  content?: string;
-  summary?: string;
-  alias?: string;
-  listed: boolean;
-  draft?: boolean;
-  createdAt?: string;
-  tags?: string[];
-  top?: number;
+  title?: string
+  content?: string
+  summary?: string
+  alias?: string
+  listed: boolean
+  draft?: boolean
+  createdAt?: string
+  tags?: string[]
+  top?: number
 }
 
 export interface AdjacentFeed {
-  id: number;
-  title: string | null;
-  summary: string;
-  hashtags: Array<{ id: number; name: string }>;
-  createdAt: string;
-  updatedAt: string;
+  id: number
+  title: string | null
+  summary: string
+  hashtags: Array<{ id: number; name: string }>
+  createdAt: string
+  updatedAt: string
 }
 
 export interface AdjacentFeedResponse {
-  previousFeed: AdjacentFeed | null;
-  nextFeed: AdjacentFeed | null;
+  previousFeed: AdjacentFeed | null
+  nextFeed: AdjacentFeed | null
 }
 
 // ============================================================================
@@ -107,15 +107,15 @@ export interface AdjacentFeedResponse {
 // ============================================================================
 
 export interface UserProfile {
-  id: number;
-  username: string;
-  avatar: string | null;
-  permission: boolean;
+  id: number
+  username: string
+  avatar: string | null
+  permission: boolean
 }
 
 export interface UpdateProfileRequest {
-  username?: string;
-  avatar?: string | null;
+  username?: string
+  avatar?: string | null
 }
 
 // ============================================================================
@@ -123,19 +123,19 @@ export interface UpdateProfileRequest {
 // ============================================================================
 
 export interface AuthStatus {
-  github: boolean;
-  password: boolean;
+  github: boolean
+  password: boolean
 }
 
 export interface LoginRequest {
-  username: string;
-  password: string;
+  username: string
+  password: string
 }
 
 export interface LoginResponse {
-  success: boolean;
-  token?: string;
-  user: UserProfile;
+  success: boolean
+  token?: string
+  user: UserProfile
 }
 
 // ============================================================================
@@ -143,15 +143,15 @@ export interface LoginResponse {
 // ============================================================================
 
 export interface Tag {
-  id: number;
-  name: string;
-  count: number;
-  createdAt: string;
-  updatedAt: string;
+  id: number
+  name: string
+  count: number
+  createdAt: string
+  updatedAt: string
 }
 
 export interface TagDetail extends Tag {
-  feeds: Feed[];
+  feeds: Feed[]
 }
 
 // ============================================================================
@@ -159,20 +159,20 @@ export interface TagDetail extends Tag {
 // ============================================================================
 
 export interface Comment {
-  id: number;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
+  id: number
+  content: string
+  createdAt: string
+  updatedAt: string
   user: {
-    id: number;
-    username: string;
-    avatar: string | null;
-    permission: number | null;
-  };
+    id: number
+    username: string
+    avatar: string | null
+    permission: number | null
+  }
 }
 
 export interface CreateCommentRequest {
-  content: string;
+  content: string
 }
 
 // ============================================================================
@@ -180,38 +180,38 @@ export interface CreateCommentRequest {
 // ============================================================================
 
 export interface Friend {
-  id: number;
-  name: string;
-  desc: string | null;
-  avatar: string;
-  url: string;
-  accepted: number;
-  sort_order: number | null;
-  createdAt: string;
-  uid: number;
-  updatedAt: string;
-  health: string;
+  id: number
+  name: string
+  desc: string | null
+  avatar: string
+  url: string
+  accepted: number
+  sort_order: number | null
+  createdAt: string
+  uid: number
+  updatedAt: string
+  health: string
 }
 
 export interface FriendListResponse {
-  friend_list: Friend[];
-  apply_list: Friend | null;
+  friend_list: Friend[]
+  apply_list: Friend | null
 }
 
 export interface CreateFriendRequest {
-  name: string;
-  desc: string;
-  avatar: string;
-  url: string;
+  name: string
+  desc: string
+  avatar: string
+  url: string
 }
 
 export interface UpdateFriendRequest {
-  name: string;
-  desc: string;
-  avatar?: string;
-  url: string;
-  accepted?: number;
-  sort_order?: number;
+  name: string
+  desc: string
+  avatar?: string
+  url: string
+  accepted?: number
+  sort_order?: number
 }
 
 // ============================================================================
@@ -219,34 +219,34 @@ export interface UpdateFriendRequest {
 // ============================================================================
 
 export interface Moment {
-  id: number;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
+  id: number
+  content: string
+  createdAt: string
+  updatedAt: string
   user: {
-    id: number;
-    username: string;
-    avatar: string;
-  };
+    id: number
+    username: string
+    avatar: string
+  }
 }
 
 export interface CreateMomentRequest {
-  content: string;
+  content: string
 }
 
 export interface MomentListResponse {
-  data: Moment[];
-  hasNext: boolean;
+  data: Moment[]
+  hasNext: boolean
 }
 
 // ============================================================================
 // Config Types
 // ============================================================================
 
-export type ConfigType = 'client' | 'server';
+export type ConfigType = 'client' | 'server'
 
 export interface ConfigResponse {
-  [key: string]: any;
+  [key: string]: any
 }
 
 // ============================================================================
@@ -254,11 +254,11 @@ export interface ConfigResponse {
 // ============================================================================
 
 export interface AIConfig {
-  enabled: boolean;
-  provider: string;
-  model: string;
-  api_key: string;
-  api_url: string;
+  enabled: boolean
+  provider: string
+  model: string
+  api_key: string
+  api_url: string
 }
 
 // ============================================================================
@@ -266,7 +266,7 @@ export interface AIConfig {
 // ============================================================================
 
 export interface UploadResponse {
-  url: string;
+  url: string
 }
 
 // ============================================================================
@@ -280,9 +280,9 @@ export interface UploadResponse {
 // ============================================================================
 
 export interface WordPressImportResponse {
-  success: number;
-  skipped: number;
-  skippedList: Array<{ title: string; reason: string }>;
+  success: number
+  skipped: number
+  skippedList: Array<{ title: string; reason: string }>
 }
 
 // ============================================================================
@@ -361,6 +361,6 @@ export const API_PATHS = {
 
   // SEO
   SEO_GET: (path: string) => `/seo${path}`,
-} as const;
+} as const
 
-export type APIEndpoint = typeof API_PATHS;
+export type APIEndpoint = typeof API_PATHS

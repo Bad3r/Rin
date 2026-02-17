@@ -3,13 +3,13 @@
   "files": {
     "includes": [
       "**",
-      "!**/.git/**",
-      "!**/.devenv/**",
+      "!**/.git",
+      "!**/.devenv",
       "!**/.pre-commit-config.yaml",
-      "!**/.turbo/**",
-      "!**/.wrangler/**",
-      "!**/dist/**",
-      "!**/node_modules/**"
+      "!**/.turbo",
+      "!**/.wrangler",
+      "!**/dist",
+      "!**/node_modules"
     ]
   },
   "formatter": {
