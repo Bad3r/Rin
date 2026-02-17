@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: 'Remote deployment base URL (for example: https://rin-server-preview.example.workers.dev)'
+        description: 'Remote deployment base URL (for example: https://rin-server-pr-9.example.workers.dev)'
         required: false
         type: string
 
