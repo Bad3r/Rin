@@ -23,7 +23,7 @@ export default defineConfig({
     },
   ],
   themeConfig: {
-    socialLinks: [{ icon: 'github', mode: 'link', content: 'https://github.com/openRin/Rin' }],
+    socialLinks: [{ icon: 'github', mode: 'link', content: 'https://github.com/Bad3r/Rin' }],
   },
   i18nSource: {
     outlineTitle: {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearch } from 'wouter'
@@ -24,22 +24,20 @@ export function SearchPage({ keyword }: { keyword: string }) {
   const page = tryInt(1, query.get('page'))
   const limit = tryInt(10, query.get('limit'), siteConfig.pageSize)
   const ref = useRef('')
-  const fetchFeeds = useCallback(() => {
-    if (!keyword) return
-    client.search.search(keyword).then(({ data }) => {
-      if (data) {
-        setFeeds(data)
-        setStatus('idle')
-      }
-    })
-  }, [keyword])
+
   useEffect(() => {
     const key = `${page} ${limit} ${keyword}`
-    if (ref.current === key) return
-    setStatus('loading')
-    fetchFeeds()
+    if (ref.current === key || !keyword) return
     ref.current = key
-  }, [page, limit, keyword, fetchFeeds])
+    setStatus('loading')
+    client.search.search(keyword).then(({ data }) => {
+      if (ref.current !== key) return
+      if (data) {
+        setFeeds(data)
+      }
+      setStatus('idle')
+    })
+  }, [page, limit, keyword])
   const title = t('article.search.title$keyword', { keyword })
   return (
     <>

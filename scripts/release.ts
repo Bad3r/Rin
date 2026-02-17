@@ -255,8 +255,8 @@ async function generateChangelogTemplate(version: string): Promise<string> {
 ### Commits in this release
 ${commits || '- See commit history'}
 
-[Unreleased]: https://github.com/openRin/Rin/compare/v${version}...HEAD
-[v${version}]: https://github.com/openRin/Rin/compare/v${await $`git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "HEAD"`.quiet().text()}...v${version}
+[Unreleased]: https://github.com/Bad3r/Rin/compare/v${version}...HEAD
+[v${version}]: https://github.com/Bad3r/Rin/compare/v${await $`git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "HEAD"`.quiet().text()}...v${version}
 `
 }
 

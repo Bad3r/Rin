@@ -8,7 +8,7 @@ export function Icon({
   name: string
   label: string
   className?: string
-  onClick: () => any
+  onClick: () => void
   hover?: boolean
 }) {
   return (
@@ -37,7 +37,7 @@ export function IconSmall({
   name: string
   label: string
   className?: string
-  onClick: () => any
+  onClick: () => void
   hover?: boolean
 }) {
   return (

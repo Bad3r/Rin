@@ -160,7 +160,7 @@ GitHub Releases 将包含：
 
 ```bash
 # 添加上游远程
-git remote add upstream https://github.com/openRin/Rin.git
+git remote add upstream https://github.com/Bad3r/Rin.git
 
 # 获取最新更改
 git fetch upstream
@@ -285,5 +285,5 @@ fixed bug
 ## 有问题？
 
 - 📖 阅读[提交规范](./commit-convention.md)了解提交指南
-- 🐛 报告问题：[GitHub Issues](https://github.com/openRin/Rin/issues)
+- 🐛 报告问题：[GitHub Issues](https://github.com/Bad3r/Rin/issues)
 - 💬 加入我们的社区讨论

@@ -271,8 +271,8 @@ export function Settings() {
           <div className='flex flex-col items-start w-full'>
             <p className='text-base font-bold dark:text-white mt-2'>{t('settings.import_skipped')}</p>
             <ul className='flex flex-col items-start max-h-64 overflow-auto w-full'>
-              {msgList.map(msg => (
-                <p key={`${msg.title}-${msg.reason}`} className='text-sm dark:text-white'>
+              {msgList.map((msg, idx) => (
+                <p key={`${msg.title}:${msg.reason}:${idx}`} className='text-sm dark:text-white'>
                   {t('settings.import_skipped_item$title$reason', { title: msg.title, reason: msg.reason })}
                 </p>
               ))}
