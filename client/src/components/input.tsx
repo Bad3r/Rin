@@ -13,7 +13,18 @@ interface InputProps {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ autofocus: _autofocus, value, setValue, className, placeholder, onSubmit, disabled, type = 'text' }, ref) => {
+  ({ autofocus, value, setValue, className, placeholder, onSubmit, disabled, type = 'text' }, ref) => {
+    const innerRef = useRef<HTMLInputElement | null>(null)
+    useEffect(() => {
+      if (autofocus) innerRef.current?.focus()
+    }, [autofocus])
+    return (
+      <input
+        ref={node => {
+          innerRef.current = node
+          if (typeof ref === 'function') ref(node)
+          else if (ref) (ref as React.MutableRefObject<HTMLInputElement | null>).current = node
+        }}
     return (
       <input
         ref={ref}
