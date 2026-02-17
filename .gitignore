@@ -41,6 +41,7 @@ dist-ssr
 
 # Local generated devenv artifacts
 /.devenv.flake.nix
+/devenv.lock
 
 # Wrangler-generated types:
 # keep server/worker-configuration.d.ts as source-of-truth,
