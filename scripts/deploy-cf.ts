@@ -135,7 +135,8 @@ async function deploy(): Promise<string> {
   // Determine server entry point - use built dist if available, otherwise use source
   const serverDistIndex = './dist/server/_worker.js'
   const hasServerBuild = await Bun.file(serverDistIndex).exists()
-  const serverMain = hasServerBuild ? 'dist/server/_worker.js' : 'server/src/_worker.ts'
+  // Wrangler resolves relative paths from the config file directory (.wrangler/)
+  const serverMain = hasServerBuild ? '../dist/server/_worker.js' : '../server/src/_worker.ts'
 
   if (hasServerBuild) {
     console.log(`✅ Using pre-built server from ${serverMain}`)
@@ -154,7 +155,7 @@ main = "${serverMain}"
 compatibility_date = "2026-01-20"
 
 [assets]
-directory = "./dist/client"
+directory = "../dist/client"
 binding = "ASSETS"
 
 [triggers]
