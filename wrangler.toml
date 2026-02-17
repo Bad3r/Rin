@@ -1,0 +1,66 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "rin-server"
+main = "server/src/_worker.ts"
+compatibility_date = "2026-01-20"
+
+[assets]
+directory = "./dist/client"
+binding = "ASSETS"
+run_worker_first = true
+not_found_handling = "single-page-application"
+
+[triggers]
+crons = ["*/20 * * * *"]
+
+[vars]
+S3_FOLDER = "images/"
+S3_CACHE_FOLDER = "cache/"
+S3_REGION = "auto"
+S3_ENDPOINT = "https://example.invalid"
+S3_ACCESS_HOST = "https://example.invalid"
+S3_BUCKET = "rin-bucket"
+S3_FORCE_PATH_STYLE = "false"
+WEBHOOK_URL = ""
+RSS_TITLE = "Rin"
+RSS_DESCRIPTION = "A lightweight personal blogging system"
+CACHE_STORAGE_MODE = "database"
+NAME = "Rin"
+DESCRIPTION = "A lightweight personal blogging system"
+AVATAR = ""
+PAGE_SIZE = "5"
+RSS_ENABLE = "false"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "rin-local"
+database_id = "local"
+
+[ai]
+binding = "AI"
+
+[placement]
+mode = "smart"
+
+[env.production]
+name = "rin-server"
+
+[env.production.vars]
+RSS_TITLE = "Rin"
+RSS_DESCRIPTION = "A lightweight personal blogging system"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "rin"
+database_id = "local"
+
+[env.preview]
+name = "rin-server-preview"
+
+[env.preview.vars]
+RSS_TITLE = "Rin Preview"
+RSS_DESCRIPTION = "Preview environment"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "rin-preview"
+database_id = "local"

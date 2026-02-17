@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * 开发环境配置加载器
- * 从 .env.local 加载配置并生成 wrangler.toml 和 client/.env
+ * 从 .env.local 加载配置并生成 client/.env 和 .dev.vars
  */
 
 import * as fs from 'node:fs'
@@ -46,16 +46,12 @@ const env = parseEnv(envContent)
 
 // 验证必要的环境变量
 const requiredVars = [
-  'NAME',
-  'AVATAR',
   'S3_ENDPOINT',
   'S3_BUCKET',
-  'RIN_GITHUB_CLIENT_ID',
-  'RIN_GITHUB_CLIENT_SECRET',
   'JWT_SECRET',
   'S3_ACCESS_KEY_ID',
   'S3_SECRET_ACCESS_KEY',
-  // BACKEND_PORT and FRONTEND_PORT removed - now using unified port
+  // OAuth and site metadata are optional for local development
 ]
 
 const missingVars = requiredVars.filter(v => !env[v])
@@ -68,49 +64,6 @@ if (missingVars.length > 0) {
   process.exit(1)
 }
 
-// 生成 wrangler.toml
-const wranglerContent = `#:schema node_modules/wrangler/config-schema.json
-name = "${env.WORKER_NAME || 'rin-server'}"
-main = "server/src/_worker.ts"
-compatibility_date = "2025-03-21"
-
-# Assets configuration - serves static files from ./dist/client
-# For development, we use wrangler dev with ASSETS to serve both frontend and backend on same port
-[assets]
-directory = "./dist/client"
-binding = "ASSETS"
-# Worker handles all requests first, static assets served by Worker logic
-run_worker_first = true
-# SPA support - serve index.html for unmatched routes
-not_found_handling = "single-page-application"
-
-[triggers]
-crons = ["*/20 * * * *"]
-
-[vars]
-S3_FOLDER = "${env.S3_FOLDER || 'images/'}"
-S3_CACHE_FOLDER = "${env.S3_CACHE_FOLDER || 'cache/'}"
-S3_REGION = "${env.S3_REGION || 'auto'}"
-S3_ENDPOINT = "${env.S3_ENDPOINT}"
-S3_ACCESS_HOST = "${env.S3_ACCESS_HOST || env.S3_ENDPOINT}"
-S3_BUCKET = "${env.S3_BUCKET}"
-S3_FORCE_PATH_STYLE = "${env.S3_FORCE_PATH_STYLE || 'false'}"
-WEBHOOK_URL = "${env.WEBHOOK_URL || ''}"
-RSS_TITLE = "${env.RSS_TITLE || 'Rin Development'}"
-RSS_DESCRIPTION = "${env.RSS_DESCRIPTION || 'Development Environment'}"
-CACHE_STORAGE_MODE = "${env.CACHE_STORAGE_MODE || 's3'}"
-ADMIN_USERNAME = "${env.ADMIN_USERNAME}"
-ADMIN_PASSWORD = "${env.ADMIN_PASSWORD}"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "${env.DB_NAME || 'rin'}"
-database_id = "local"
-`
-
-fs.writeFileSync(path.join(ROOT_DIR, 'wrangler.toml'), wranglerContent)
-console.log('✅ 已生成 wrangler.toml')
-
 // 生成 client/.env
 const clientEnvContent = `NAME=${env.NAME}
 DESCRIPTION=${env.DESCRIPTION || ''}
@@ -122,12 +75,30 @@ RSS_ENABLE=${env.RSS_ENABLE || 'false'}
 fs.writeFileSync(path.join(ROOT_DIR, 'client', '.env'), clientEnvContent)
 console.log('✅ 已生成 client/.env')
 
-// 生成 .dev.vars（用于 wrangler dev 的敏感信息）
+// 生成 .dev.vars（用于 wrangler dev，本地值会覆盖 wrangler.toml 同名 vars）
 const devVarsContent = `RIN_GITHUB_CLIENT_ID=${env.RIN_GITHUB_CLIENT_ID}
 RIN_GITHUB_CLIENT_SECRET=${env.RIN_GITHUB_CLIENT_SECRET}
 JWT_SECRET=${env.JWT_SECRET}
 S3_ACCESS_KEY_ID=${env.S3_ACCESS_KEY_ID}
 S3_SECRET_ACCESS_KEY=${env.S3_SECRET_ACCESS_KEY}
+S3_FOLDER=${env.S3_FOLDER || 'images/'}
+S3_CACHE_FOLDER=${env.S3_CACHE_FOLDER || 'cache/'}
+S3_REGION=${env.S3_REGION || 'auto'}
+S3_ENDPOINT=${env.S3_ENDPOINT}
+S3_ACCESS_HOST=${env.S3_ACCESS_HOST || env.S3_ENDPOINT}
+S3_BUCKET=${env.S3_BUCKET}
+S3_FORCE_PATH_STYLE=${env.S3_FORCE_PATH_STYLE || 'false'}
+WEBHOOK_URL=${env.WEBHOOK_URL || ''}
+RSS_TITLE=${env.RSS_TITLE || 'Rin Development'}
+RSS_DESCRIPTION=${env.RSS_DESCRIPTION || 'Development Environment'}
+CACHE_STORAGE_MODE=${env.CACHE_STORAGE_MODE || 'database'}
+ADMIN_USERNAME=${env.ADMIN_USERNAME}
+ADMIN_PASSWORD=${env.ADMIN_PASSWORD}
+NAME=${env.NAME || 'Rin'}
+DESCRIPTION=${env.DESCRIPTION || 'A lightweight personal blogging system'}
+AVATAR=${env.AVATAR || ''}
+PAGE_SIZE=${env.PAGE_SIZE || '5'}
+RSS_ENABLE=${env.RSS_ENABLE || 'false'}
 `
 
 fs.writeFileSync(path.join(ROOT_DIR, '.dev.vars'), devVarsContent)
