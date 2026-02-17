@@ -92,11 +92,39 @@ export function UserService(router: Router): void {
 
       let authToken: string | undefined
 
-      await db.query.users.findFirst({ where: eq(users.openid, profile.openid) }).then(async (user: any) => {
-        if (user) {
-          profile.permission = user.permission
-          await db.update(users).set(profile).where(eq(users.id, user.id))
-          authToken = await jwt.sign({ id: user.id })
+      const existingUser = await db.query.users.findFirst({ where: eq(users.openid, profile.openid) })
+      if (existingUser) {
+        profile.permission = existingUser.permission
+        await db.update(users).set(profile).where(eq(users.id, existingUser.id))
+        authToken = await jwt.sign({ id: existingUser.id })
+        cookie.token.set({
+          value: authToken,
+          expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+          path: '/',
+          httpOnly: true,
+          secure: true,
+          sameSite: 'lax',
+        })
+        // Store token in cookie for frontend to read (not HttpOnly)
+        cookie.auth_token.set({
+          value: authToken,
+          expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+          path: '/',
+          sameSite: 'lax',
+        })
+      } else {
+        // if no user exists, set permission to 1
+        if (!(await anyUser(db))) {
+          const realTimeCheck = (await db.query.users.findMany())?.length > 0
+          if (!realTimeCheck) {
+            profile.permission = 1
+          }
+        }
+        const result = await db.insert(users).values(profile).returning({ insertedId: users.id })
+        if (!result || result.length === 0) {
+          throw new InternalServerError('Failed to register user')
+        } else {
+          authToken = await jwt.sign({ id: result[0].insertedId })
           cookie.token.set({
             value: authToken,
             expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
@@ -112,37 +140,8 @@ export function UserService(router: Router): void {
             path: '/',
             sameSite: 'lax',
           })
-        } else {
-          // if no user exists, set permission to 1
-          if (!(await anyUser(db))) {
-            const realTimeCheck = (await db.query.users.findMany())?.length > 0
-            if (!realTimeCheck) {
-              profile.permission = 1
-            }
-          }
-          const result = await db.insert(users).values(profile).returning({ insertedId: users.id })
-          if (!result || result.length === 0) {
-            throw new InternalServerError('Failed to register user')
-          } else {
-            authToken = await jwt.sign({ id: result[0].insertedId })
-            cookie.token.set({
-              value: authToken,
-              expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
-              path: '/',
-              httpOnly: true,
-              secure: true,
-              sameSite: 'lax',
-            })
-            // Store token in cookie for frontend to read (not HttpOnly)
-            cookie.auth_token.set({
-              value: authToken,
-              expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
-              path: '/',
-              sameSite: 'lax',
-            })
-          }
         }
-      })
+      }
 
       const redirect_url = new URL(cookie.redirect_to.value)
       // Add token to URL for frontend to store (for cross-domain auth)
