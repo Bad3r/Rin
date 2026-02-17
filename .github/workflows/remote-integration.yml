@@ -47,6 +47,7 @@ jobs:
         run: |
           echo "Remote tests enabled but no URL configured."
           echo "Set workflow_dispatch input 'base_url' or repo variable RIN_REMOTE_BASE_URL."
+          exit 1
 
       - name: Run remote integration tests
         if: ${{ steps.config.outputs.enabled == 'true' && steps.config.outputs.base_url != '' }}

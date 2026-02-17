@@ -44,8 +44,10 @@ jobs:
 
       - name: Download artifacts from URL
         if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          ARTIFACT_URL: ${{ github.event.inputs.artifact_url }}
         run: |
-          URL="${{ github.event.inputs.artifact_url }}"
+          URL="$ARTIFACT_URL"
           echo "Downloading from: $URL"
 
           mkdir -p ./artifacts
@@ -235,6 +237,7 @@ jobs:
     needs: [prepare, deploy]
     if: ${{ vars.ENABLE_REMOTE_INTEGRATION_TESTS == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
