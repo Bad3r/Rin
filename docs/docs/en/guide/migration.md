@@ -175,8 +175,8 @@ If migration fails and you need to rollback:
 ## Need Help?
 
 - 📖 [Full Documentation](https://rin-docs.xeu.life)
-- 🐛 [GitHub Issues](https://github.com/openRin/Rin/issues)
-- 💬 [GitHub Discussions](https://github.com/openRin/Rin/discussions)
+- 🐛 [GitHub Issues](https://github.com/Bad3r/Rin/issues)
+- 💬 [GitHub Discussions](https://github.com/Bad3r/Rin/discussions)
 
 ---
 

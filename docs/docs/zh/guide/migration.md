@@ -176,8 +176,8 @@ const feeds = await client.feed.list({ page: 1 });
 ## 需要帮助？
 
 - 📖 [完整文档](https://rin-docs.xeu.life)
-- 🐛 [GitHub Issues](https://github.com/openRin/Rin/issues)
-- 💬 [GitHub Discussions](https://github.com/openRin/Rin/discussions)
+- 🐛 [GitHub Issues](https://github.com/Bad3r/Rin/issues)
+- 💬 [GitHub Discussions](https://github.com/Bad3r/Rin/discussions)
 
 ---
 

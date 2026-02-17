@@ -1,9 +1,8 @@
+import DOMPurify from 'dompurify'
 import { useCallback, useContext, useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet'
-import ReactMarkdown from 'react-markdown'
 import { useTranslation } from 'react-i18next'
 import Popup from 'reactjs-popup'
-import rehypeRaw from 'rehype-raw'
 import { useLocation } from 'wouter'
 import { ClientConfigContext } from '../state/config'
 import { siteName } from '../utils/constants'
@@ -38,18 +37,6 @@ function Footer() {
     window.dispatchEvent(new Event('colorSchemeChange'))
   }, [])
 
-  const handleFooterDoubleClick = useCallback(() => {
-    if (doubleClickTimes >= 2) {
-      // actually need 3 times doubleClick
-      setDoubleClickTimes(0)
-      if (!loginEnabled) {
-        setLocation('/login')
-      }
-      return
-    }
-    setDoubleClickTimes(doubleClickTimes + 1)
-  }, [doubleClickTimes, loginEnabled, setLocation])
-
   useEffect(() => {
     const mode = (localStorage.getItem('theme') as ThemeMode) || 'system'
     setModeState(mode)
@@ -64,16 +51,27 @@ function Footer() {
         <link rel='alternate' type='application/json' title={siteName} href='/rss.json' />
       </Helmet>
       <div className='flex flex-col mb-8 space-y-2 justify-center items-center t-primary ani-show'>
-        {footerHtml && (
-          <ReactMarkdown className='text-sm text-neutral-500 font-normal link-line' rehypePlugins={[rehypeRaw]}>
-            {footerHtml}
-          </ReactMarkdown>
-        )}
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: footer is explicitly configured by trusted blog owners */}
+        {footerHtml && <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(footerHtml) }} />}
         <p className='text-sm text-neutral-500 font-normal link-line'>
-          <button type='button' className='text-inherit hover:underline' onDoubleClick={handleFooterDoubleClick}>
+          <button
+            type='button'
+            className='inline p-0 m-0 bg-transparent border-none text-inherit'
+            onDoubleClick={() => {
+              if (doubleClickTimes >= 2) {
+                // actually need 3 times doubleClick
+                setDoubleClickTimes(0)
+                if (!loginEnabled) {
+                  setLocation('/login')
+                }
+              } else {
+                setDoubleClickTimes(doubleClickTimes + 1)
+              }
+            }}
+          >
             © {new Date().getFullYear()} Powered by
           </button>{' '}
-          <a className='hover:underline' href='https://github.com/openRin/Rin' target='_blank' rel='noopener'>
+          <a className='hover:underline' href='https://github.com/Bad3r/Rin' target='_blank' rel='noopener'>
             Rin
           </a>
           {config.get<boolean>('rss') && (
