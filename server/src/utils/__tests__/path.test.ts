@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it } from 'vitest'
 import { getFirstPathSegment, path_join } from '../path'
 
 describe('path_join', () => {

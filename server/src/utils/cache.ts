@@ -6,6 +6,15 @@ import { path_join } from './path'
 // Cache Utils for storing data in memory and persisting to database (with optional S3 backup)
 
 export type CacheStorageMode = 'database' | 's3'
+type CacheValue = unknown
+type S3ClientLike = Awaited<ReturnType<typeof import('./s3')['createS3Client']>>
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message
+  }
+  return String(error)
+}
 
 // 存储提供者接口
 interface StorageProvider {
@@ -19,7 +28,7 @@ interface StorageProvider {
 class DatabaseStorageProvider implements StorageProvider {
   constructor(
     private db: DB,
-    private cacheMap: Map<string, any>,
+    private cacheMap: Map<string, CacheValue>,
     private type: string
   ) {}
 
@@ -35,9 +44,9 @@ class DatabaseStorageProvider implements StorageProvider {
         }
       }
       console.log(`Cache loaded ${rows.length} entries from database`)
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Cache load from database failed')
-      console.error(e.message)
+      console.error(getErrorMessage(e))
     }
   }
 
@@ -83,9 +92,9 @@ class DatabaseStorageProvider implements StorageProvider {
     try {
       await this.db.delete(cache).where(and(eq(cache.key, key), eq(cache.type, this.type)))
       console.log('Cache deleted from database:', key)
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Cache delete from database failed')
-      console.error(e.message)
+      console.error(getErrorMessage(e))
     }
   }
 
@@ -93,21 +102,21 @@ class DatabaseStorageProvider implements StorageProvider {
     try {
       await this.db.delete(cache).where(eq(cache.type, this.type))
       console.log('Cache cleared from database')
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Cache clear from database failed')
-      console.error(e.message)
+      console.error(getErrorMessage(e))
     }
   }
 }
 
 // S3 存储提供者
 class S3StorageProvider implements StorageProvider {
-  private s3Instance: any = null
+  private s3Instance: S3ClientLike | null = null
   private cacheUrl: string
 
   constructor(
     private env: Env,
-    private cacheMap: Map<string, any>,
+    private cacheMap: Map<string, CacheValue>,
     private type: string
   ) {
     const slash = this.env.S3_ACCESS_HOST.endsWith('/') ? '' : '/'
@@ -134,13 +143,13 @@ class S3StorageProvider implements StorageProvider {
         }
         return
       }
-      const data = await response.json<any>()
+      const data = await response.json<Record<string, CacheValue>>()
       for (const key in data) {
         this.cacheMap.set(key, data[key])
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Cache load from S3 failed')
-      console.error(e.message)
+      console.error(getErrorMessage(e))
     }
   }
 
@@ -153,13 +162,13 @@ class S3StorageProvider implements StorageProvider {
         .then(() => {
           console.log('Cache saved to S3')
         })
-        .catch((e: any) => {
+        .catch((e: unknown) => {
           console.error('Cache save to S3 failed')
-          console.error(e.message)
+          console.error(getErrorMessage(e))
         })
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Cache save to S3 failed')
-      console.error(e.message)
+      console.error(getErrorMessage(e))
     }
   }
 
@@ -173,7 +182,7 @@ class S3StorageProvider implements StorageProvider {
 }
 
 export class CacheImpl {
-  cache: Map<string, any> = new Map<string, any>()
+  cache: Map<string, CacheValue> = new Map<string, CacheValue>()
   db: DB
   env: Env
   type: string
@@ -184,7 +193,7 @@ export class CacheImpl {
     this.type = type
     this.db = db
     this.env = env
-    this.cache = new Map<string, any>()
+    this.cache = new Map<string, CacheValue>()
 
     // 优先级：参数 > 环境变量，默认为 s3 以向前兼容
     const mode = storageMode ?? (env.CACHE_STORAGE_MODE as CacheStorageMode) ?? 's3'
@@ -216,7 +225,7 @@ export class CacheImpl {
     return this.cache.get(key)
   }
 
-  async getByPrefix(prefix: string): Promise<any[]> {
+  async getByPrefix(prefix: string): Promise<CacheValue[]> {
     if (!this.loaded) {
       await this.load()
     }
@@ -229,7 +238,7 @@ export class CacheImpl {
     return result
   }
 
-  async getBySuffix(suffix: string): Promise<any[]> {
+  async getBySuffix(suffix: string): Promise<CacheValue[]> {
     if (!this.loaded) {
       await this.load()
     }
@@ -258,7 +267,7 @@ export class CacheImpl {
     return this.getOrSet(key, async () => defaultValue)
   }
 
-  async set(key: string, value: any, save: boolean = true) {
+  async set(key: string, value: CacheValue, save: boolean = true) {
     if (!this.loaded) await this.load()
     this.cache.set(key, value)
     if (save) {

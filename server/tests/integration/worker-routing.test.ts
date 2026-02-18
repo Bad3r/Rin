@@ -1,16 +1,25 @@
-import { describe, expect, it } from 'bun:test'
+import { beforeAll, describe, expect, it } from 'vitest'
 import worker from '../../src/_worker'
+import { createApp } from '../../src/server'
 import { createMockEnv } from '../fixtures'
 
 type RouterImpl = 'legacy' | 'hono'
 const ROUTER_IMPLS: RouterImpl[] = ['legacy', 'hono']
+const TEST_ORIGIN = 'https://example.test'
 
 for (const impl of ROUTER_IMPLS) {
   describe(`Worker routing (${impl})`, () => {
+    beforeAll(async () => {
+      // Warm dynamic service imports once per adapter.
+      // Coverage instrumentation can make first-load path significantly slower.
+      const env = createMockEnv({ ROUTER_IMPL: impl })
+      await createApp(env, '/auth/status')
+    })
+
     it('strips /api prefix before routing service handlers', async () => {
       const env = createMockEnv({ ROUTER_IMPL: impl })
 
-      const response = await worker.fetch(new Request('http://localhost/api/auth/status'), env)
+      const response = await worker.fetch(new Request(`${TEST_ORIGIN}/api/auth/status`), env)
       expect(response.status).toBe(200)
 
       const payload = await response.json()
@@ -23,7 +32,7 @@ for (const impl of ROUTER_IMPLS) {
     it('returns API 404 when service path is unknown', async () => {
       const env = createMockEnv({ ROUTER_IMPL: impl })
 
-      const response = await worker.fetch(new Request('http://localhost/api/nope'), env)
+      const response = await worker.fetch(new Request(`${TEST_ORIGIN}/api/nope`), env)
       expect(response.status).toBe(404)
       // This assertion covers worker-level routing fallback, not router-level JSON NOT_FOUND payloads.
       expect(await response.text()).toBe('Not Found')
@@ -48,7 +57,7 @@ for (const impl of ROUTER_IMPLS) {
         } as unknown as Fetcher,
       })
 
-      const response = await worker.fetch(new Request('http://localhost/app/dashboard'), env)
+      const response = await worker.fetch(new Request(`${TEST_ORIGIN}/app/dashboard`), env)
       expect(response.status).toBe(200)
       expect(await response.text()).toContain('index')
     })

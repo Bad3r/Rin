@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'bun:test'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { createMockEnv } from '../../../tests/fixtures'
 import { createBaseApp } from '../base'
 import type { Context, Handler } from '../types'
@@ -17,7 +17,7 @@ describe('Router', () => {
       const handler: Handler = () => 'GET response'
       app.get('/test', handler)
 
-      const request = new Request('http://localhost/test')
+      const request = new Request('https://example.test/test')
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -28,7 +28,7 @@ describe('Router', () => {
       const handler: Handler = () => 'POST response'
       app.post('/test', handler)
 
-      const request = new Request('http://localhost/test', { method: 'POST' })
+      const request = new Request('https://example.test/test', { method: 'POST' })
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -39,7 +39,7 @@ describe('Router', () => {
       const handler: Handler = () => 'PUT response'
       app.put('/test', handler)
 
-      const request = new Request('http://localhost/test', { method: 'PUT' })
+      const request = new Request('https://example.test/test', { method: 'PUT' })
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -49,7 +49,7 @@ describe('Router', () => {
       const handler: Handler = () => 'DELETE response'
       app.delete('/test', handler)
 
-      const request = new Request('http://localhost/test', { method: 'DELETE' })
+      const request = new Request('https://example.test/test', { method: 'DELETE' })
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -61,11 +61,11 @@ describe('Router', () => {
       const handler: Handler = (ctx: Context) => ({ id: ctx.params.id })
       app.get('/users/:id', handler)
 
-      const request = new Request('http://localhost/users/123')
+      const request = new Request('https://example.test/users/123')
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
-      const data = (await response.json()) as any
+      const data = (await response.json()) as Record<string, string>
       expect(data.id).toBe('123')
     })
 
@@ -76,11 +76,11 @@ describe('Router', () => {
       })
       app.get('/users/:userId/posts/:postId', handler)
 
-      const request = new Request('http://localhost/users/1/posts/2')
+      const request = new Request('https://example.test/users/1/posts/2')
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
-      const data = (await response.json()) as any
+      const data = (await response.json()) as Record<string, string>
       expect(data.userId).toBe('1')
       expect(data.postId).toBe('2')
     })
@@ -91,11 +91,11 @@ describe('Router', () => {
       const handler: Handler = (ctx: Context) => ctx.query
       app.get('/search', handler)
 
-      const request = new Request('http://localhost/search?q=test&page=1')
+      const request = new Request('https://example.test/search?q=test&page=1')
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
-      const data = (await response.json()) as any
+      const data = (await response.json()) as Record<string, string>
       expect(data.q).toBe('test')
       expect(data.page).toBe('1')
     })
@@ -104,11 +104,11 @@ describe('Router', () => {
       const handler: Handler = (ctx: Context) => ctx.query
       app.get('/test', handler)
 
-      const request = new Request('http://localhost/test')
+      const request = new Request('https://example.test/test')
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
-      const data = (await response.json()) as any
+      const data = (await response.json()) as Record<string, string>
       expect(Object.keys(data).length).toBe(0)
     })
   })
@@ -116,16 +116,16 @@ describe('Router', () => {
   describe('Route groups', () => {
     it('should handle grouped routes', async () => {
       app.group('/api', group => {
-        group.get('/users', () => 'users list' as any)
-        group.get('/posts', () => 'posts list' as any)
+        group.get('/users', () => 'users list')
+        group.get('/posts', () => 'posts list')
       })
 
-      const request1 = new Request('http://localhost/api/users')
+      const request1 = new Request('https://example.test/api/users')
       const response1 = await app.handle(request1, env)
       expect(response1.status).toBe(200)
       expect((await response1.json()) as string).toBe('users list')
 
-      const request2 = new Request('http://localhost/api/posts')
+      const request2 = new Request('https://example.test/api/posts')
       const response2 = await app.handle(request2, env)
       expect(response2.status).toBe(200)
       expect((await response2.json()) as string).toBe('posts list')
@@ -134,11 +134,11 @@ describe('Router', () => {
     it('should handle nested groups', async () => {
       app.group('/api', api => {
         api.group('/v1', v1 => {
-          v1.get('/test', () => 'v1 test' as any)
+          v1.get('/test', () => 'v1 test')
         })
       })
 
-      const request = new Request('http://localhost/api/v1/test')
+      const request = new Request('https://example.test/api/v1/test')
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -159,7 +159,7 @@ describe('Router', () => {
       const handler: Handler = (ctx: Context) => ({ value: ctx.store.testValue })
       app.get('/test', handler)
 
-      const request = new Request('http://localhost/test')
+      const request = new Request('https://example.test/test')
       const response = await app.handle(request, env)
 
       expect(middlewareRan).toBe(true)
@@ -174,7 +174,7 @@ describe('Router', () => {
       const handler: Handler = () => 'should not reach here'
       app.get('/test', handler)
 
-      const request = new Request('http://localhost/test')
+      const request = new Request('https://example.test/test')
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(403)
@@ -184,7 +184,7 @@ describe('Router', () => {
 
   describe('Error handling', () => {
     it('should return 404 for unknown routes', async () => {
-      const request = new Request('http://localhost/unknown')
+      const request = new Request('https://example.test/unknown')
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(404)
@@ -196,16 +196,24 @@ describe('Router', () => {
       }
       app.get('/error', handler)
 
-      const request = new Request('http://localhost/error')
-      const response = await app.handle(request, env)
+      const originalConsoleError = console.error
+      console.error = () => {}
 
-      expect(response.status).toBe(500)
+      let response: Response | undefined
+      try {
+        const request = new Request('https://example.test/error')
+        response = await app.handle(request, env)
+      } finally {
+        console.error = originalConsoleError
+      }
+
+      expect(response?.status).toBe(500)
     })
   })
 
   describe('CORS', () => {
     it('should handle OPTIONS preflight', async () => {
-      const request = new Request('http://localhost/test', { method: 'OPTIONS' })
+      const request = new Request('https://example.test/test', { method: 'OPTIONS' })
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(204)

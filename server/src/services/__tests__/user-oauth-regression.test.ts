@@ -1,6 +1,5 @@
-import type { Database } from 'bun:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanupTestDB, createMockDB, createMockEnv, execSql } from '../../../tests/fixtures'
 import { createBaseApp } from '../../core/base'
 import type { Context } from '../../core/types'
 import { UserService } from '../user'
@@ -8,13 +7,13 @@ import { UserService } from '../user'
 type RouterImpl = 'legacy' | 'hono'
 
 const ROUTER_IMPLS: RouterImpl[] = ['legacy', 'hono']
-const originalFetch = globalThis.fetch
+const TEST_ORIGIN = 'https://example.test'
 
 for (const impl of ROUTER_IMPLS) {
   describe(`User OAuth regression (${impl})`, () => {
     let env: Env
     let app: ReturnType<typeof createBaseApp>
-    let sqlite: Database
+    let sqlite: D1Database
 
     beforeEach(() => {
       const mockDB = createMockDB()
@@ -33,7 +32,7 @@ for (const impl of ROUTER_IMPLS) {
         get: async () => undefined,
         set: async () => {},
         deletePrefix: async () => {},
-        getOrSet: async (_key: string, fn: Function) => fn(),
+        getOrSet: async (_key: string, fn: () => unknown) => fn(),
         getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
       })
       app.state('serverConfig', {
@@ -65,16 +64,14 @@ for (const impl of ROUTER_IMPLS) {
       })
 
       UserService(app)
-      globalThis.fetch = originalFetch
     })
 
-    afterEach(() => {
-      globalThis.fetch = originalFetch
-      cleanupTestDB(sqlite)
+    afterEach(async () => {
+      await cleanupTestDB(sqlite)
     })
 
     it('GET /user/github requires referer header', async () => {
-      const response = await app.handle(new Request('http://localhost/user/github'), env)
+      const response = await app.handle(new Request(`${TEST_ORIGIN}/user/github`), env)
       expect(response.status).toBe(400)
 
       const payload = (await response.json()) as {
@@ -87,7 +84,7 @@ for (const impl of ROUTER_IMPLS) {
 
     it('GET /user/github sets cookies and redirects', async () => {
       const response = await app.handle(
-        new Request('http://localhost/user/github', {
+        new Request(`${TEST_ORIGIN}/user/github`, {
           headers: {
             Referer: 'https://frontend.example.com/feed/42',
           },
@@ -105,7 +102,7 @@ for (const impl of ROUTER_IMPLS) {
 
     it('GET /user/github/callback rejects mismatched state', async () => {
       const response = await app.handle(
-        new Request('http://localhost/user/github/callback?state=mismatch&code=abc', {
+        new Request(`${TEST_ORIGIN}/user/github/callback?state=mismatch&code=abc`, {
           headers: {
             Cookie: 'state=state-123; redirect_to=https%3A%2F%2Ffrontend.example.com%2Fcallback',
           },
@@ -124,7 +121,7 @@ for (const impl of ROUTER_IMPLS) {
 
     it('GET /user/github/callback rejects redirect targets outside allowlist', async () => {
       const response = await app.handle(
-        new Request('http://localhost/user/github/callback?state=state-123&code=abc', {
+        new Request(`${TEST_ORIGIN}/user/github/callback?state=state-123&code=abc`, {
           headers: {
             Cookie: 'state=state-123; redirect_to=https%3A%2F%2Fattacker.example%2Fcallback',
           },
@@ -142,13 +139,16 @@ for (const impl of ROUTER_IMPLS) {
     })
 
     it('GET /user/github/callback validates state and propagates token to redirect URL', async () => {
-      sqlite.exec(`
+      await execSql(
+        sqlite,
+        `
         INSERT INTO users (id, username, avatar, openid, permission)
         VALUES (7, 'oauth-user', 'avatar.png', '12345', 0)
-      `)
+      `
+      )
 
-      globalThis.fetch = async () =>
-        new Response(
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+        return new Response(
           JSON.stringify({
             id: '12345',
             login: 'oauth-user',
@@ -162,24 +162,30 @@ for (const impl of ROUTER_IMPLS) {
             },
           }
         )
+      })
 
-      const response = await app.handle(
-        new Request('http://localhost/user/github/callback?state=state-123&code=abc', {
-          headers: {
-            Cookie: 'state=state-123; redirect_to=https%3A%2F%2Ffrontend.example.com%2Fcallback',
-          },
-        }),
-        env
-      )
+      try {
+        const response = await app.handle(
+          new Request(`${TEST_ORIGIN}/user/github/callback?state=state-123&code=abc`, {
+            headers: {
+              Cookie: 'state=state-123; redirect_to=https%3A%2F%2Ffrontend.example.com%2Fcallback',
+            },
+          }),
+          env
+        )
 
-      expect(response.status).toBe(302)
-      const location = response.headers.get('Location') || ''
-      expect(location).toContain('https://frontend.example.com/callback')
-      expect(location).toContain('token=jwt_7')
+        expect(response.status).toBe(302)
+        expect(fetchSpy).toHaveBeenCalled()
+        const location = response.headers.get('Location') || ''
+        expect(location).toContain('https://frontend.example.com/callback')
+        expect(location).toContain('token=jwt_7')
 
-      const setCookie = response.headers.get('Set-Cookie') || ''
-      expect(setCookie).toContain('state=')
-      expect(setCookie).toContain('token=jwt_7')
+        const setCookie = response.headers.get('Set-Cookie') || ''
+        expect(setCookie).toContain('state=')
+        expect(setCookie).toContain('token=jwt_7')
+      } finally {
+        fetchSpy.mockRestore()
+      }
     })
   })
 }

@@ -1,7 +1,9 @@
 import { readdir } from 'node:fs/promises'
+import { isIP } from 'node:net'
 import { $ } from 'bun'
 import stripIndent from 'strip-indent'
 import { fixTopField, getMigrationVersion, isInfoExist, updateMigrationVersion } from './db-fix-top-field'
+import { isKnownTopColumnCatchUpCase } from './migration-utils'
 
 function env(name: string, defaultValue?: string, required = false) {
   const env = process.env
@@ -13,7 +15,13 @@ function env(name: string, defaultValue?: string, required = false) {
 }
 
 // must be defined
-const renv = (name: string, defaultValue?: string) => env(name, defaultValue, true)!
+const renv = (name: string, defaultValue?: string) => {
+  const value = env(name, defaultValue, true)
+  if (!value) {
+    throw new Error(`${name} is not defined`)
+  }
+  return value
+}
 
 const DB_NAME = renv('DB_NAME', 'rin')
 const WORKER_NAME = renv('WORKER_NAME', 'rin-server')
@@ -49,6 +57,51 @@ const DESCRIPTION = env('DESCRIPTION', 'A lightweight personal blogging system')
 const AVATAR = env('AVATAR', '')
 const PAGE_SIZE = env('PAGE_SIZE', '5')
 const RSS_ENABLE = env('RSS_ENABLE', 'false')
+
+type ShellProcessError = {
+  stdio?: string | Uint8Array | null
+  stdout?: string | Uint8Array | null
+  stderr?: string | Uint8Array | null
+}
+
+function toOptionalText(value: unknown): string | null {
+  if (typeof value === 'string') {
+    return value
+  }
+  if (value instanceof Uint8Array) {
+    return new TextDecoder().decode(value)
+  }
+  return null
+}
+
+function logShellProcessError(error: unknown): void {
+  if (typeof error === 'object' && error !== null) {
+    const shellError = error as ShellProcessError
+    const stdio = toOptionalText(shellError.stdio)
+    const stdout = toOptionalText(shellError.stdout)
+    const stderr = toOptionalText(shellError.stderr)
+
+    if (stdio) {
+      console.error(stdio)
+    }
+    if (stdout) {
+      console.error(stdout)
+    }
+    if (stderr) {
+      console.error(stderr)
+    }
+  }
+
+  if (error instanceof Error) {
+    console.error(error.message)
+  } else if (typeof error === 'string') {
+    console.error(error)
+  }
+}
+
+function toTomlString(value: string): string {
+  return JSON.stringify(value)
+}
 
 // Debug: Log environment variables
 console.log('Environment variables:')
@@ -137,37 +190,37 @@ async function deploy(): Promise<string> {
     'wrangler.toml',
     stripIndent(`
 #:schema node_modules/wrangler/config-schema.json
-name = "${WORKER_NAME}"
-main = "${serverMain}"
-compatibility_date = "2026-01-20"
+name = ${toTomlString(WORKER_NAME)}
+main = ${toTomlString(serverMain)}
+compatibility_date = ${toTomlString('2026-01-20')}
 
 [assets]
-directory = "./dist/client"
-binding = "ASSETS"
+directory = ${toTomlString('./dist/client')}
+binding = ${toTomlString('ASSETS')}
 
 [triggers]
-crons = ["*/20 * * * *"]
+crons = [${toTomlString('*/20 * * * *')}]
 
 [vars]
-S3_FOLDER = "${S3_FOLDER}"
-S3_CACHE_FOLDER="${S3_CACHE_FOLDER}"
-S3_REGION = "${S3_REGION}"
-S3_ENDPOINT = "${finalS3Endpoint}"
-S3_ACCESS_HOST = "${finalS3AccessHost}"
-S3_BUCKET = "${finalS3Bucket}"
-S3_FORCE_PATH_STYLE = "${S3_FORCE_PATH_STYLE}"
-WEBHOOK_URL = "${WEBHOOK_URL}"
-RSS_TITLE = "${RSS_TITLE}"
-RSS_DESCRIPTION = "${RSS_DESCRIPTION}"
-CACHE_STORAGE_MODE = "${CACHE_STORAGE_MODE}"
-NAME = "${NAME}"
-DESCRIPTION = "${DESCRIPTION}"
-AVATAR = "${AVATAR}"
-PAGE_SIZE = "${PAGE_SIZE}"
-RSS_ENABLE = "${RSS_ENABLE}"
+S3_FOLDER = ${toTomlString(S3_FOLDER)}
+S3_CACHE_FOLDER=${toTomlString(S3_CACHE_FOLDER)}
+S3_REGION = ${toTomlString(S3_REGION)}
+S3_ENDPOINT = ${toTomlString(finalS3Endpoint)}
+S3_ACCESS_HOST = ${toTomlString(finalS3AccessHost)}
+S3_BUCKET = ${toTomlString(finalS3Bucket)}
+S3_FORCE_PATH_STYLE = ${toTomlString(S3_FORCE_PATH_STYLE)}
+WEBHOOK_URL = ${toTomlString(WEBHOOK_URL)}
+RSS_TITLE = ${toTomlString(RSS_TITLE)}
+RSS_DESCRIPTION = ${toTomlString(RSS_DESCRIPTION)}
+CACHE_STORAGE_MODE = ${toTomlString(CACHE_STORAGE_MODE)}
+NAME = ${toTomlString(NAME)}
+DESCRIPTION = ${toTomlString(DESCRIPTION)}
+AVATAR = ${toTomlString(AVATAR)}
+PAGE_SIZE = ${toTomlString(PAGE_SIZE)}
+RSS_ENABLE = ${toTomlString(RSS_ENABLE)}
 
 [placement]
-mode = "smart"
+mode = ${toTomlString('smart')}
 `)
   )
 
@@ -203,9 +256,9 @@ mode = "smart"
     console.log(`Found: ${existing.name}:${existing.uuid}`)
     const configText = stripIndent(`
     [[d1_databases]]
-    binding = "DB"
-    database_name = "${existing.name}"
-    database_id = "${existing.uuid}"`)
+    binding = ${toTomlString('DB')}
+    database_name = ${toTomlString(existing.name)}
+    database_id = ${toTomlString(existing.uuid)}`)
     await $`echo ${configText} >> wrangler.toml`.quiet()
     console.log(`Appended to wrangler.toml`)
   }
@@ -215,7 +268,7 @@ mode = "smart"
   console.log(`Adding AI binding`)
   const aiConfigText = stripIndent(`
     [ai]
-    binding = "AI"`)
+    binding = ${toTomlString('AI')}`)
   await $`echo ${aiConfigText} >> wrangler.toml`.quiet()
   console.log(`AI binding appended to wrangler.toml`)
 
@@ -237,7 +290,18 @@ mode = "smart"
       .sort()
     console.log('migration_version:', migrationVersion, 'Migration SQL List: ', sqlFiles)
     for (const file of sqlFiles) {
-      await $`bunx wrangler d1 execute ${DB_NAME} --remote --file ./server/sql/${file} -y`
+      const { exitCode, stdout, stderr } =
+        await $`bunx wrangler d1 execute ${DB_NAME} --remote --file ./server/sql/${file} -y`.quiet().nothrow()
+
+      if (exitCode !== 0) {
+        const output = `${stdout.toString()}\n${stderr.toString()}`.trim()
+        if (isKnownTopColumnCatchUpCase(file, output)) {
+          console.warn(`[migration] Skipping ${file}: feeds.top already exists`)
+          continue
+        }
+        throw new Error(output || `Failed to migrate ${file}`)
+      }
+
       console.log(`Migrated ${file}`)
     }
     if (sqlFiles.length === 0) {
@@ -248,10 +312,8 @@ mode = "smart"
         await updateMigrationVersion(typ, DB_NAME, lastVersion)
       }
     }
-  } catch (e: any) {
-    console.error(e.stdio?.toString())
-    console.error(e.stdout?.toString())
-    console.error(e.stderr?.toString())
+  } catch (e: unknown) {
+    logShellProcessError(e)
     process.exit(1)
   }
 
@@ -268,7 +330,15 @@ mode = "smart"
   async function putSecret(name: string, value?: string) {
     if (value) {
       console.log(`Put ${name}`)
-      await $`echo "${value}" | bun wrangler secret put ${name}`
+      const process = Bun.spawn(['bunx', 'wrangler', 'secret', 'put', name], {
+        stdin: value,
+        stdout: 'inherit',
+        stderr: 'inherit',
+      })
+      const exitCode = await process.exited
+      if (exitCode !== 0) {
+        throw new Error(`Failed to put secret ${name} (exit code ${exitCode})`)
+      }
     } else {
       console.log(`Skip ${name}, value is not defined.`)
     }
@@ -328,7 +398,8 @@ function parseWranglerFeedIds(stdout: string): number[] {
   try {
     const json = JSON.parse(stdout)
     if (Array.isArray(json) && json.length > 0 && json[0].results) {
-      return json[0].results.map((row: any) => parseInt(row.feed_id, 10)).filter((id: number) => !Number.isNaN(id))
+      const rows = json[0].results as Array<{ feed_id?: string | number }>
+      return rows.map(row => Number.parseInt(String(row.feed_id ?? ''), 10)).filter((id: number) => !Number.isNaN(id))
     }
   } catch (_e) {
     return stdout
@@ -345,13 +416,14 @@ function parseWranglerIPs(stdout: string): string[] {
   try {
     const json = JSON.parse(stdout)
     if (json.results) {
-      return json.results.map((row: any) => row.ip).filter((ip: string) => ip && typeof ip === 'string')
+      const rows = json.results as Array<{ ip?: string | null }>
+      return rows.map(row => row.ip).filter((ip): ip is string => typeof ip === 'string' && ip.length > 0)
     }
   } catch (_e) {
     return stdout
       .split('\n')
       .map(line => line.trim())
-      .filter(line => line && !/^\d+$/.test(line) && line !== 'ip')
+      .filter(line => isIP(line) !== 0)
   }
   return []
 }

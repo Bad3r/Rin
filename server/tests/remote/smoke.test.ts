@@ -1,8 +1,8 @@
-import { beforeAll, describe, expect, it } from 'bun:test'
+import { beforeAll, describe, expect, inject, it } from 'vitest'
 
-const baseUrlEnv = process.env.RIN_REMOTE_BASE_URL
+const baseUrlEnv = inject('remoteBaseUrl') as string
 let baseUrl: URL | null = null
-const timeoutMs = Number(process.env.RIN_REMOTE_TIMEOUT_MS || '10000')
+const timeoutMs = inject('remoteTimeoutMs') as number
 
 function makeUrl(path: string): string {
   if (!baseUrl) {

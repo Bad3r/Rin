@@ -1,4 +1,5 @@
 import { commentCreateSchema } from '@rin/api'
+import type { CreateCommentRequest } from '@rin/api'
 import { desc, eq } from 'drizzle-orm'
 import type { Router } from '../core/router'
 import type { Context } from '../core/types'
@@ -39,13 +40,13 @@ export function CommentService(router: Router): void {
           body,
           store: { db, env, serverConfig },
         } = ctx
-        const { content } = body
+        const { content } = body as Partial<CreateCommentRequest>
 
         if (!uid) {
           set.status = 401
           return 'Unauthorized'
         }
-        if (!content) {
+        if (typeof content !== 'string' || content.length === 0) {
           set.status = 400
           return 'Content is required'
         }
@@ -73,7 +74,9 @@ export function CommentService(router: Router): void {
           content,
         })
 
-        const webhookUrl = (await serverConfig.get(Config.webhookUrl)) || env.WEBHOOK_URL
+        const webhookUrlValue = await serverConfig.get(Config.webhookUrl)
+        const webhookUrl =
+          typeof webhookUrlValue === 'string' && webhookUrlValue.length > 0 ? webhookUrlValue : env.WEBHOOK_URL
         const frontendUrl = ctx.url.origin
         await notify(webhookUrl, `${frontendUrl}/feed/${feedId}\n${user.username} 评论了: ${exist.title}\n${content}`)
         return 'OK'

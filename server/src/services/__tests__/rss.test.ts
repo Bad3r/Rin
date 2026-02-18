@@ -1,12 +1,13 @@
-import type { Database } from 'bun:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanupTestDB, createMockDB, createMockEnv, execSql } from '../../../tests/fixtures'
 import { createBaseApp } from '../../core/base'
 import { RSSService, rssCrontab } from '../rss'
 
+const TEST_ORIGIN = 'https://example.test'
+
 describe('RSSService', () => {
   let db: any
-  let sqlite: Database
+  let sqlite: D1Database
   let env: Env
   let app: any
 
@@ -28,28 +29,34 @@ describe('RSSService', () => {
     await seedTestData(db)
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
   async function seedTestData(_db: any) {
     // Insert test user
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO users (id, username, avatar, openid) VALUES (1, 'testuser', 'avatar.png', 'gh_test')
-        `)
+        `
+    )
 
     // Insert test feeds with content
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO feeds (id, title, content, summary, uid, draft, listed, created_at, updated_at) VALUES 
                 (1, 'Test Feed 1', '# Hello\n\nThis is content', 'Summary 1', 1, 0, 1, unixepoch(), unixepoch()),
                 (2, 'Test Feed 2', '![image](https://example.com/img.png)', 'Summary 2', 1, 0, 1, unixepoch(), unixepoch()),
                 (3, 'Draft Feed', 'Draft content', '', 1, 1, 1, unixepoch(), unixepoch())
-        `)
+        `
+    )
   }
 
   describe('GET /:name - RSS feed endpoints', () => {
     it('should serve rss.xml', async () => {
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -64,7 +71,7 @@ describe('RSSService', () => {
     })
 
     it('should serve atom.xml', async () => {
-      const request = new Request('http://localhost/atom.xml')
+      const request = new Request(`${TEST_ORIGIN}/atom.xml`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -77,7 +84,7 @@ describe('RSSService', () => {
     })
 
     it('should serve rss.json', async () => {
-      const request = new Request('http://localhost/rss.json')
+      const request = new Request(`${TEST_ORIGIN}/rss.json`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -89,7 +96,7 @@ describe('RSSService', () => {
     })
 
     it('should serve feed.json (alias)', async () => {
-      const request = new Request('http://localhost/feed.json')
+      const request = new Request(`${TEST_ORIGIN}/feed.json`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -97,7 +104,7 @@ describe('RSSService', () => {
     })
 
     it('should redirect feed.xml to rss.xml', async () => {
-      const request = new Request('http://localhost/feed.xml')
+      const request = new Request(`${TEST_ORIGIN}/feed.xml`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -106,7 +113,7 @@ describe('RSSService', () => {
     })
 
     it('should return 404 for unknown feed names', async () => {
-      const request = new Request('http://localhost/unknown.xml')
+      const request = new Request(`${TEST_ORIGIN}/unknown.xml`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(404)
@@ -115,7 +122,7 @@ describe('RSSService', () => {
     })
 
     it('should convert markdown to HTML in content', async () => {
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await app.handle(request, env)
 
       const text = await response.text()
@@ -125,7 +132,7 @@ describe('RSSService', () => {
     })
 
     it('should include feed metadata', async () => {
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await app.handle(request, env)
 
       const text = await response.text()
@@ -135,7 +142,7 @@ describe('RSSService', () => {
     })
 
     it('should include author information', async () => {
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await app.handle(request, env)
 
       const text = await response.text()
@@ -148,13 +155,16 @@ describe('RSSService', () => {
     it('should limit to 20 items', async () => {
       // Add more feeds
       for (let i = 4; i <= 25; i++) {
-        sqlite.exec(`
+        await execSql(
+          sqlite,
+          `
                     INSERT INTO feeds (id, title, content, uid, draft, listed, created_at) 
                     VALUES (${i}, 'Feed ${i}', 'Content', 1, 0, 1, unixepoch())
-                `)
+                `
+        )
       }
 
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await app.handle(request, env)
 
       const text = await response.text()
@@ -176,7 +186,7 @@ describe('RSSService', () => {
       appNoS3.state('env', envNoS3)
       RSSService(appNoS3)
 
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await appNoS3.handle(request, envNoS3)
 
       expect(response.status).toBe(200)
@@ -194,17 +204,16 @@ describe('RSSService', () => {
       appWithS3.state('env', envWithS3)
       RSSService(appWithS3)
 
-      // Mock fetch to return 404
-      const originalFetch = global.fetch
-      global.fetch = async () => new Response('Not Found', { status: 404 })
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('Not Found', { status: 404 }))
 
       try {
-        const request = new Request('http://localhost/rss.xml')
+        const request = new Request(`${TEST_ORIGIN}/rss.xml`)
         const response = await appWithS3.handle(request, envWithS3)
 
         expect(response.status).toBe(200)
+        expect(fetchSpy).toHaveBeenCalled()
       } finally {
-        global.fetch = originalFetch
+        fetchSpy.mockRestore()
       }
     })
 
@@ -218,20 +227,17 @@ describe('RSSService', () => {
       appWithS3.state('env', envWithS3)
       RSSService(appWithS3)
 
-      // Mock fetch to throw error
-      const originalFetch = global.fetch
-      global.fetch = async () => {
-        throw new Error('Network error')
-      }
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network error'))
 
       try {
-        const request = new Request('http://localhost/rss.xml')
+        const request = new Request(`${TEST_ORIGIN}/rss.xml`)
         const response = await appWithS3.handle(request, envWithS3)
 
         // Should still generate feed
         expect(response.status).toBe(200)
+        expect(fetchSpy).toHaveBeenCalled()
       } finally {
-        global.fetch = originalFetch
+        fetchSpy.mockRestore()
       }
     })
   })
@@ -239,7 +245,7 @@ describe('RSSService', () => {
   describe('Feed content processing', () => {
     it('should extract images from content', async () => {
       // Feed 2 has an image in content
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await app.handle(request, env)
 
       const text = await response.text()
@@ -247,7 +253,7 @@ describe('RSSService', () => {
     })
 
     it('should use summary as description when available', async () => {
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await app.handle(request, env)
 
       const text = await response.text()
@@ -257,12 +263,15 @@ describe('RSSService', () => {
 
     it('should truncate content for description when no summary', async () => {
       // Create feed with long content but no summary
-      sqlite.exec(`
+      await execSql(
+        sqlite,
+        `
                 INSERT INTO feeds (id, title, content, summary, uid, draft, listed, created_at) 
                 VALUES (100, 'Long Feed', '${'a'.repeat(200)}', '', 1, 0, 1, unixepoch())
-            `)
+            `
+      )
 
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -272,7 +281,7 @@ describe('RSSService', () => {
 
 describe('rssCrontab', () => {
   let db: any
-  let sqlite: Database
+  let sqlite: D1Database
   let env: Env
 
   beforeEach(async () => {
@@ -282,16 +291,19 @@ describe('rssCrontab', () => {
     env = createMockEnv()
 
     // Seed test data
-    sqlite.exec(`INSERT INTO users (id, username, openid) VALUES (1, 'testuser', 'gh_test')`)
-    sqlite.exec(`
+    await execSql(sqlite, `INSERT INTO users (id, username, openid) VALUES (1, 'testuser', 'gh_test')`)
+    await execSql(
+      sqlite,
+      `
             INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES 
                 (1, 'Feed 1', 'Content 1', 1, 0, 1),
                 (2, 'Feed 2', 'Content 2', 1, 0, 1)
-        `)
+        `
+    )
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
   it('should generate and save RSS feeds to S3', async () => {
@@ -308,7 +320,7 @@ describe('rssCrontab', () => {
 
   it('should handle missing feeds gracefully', async () => {
     // Clear all feeds
-    sqlite.exec('DELETE FROM feeds')
+    await execSql(sqlite, 'DELETE FROM feeds')
 
     let thrown: unknown
 

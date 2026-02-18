@@ -1,23 +1,44 @@
-import type { Database } from 'bun:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanupTestDB, createMockDB, createMockEnv, execSql, queryAll } from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
 import { createBaseApp } from '../../core/base'
 import { UserService } from '../user'
 
+const TEST_ORIGIN = 'https://example.test'
+const TEST_CLIENT_ORIGIN = 'https://client.example.test'
+
 describe('UserService', () => {
   let db: any
-  let sqlite: Database
+  let sqlite: D1Database
   let env: Env
   let app: any
   let api: ReturnType<typeof createTestClient>
+
+  const messageOf = (value: unknown): string | undefined => {
+    if (typeof value === 'string') {
+      return value
+    }
+    if (!value || typeof value !== 'object') {
+      return undefined
+    }
+    const message = (value as { message?: unknown }).message
+    if (typeof message === 'string') {
+      return message
+    }
+    const error = (value as { error?: unknown }).error
+    if (!error || typeof error !== 'object') {
+      return undefined
+    }
+    const nestedMessage = (error as { message?: unknown }).message
+    return typeof nestedMessage === 'string' ? nestedMessage : undefined
+  }
 
   beforeEach(async () => {
     const mockDB = createMockDB()
     db = mockDB.db
     sqlite = mockDB.sqlite
     env = createMockEnv({
-      RIN_ALLOWED_REDIRECT_ORIGINS: 'http://localhost:5173',
+      RIN_ALLOWED_REDIRECT_ORIGINS: TEST_CLIENT_ORIGIN,
     })
 
     // Setup app with mock db and auth utilities
@@ -48,23 +69,26 @@ describe('UserService', () => {
     await seedTestData(sqlite)
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
-  async function seedTestData(sqlite: Database) {
-    sqlite.exec(`
+  async function seedTestData(sqlite: D1Database) {
+    await execSql(
+      sqlite,
+      `
             INSERT INTO users (id, username, avatar, permission, openid) VALUES 
                 (1, 'user1', 'avatar1.png', 0, 'gh_123'),
                 (2, 'admin', 'admin.png', 1, 'gh_456')
-        `)
+        `
+    )
   }
 
   describe('GET /user/github - Initiate GitHub OAuth', () => {
     it('should redirect to GitHub OAuth', async () => {
       // OAuth endpoints need custom headers, using direct request for this case
-      const request = new Request('http://localhost/user/github', {
-        headers: { Referer: 'http://localhost:5173/' },
+      const request = new Request(`${TEST_ORIGIN}/user/github`, {
+        headers: { Referer: `${TEST_CLIENT_ORIGIN}/` },
       })
 
       const response = await app.handle(request, env)
@@ -77,7 +101,7 @@ describe('UserService', () => {
 
     it('should require referer header', async () => {
       // OAuth endpoints need custom headers, using direct request for this case
-      const request = new Request('http://localhost/user/github')
+      const request = new Request(`${TEST_ORIGIN}/user/github`)
 
       const response = await app.handle(request, env)
 
@@ -96,8 +120,8 @@ describe('UserService', () => {
       appNoOAuth.state('oauth2', null) // No oauth2 state
       UserService(appNoOAuth)
 
-      const request = new Request('http://localhost/user/github', {
-        headers: { Referer: 'http://localhost:5173/' },
+      const request = new Request(`${TEST_ORIGIN}/user/github`, {
+        headers: { Referer: `${TEST_CLIENT_ORIGIN}/` },
       })
 
       const response = await appNoOAuth.handle(request, envNoOAuth)
@@ -109,8 +133,8 @@ describe('UserService', () => {
 
     it('should set redirect_to cookie', async () => {
       // OAuth endpoints need custom headers, using direct request for this case
-      const request = new Request('http://localhost/user/github', {
-        headers: { Referer: 'http://localhost:5173/feed/123' },
+      const request = new Request(`${TEST_ORIGIN}/user/github`, {
+        headers: { Referer: `${TEST_CLIENT_ORIGIN}/feed/123` },
       })
 
       const response = await app.handle(request, env)
@@ -123,7 +147,7 @@ describe('UserService', () => {
     })
 
     it('should reject referer origin outside allowlist', async () => {
-      const request = new Request('http://localhost/user/github', {
+      const request = new Request(`${TEST_ORIGIN}/user/github`, {
         headers: { Referer: 'https://attacker.example/feed/123' },
       })
 
@@ -137,9 +161,7 @@ describe('UserService', () => {
 
   describe('GET /user/github/callback - GitHub OAuth callback', () => {
     it('should authenticate existing user', async () => {
-      // Mock GitHub API response
-      const originalFetch = global.fetch
-      global.fetch = async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
         return new Response(
           JSON.stringify({
             id: 'gh_123',
@@ -149,31 +171,30 @@ describe('UserService', () => {
           }),
           { status: 200 }
         )
-      }
+      })
 
       try {
         // OAuth callbacks need custom Cookie header, using direct request
-        const request = new Request('http://localhost/user/github/callback?code=valid_code&state=mock_state', {
+        const request = new Request(`${TEST_ORIGIN}/user/github/callback?code=valid_code&state=mock_state`, {
           headers: {
-            Cookie: 'state=mock_state; redirect_to=http://localhost:5173/callback',
+            Cookie: `state=mock_state; redirect_to=${TEST_CLIENT_ORIGIN}/callback`,
           },
         })
 
         const response = await app.handle(request, env)
 
         expect(response.status).toBe(302)
+        expect(fetchSpy).toHaveBeenCalled()
         const location = response.headers.get('Location')
         expect(location).toContain('/callback')
         expect(location).toContain('token=mock_token_1')
       } finally {
-        global.fetch = originalFetch
+        fetchSpy.mockRestore()
       }
     })
 
     it('should register new user', async () => {
-      // Mock GitHub API response for new user
-      const originalFetch = global.fetch
-      global.fetch = async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
         return new Response(
           JSON.stringify({
             id: 'gh_new',
@@ -183,33 +204,34 @@ describe('UserService', () => {
           }),
           { status: 200 }
         )
-      }
+      })
 
       try {
         // OAuth callbacks need custom Cookie header, using direct request
-        const request = new Request('http://localhost/user/github/callback?code=valid_code&state=mock_state', {
+        const request = new Request(`${TEST_ORIGIN}/user/github/callback?code=valid_code&state=mock_state`, {
           headers: {
-            Cookie: 'state=mock_state; redirect_to=http://localhost:5173/callback',
+            Cookie: `state=mock_state; redirect_to=${TEST_CLIENT_ORIGIN}/callback`,
           },
         })
 
         const response = await app.handle(request, env)
 
         expect(response.status).toBe(302)
+        expect(fetchSpy).toHaveBeenCalled()
 
         // Verify user was created
-        const result = sqlite.prepare(`SELECT * FROM users WHERE openid = 'gh_new'`).all()
+        const result = await queryAll(sqlite, `SELECT * FROM users WHERE openid = 'gh_new'`)
         expect(result.length).toBe(1)
       } finally {
-        global.fetch = originalFetch
+        fetchSpy.mockRestore()
       }
     })
 
     it('should reject invalid state', async () => {
       // OAuth callbacks need custom Cookie header, using direct request
-      const request = new Request('http://localhost/user/github/callback?code=valid_code&state=wrong_state', {
+      const request = new Request(`${TEST_ORIGIN}/user/github/callback?code=valid_code&state=wrong_state`, {
         headers: {
-          Cookie: 'state=mock_state; redirect_to=http://localhost:5173/callback',
+          Cookie: `state=mock_state; redirect_to=${TEST_CLIENT_ORIGIN}/callback`,
         },
       })
 
@@ -222,9 +244,9 @@ describe('UserService', () => {
 
     it('should reject failed authorization', async () => {
       // OAuth callbacks need custom Cookie header, using direct request
-      const request = new Request('http://localhost/user/github/callback?code=invalid_code&state=mock_state', {
+      const request = new Request(`${TEST_ORIGIN}/user/github/callback?code=invalid_code&state=mock_state`, {
         headers: {
-          Cookie: 'state=mock_state; redirect_to=http://localhost:5173/callback',
+          Cookie: `state=mock_state; redirect_to=${TEST_CLIENT_ORIGIN}/callback`,
         },
       })
 
@@ -262,8 +284,7 @@ describe('UserService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(403)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Authentication required')
+      expect(messageOf(result.error?.value)).toBe('Authentication required')
     })
 
     it('should return 403 when user does not exist', async () => {
@@ -274,8 +295,7 @@ describe('UserService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(403)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Authentication required')
+      expect(messageOf(result.error?.value)).toBe('Authentication required')
     })
   })
 
@@ -292,7 +312,7 @@ describe('UserService', () => {
       expect(result.data?.success).toBe(true)
 
       // Verify update
-      const dbResult = sqlite.prepare(`SELECT username FROM users WHERE id = 1`).all() as any[]
+      const dbResult = await queryAll<{ username: string }>(sqlite, `SELECT username FROM users WHERE id = 1`)
       expect(dbResult[0]?.username).toBe('newname')
     })
 
@@ -306,7 +326,7 @@ describe('UserService', () => {
 
       expect(result.error).toBeUndefined()
 
-      const dbResult = sqlite.prepare(`SELECT avatar FROM users WHERE id = 1`).all() as any[]
+      const dbResult = await queryAll<{ avatar: string }>(sqlite, `SELECT avatar FROM users WHERE id = 1`)
       expect(dbResult[0]?.avatar).toBe('https://new-avatar.png')
     })
 
@@ -317,8 +337,7 @@ describe('UserService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(403)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Authentication required')
+      expect(messageOf(result.error?.value)).toBe('Authentication required')
     })
 
     it('should require at least one field', async () => {
@@ -326,8 +345,7 @@ describe('UserService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(400)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('At least one field (username or avatar) is required')
+      expect(messageOf(result.error?.value)).toBe('At least one field (username or avatar) is required')
     })
   })
 
@@ -340,7 +358,7 @@ describe('UserService', () => {
     })
 
     it('should clear both auth cookies in response headers', async () => {
-      const response = await app.handle(new Request('http://localhost/user/logout', { method: 'POST' }), env)
+      const response = await app.handle(new Request(`${TEST_ORIGIN}/user/logout`, { method: 'POST' }), env)
 
       expect(response.status).toBe(200)
       const setCookie = response.headers.get('Set-Cookie')

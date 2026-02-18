@@ -89,7 +89,7 @@ export function FaviconService(router: Router): void {
         admin,
         store: { env },
       } = ctx
-      const { file } = body
+      const file = body.file
 
       const s3 = createS3Client(env)
       const accessHost = env.S3_ACCESS_HOST || env.S3_ENDPOINT
@@ -99,6 +99,10 @@ export function FaviconService(router: Router): void {
         if (!admin) {
           set.status = 403
           return 'Permission denied'
+        }
+        if (!(file instanceof Blob)) {
+          set.status = 400
+          return 'Invalid file'
         }
 
         const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB

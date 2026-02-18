@@ -1,4 +1,7 @@
 import {
+  asDate,
+  type CreateFeedRequest,
+  type UpdateFeedRequest,
   feedCreateSchema,
   feedListSchema,
   feedSetTopSchema,
@@ -17,8 +20,41 @@ import { extractImage } from '../utils/image'
 import { bindTagToPost } from './tag'
 
 // Lazy-loaded modules for WordPress import
-let XMLParser: any
-let html2md: any
+let XMLParser: typeof import('fast-xml-parser').XMLParser | undefined
+let html2md: ((html: string) => string) | undefined
+
+type AdjacentFeed = {
+  id: number
+  title: string | null
+  summary: string
+  content: string
+  hashtags: Array<{ hashtag: { id: number; name: string } }>
+  createdAt: Date
+  updatedAt: Date
+}
+
+type WordPressItem = {
+  title?: string
+  category?: string | string[]
+  'wp:post_date'?: string
+  'wp:post_modified'?: string
+  'wp:status'?: string
+  'content:encoded'?: string
+}
+
+function queryValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value
+}
+
+function normalizedTags(tags: unknown): string[] | undefined {
+  if (!Array.isArray(tags)) {
+    return undefined
+  }
+  if (tags.every(tag => typeof tag === 'string')) {
+    return tags
+  }
+  return undefined
+}
 
 async function initWPModules() {
   if (!XMLParser) {
@@ -44,15 +80,18 @@ export function FeedService(router: Router): void {
           store: { db, cache },
         } = ctx
         const { page, limit, type } = query
+        const pageValue = queryValue(page)
+        const limitValue = queryValue(limit)
+        const typeValue = queryValue(type)
 
-        if ((type === 'draft' || type === 'unlisted') && !admin) {
+        if ((typeValue === 'draft' || typeValue === 'unlisted') && !admin) {
           set.status = 403
           return 'Permission denied'
         }
 
-        const page_num = (page ? (parseInt(page as string, 10) > 0 ? parseInt(page as string, 10) : 1) : 1) - 1
-        const limit_num = limit ? (parseInt(limit as string, 10) > 50 ? 50 : parseInt(limit as string, 10)) : 20
-        const cacheKey = `feeds_${type}_${page_num}_${limit_num}`
+        const page_num = (pageValue ? (parseInt(pageValue, 10) > 0 ? parseInt(pageValue, 10) : 1) : 1) - 1
+        const limit_num = limitValue ? (parseInt(limitValue, 10) > 50 ? 50 : parseInt(limitValue, 10)) : 20
+        const cacheKey = `feeds_${typeValue}_${page_num}_${limit_num}`
         const cached = await cache.get(cacheKey)
 
         if (cached) {
@@ -60,9 +99,9 @@ export function FeedService(router: Router): void {
         }
 
         const where =
-          type === 'draft'
+          typeValue === 'draft'
             ? eq(feeds.draft, 1)
-            : type === 'unlisted'
+            : typeValue === 'unlisted'
               ? and(eq(feeds.draft, 0), eq(feeds.listed, 0))
               : and(eq(feeds.draft, 0), eq(feeds.listed, 1))
 
@@ -89,11 +128,11 @@ export function FeedService(router: Router): void {
             offset: page_num * limit_num,
             limit: limit_num + 1,
           })
-        ).map(({ content, hashtags, summary, ...other }: any) => {
+        ).map(({ content, hashtags, summary, ...other }) => {
           const avatar = extractImage(content)
           return {
             summary: summary.length > 0 ? summary : content.length > 100 ? content.slice(0, 100) : content,
-            hashtags: hashtags.map(({ hashtag }: any) => hashtag),
+            hashtags: hashtags.map(({ hashtag }) => hashtag),
             avatar,
             ...other,
           }
@@ -107,7 +146,7 @@ export function FeedService(router: Router): void {
 
         const data = { size: size[0].count, data: feed_list, hasNext }
 
-        if (type === undefined || type === 'normal' || type === '') {
+        if (typeValue === undefined || typeValue === 'normal' || typeValue === '') {
           await cache.set(cacheKey, data)
         }
 
@@ -141,18 +180,23 @@ export function FeedService(router: Router): void {
           body,
           store: { db, cache, env },
         } = ctx
-        const { title, alias, listed, content, summary, draft, tags, createdAt } = body
+        const payload = body as Partial<CreateFeedRequest> & { createdAt?: unknown }
+        const { title, alias, listed, content, summary, draft, tags, createdAt } = payload
 
         if (!admin) {
           set.status = 403
           return 'Permission denied'
         }
+        if (uid === undefined) {
+          set.status = 401
+          return 'Unauthorized'
+        }
 
-        if (!title) {
+        if (typeof title !== 'string' || title.length === 0) {
           set.status = 400
           return 'Title is required'
         }
-        if (!content) {
+        if (typeof content !== 'string' || content.length === 0) {
           set.status = 400
           return 'Content is required'
         }
@@ -166,7 +210,19 @@ export function FeedService(router: Router): void {
           return 'Content already exists'
         }
 
-        const date = createdAt ? new Date(createdAt) : new Date()
+        let date = new Date()
+        if (createdAt !== undefined) {
+          if (typeof createdAt !== 'string') {
+            set.status = 400
+            return 'Invalid createdAt: expected ISO 8601 date-time string'
+          }
+          try {
+            date = asDate(createdAt, 'createdAt')
+          } catch (error) {
+            set.status = 400
+            return error instanceof Error ? error.message : 'Invalid createdAt'
+          }
+        }
 
         // Generate AI summary if enabled and not a draft
         let ai_summary = ''
@@ -185,7 +241,7 @@ export function FeedService(router: Router): void {
             summary,
             ai_summary,
             uid,
-            alias,
+            alias: typeof alias === 'string' ? alias : undefined,
             listed: listed ? 1 : 0,
             draft: draft ? 1 : 0,
             createdAt: date,
@@ -193,15 +249,14 @@ export function FeedService(router: Router): void {
           })
           .returning({ insertedId: feeds.id })
 
-        await bindTagToPost(db, result[0].insertedId, tags)
-        await cache.deletePrefix('feeds_')
-
         if (result.length === 0) {
           set.status = 500
           return 'Failed to insert'
-        } else {
-          return result[0]
         }
+
+        await bindTagToPost(db, result[0].insertedId, normalizedTags(tags) ?? [])
+        await cache.deletePrefix('feeds_')
+        return result[0]
       },
       feedCreateSchema
     )
@@ -246,7 +301,7 @@ export function FeedService(router: Router): void {
       }
 
       const { hashtags, ...other } = feed
-      const hashtags_flatten = hashtags.map((f: any) => f.hashtag)
+      const hashtags_flatten = hashtags.map(f => f.hashtag)
 
       // update visits using HyperLogLog for efficient UV estimation
       const enableVisit = await clientConfig.getOrDefault('counter.enabled', true)
@@ -331,9 +386,9 @@ export function FeedService(router: Router): void {
 
       const created_at = feed.createdAt
 
-      function formatAndCacheData(feed: any, feedDirection: 'previous_feed' | 'next_feed') {
+      function formatAndCacheData(feed: AdjacentFeed | null | undefined, feedDirection: 'previous_feed' | 'next_feed') {
         if (feed) {
-          const hashtags_flatten = feed.hashtags.map((f: any) => f.hashtag)
+          const hashtags_flatten = feed.hashtags.map(f => f.hashtag)
           const summary =
             feed.summary.length > 0 ? feed.summary : feed.content.length > 50 ? feed.content.slice(0, 50) : feed.content
           const cacheKey = `${feed.id}_${feedDirection}_${id_num}`
@@ -408,7 +463,8 @@ export function FeedService(router: Router): void {
           store: { db, cache, env },
         } = ctx
         const { id } = params
-        const { title, listed, content, summary, alias, draft, top, tags, createdAt } = body
+        const payload = body as Partial<UpdateFeedRequest> & { createdAt?: unknown }
+        const { title, listed, content, summary, alias, draft, top, tags, createdAt } = payload
 
         const id_num = parseInt(id, 10)
         const feed = await db.query.feeds.findFirst({ where: eq(feeds.id, id_num) })
@@ -425,7 +481,7 @@ export function FeedService(router: Router): void {
 
         // Generate AI summary if content changed and not a draft
         let ai_summary: string | undefined
-        const contentChanged = content && content !== feed.content
+        const contentChanged = typeof content === 'string' && content !== feed.content
         const isDraft = draft !== undefined ? draft : feed.draft === 1
 
         if (contentChanged && !isDraft) {
@@ -443,27 +499,42 @@ export function FeedService(router: Router): void {
           }
         }
 
+        let parsedCreatedAt: Date | undefined
+        if (createdAt !== undefined) {
+          if (typeof createdAt !== 'string') {
+            set.status = 400
+            return 'Invalid createdAt: expected ISO 8601 date-time string'
+          }
+          try {
+            parsedCreatedAt = asDate(createdAt, 'createdAt')
+          } catch (error) {
+            set.status = 400
+            return error instanceof Error ? error.message : 'Invalid createdAt'
+          }
+        }
+
         await db
           .update(feeds)
           .set({
-            title,
-            content,
-            summary,
+            title: typeof title === 'string' ? title : undefined,
+            content: typeof content === 'string' ? content : undefined,
+            summary: typeof summary === 'string' ? summary : undefined,
             ai_summary,
-            alias,
-            top,
-            listed: listed ? 1 : 0,
-            draft: draft ? 1 : 0,
-            createdAt: createdAt ? new Date(createdAt) : undefined,
+            alias: typeof alias === 'string' ? alias : undefined,
+            top: typeof top === 'number' ? top : undefined,
+            listed: listed === undefined ? undefined : listed ? 1 : 0,
+            draft: draft === undefined ? undefined : draft ? 1 : 0,
+            createdAt: parsedCreatedAt,
             updatedAt: new Date(),
           })
           .where(eq(feeds.id, id_num))
 
-        if (tags) {
-          await bindTagToPost(db, id_num, tags)
+        const normalizedUpdateTags = normalizedTags(tags)
+        if (normalizedUpdateTags) {
+          await bindTagToPost(db, id_num, normalizedUpdateTags)
         }
 
-        await clearFeedCache(cache, id_num, feed.alias, alias || null)
+        await clearFeedCache(cache, id_num, feed.alias, typeof alias === 'string' ? alias : null)
         return 'Updated'
       },
       feedUpdateSchema
@@ -482,7 +553,12 @@ export function FeedService(router: Router): void {
           store: { db, cache },
         } = ctx
         const { id } = params
-        const { top } = body
+        const { top } = body as Partial<{ top: number }>
+
+        if (typeof top !== 'number') {
+          set.status = 400
+          return 'Top value is required'
+        }
 
         const id_num = parseInt(id, 10)
         const feed = await db.query.feeds.findFirst({ where: eq(feeds.id, id_num) })
@@ -546,10 +622,12 @@ export function FeedService(router: Router): void {
       } = ctx
       let { keyword } = params
       const { page, limit } = query
+      const pageValue = queryValue(page)
+      const limitValue = queryValue(limit)
 
       keyword = decodeURI(keyword)
-      const page_num = (page ? (parseInt(page as string, 10) > 0 ? parseInt(page as string, 10) : 1) : 1) - 1
-      const limit_num = limit ? (parseInt(limit as string, 10) > 50 ? 50 : parseInt(limit as string, 10)) : 20
+      const page_num = (pageValue ? (parseInt(pageValue, 10) > 0 ? parseInt(pageValue, 10) : 1) : 1) - 1
+      const limit_num = limitValue ? (parseInt(limitValue, 10) > 50 ? 50 : parseInt(limitValue, 10)) : 20
 
       if (keyword === undefined || keyword.trim().length === 0) {
         return { size: 0, data: [], hasNext: false }
@@ -579,10 +657,10 @@ export function FeedService(router: Router): void {
             orderBy: [desc(feeds.createdAt), desc(feeds.updatedAt)],
           })
         )
-      ).map(({ content, hashtags, summary, ...other }: any) => {
+      ).map(({ content, hashtags, summary, ...other }) => {
         return {
           summary: summary.length > 0 ? summary : content.length > 100 ? content.slice(0, 100) : content,
-          hashtags: hashtags.map(({ hashtag }: any) => hashtag),
+          hashtags: hashtags.map(({ hashtag }) => hashtag),
           ...other,
         }
       })
@@ -619,41 +697,47 @@ export function FeedService(router: Router): void {
         return 'Permission denied'
       }
 
-      if (!data) {
+      if (!(data instanceof Blob)) {
         set.status = 400
         return 'Data is required'
       }
 
       // Initialize WordPress import modules lazily
       await initWPModules()
+      if (!XMLParser) {
+        throw new Error('XML parser is unavailable')
+      }
 
       const xml = await data.text()
       const parser = new XMLParser()
-      const result = await parser.parse(xml)
-      const items = result.rss.channel.item
+      const result = parser.parse(xml)
+      const parsed = result as { rss?: { channel?: { item?: WordPressItem[] | WordPressItem } } }
+      const itemsRaw = parsed.rss?.channel?.item
+      const items = Array.isArray(itemsRaw) ? itemsRaw : itemsRaw ? [itemsRaw] : []
 
-      if (!items) {
+      if (items.length === 0) {
         set.status = 404
         return 'No items found'
       }
 
-      const feedItems: FeedItem[] = items?.map((item: any) => {
-        const createdAt = new Date(item?.['wp:post_date'])
-        const updatedAt = new Date(item?.['wp:post_modified'])
-        const draft = item?.['wp:status'] !== 'publish'
-        const contentHtml = item?.['content:encoded']
-        const content = html2md(contentHtml)
+      const feedItems: FeedItem[] = items.map((item: WordPressItem) => {
+        const createdAtSource = typeof item['wp:post_date'] === 'string' ? item['wp:post_date'] : undefined
+        const updatedAtSource = typeof item['wp:post_modified'] === 'string' ? item['wp:post_modified'] : undefined
+        const createdAt = createdAtSource ? new Date(createdAtSource) : new Date()
+        const updatedAt = updatedAtSource ? new Date(updatedAtSource) : createdAt
+        const draft = item['wp:status'] !== 'publish'
+        const contentHtml = typeof item['content:encoded'] === 'string' ? item['content:encoded'] : ''
+        const content = html2md ? html2md(contentHtml || '') : contentHtml || ''
         const summary = content.length > 100 ? content.slice(0, 100) : content
-        let tags = item?.category
-
-        if (tags && Array.isArray(tags)) {
-          tags = tags.map((tag: any) => `${tag}`)
-        } else if (tags && typeof tags === 'string') {
-          tags = [tags]
+        let tags: string[] | undefined
+        if (Array.isArray(item.category)) {
+          tags = item.category.map(tag => `${tag}`)
+        } else if (typeof item.category === 'string') {
+          tags = [item.category]
         }
 
         return {
-          title: item.title,
+          title: typeof item.title === 'string' ? item.title : '',
           summary,
           content,
           draft,

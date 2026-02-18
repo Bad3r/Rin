@@ -12,7 +12,8 @@
     "i18n": "i18next",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:coverage:ci": "vitest run --coverage --coverage.reporter=text --coverage.reporter=lcov --coverage.reportsDirectory=coverage"
   },
   "dependencies": {
     "@astroimg/timeago": "^1.1.6",
@@ -65,6 +66,7 @@
     "@typescript-eslint/eslint-plugin": "^8.56.0",
     "@typescript-eslint/parser": "^8.56.0",
     "@vitejs/plugin-react-swc": "^4.2.3",
+    "@vitest/coverage-v8": "~3.2.4",
     "eslint": "^10.0.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.0",
@@ -79,6 +81,6 @@
     "puppeteer": "^24.37.3",
     "tailwindcss": "^4.1.18",
     "turbo": "^2.8.9",
-    "vitest": "4.0.18"
+    "vitest": "~3.2.4"
   }
 }

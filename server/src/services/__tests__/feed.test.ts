@@ -1,6 +1,5 @@
-import type { Database } from 'bun:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { cleanupTestDB, createMockDB, createMockEnv, createTestUser as seedAdminUser } from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
 import { createBaseApp } from '../../core/base'
 import { CommentService } from '../comments'
@@ -9,7 +8,7 @@ import { TagService } from '../tag'
 
 describe('FeedService', () => {
   let db: any
-  let sqlite: Database
+  let sqlite: D1Database
   let env: Env
   let app: any
   let api: ReturnType<typeof createTestClient>
@@ -48,20 +47,12 @@ describe('FeedService', () => {
     api = createTestClient(app, env)
 
     // Create test user via User API (or mock context)
-    await createTestUser()
+    await seedAdminUser(sqlite)
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
-
-  async function createTestUser() {
-    // Create a user by directly inserting to DB (this is setup, not the test)
-    sqlite.exec(`
-            INSERT INTO users (id, username, openid, avatar, permission) 
-            VALUES (1, 'testuser', 'gh_test', 'avatar.png', 1)
-        `)
-  }
 
   describe('GET /feed - List feeds', () => {
     it('should list published feeds', async () => {
@@ -94,7 +85,7 @@ describe('FeedService', () => {
 
       expect(listResult.error).toBeUndefined()
       expect(listResult.data?.size).toBe(2)
-      expect(listResult.data?.data).toBeArray()
+      expect(Array.isArray(listResult.data?.data)).toBe(true)
     })
 
     it('should return empty list when no feeds exist', async () => {

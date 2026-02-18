@@ -1,15 +1,14 @@
-import type { Database } from 'bun:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createBaseApp } from '../../src/core/base'
 import { CommentService } from '../../src/services/comments'
 import { FeedService } from '../../src/services/feed'
 import { TagService } from '../../src/services/tag'
-import { cleanupTestDB, createMockDB, createMockEnv } from '../fixtures'
+import { cleanupTestDB, createMockDB, createMockEnv, execSql } from '../fixtures'
 import { createTestClient } from '../test-api-client'
 
 describe('Integration Tests - API Flow', () => {
   let db: any
-  let sqlite: Database
+  let sqlite: D1Database
   let env: Env
   let app: any
   let api: ReturnType<typeof createTestClient>
@@ -58,30 +57,42 @@ describe('Integration Tests - API Flow', () => {
     await seedTestData(db)
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
   async function seedTestData(_db: any) {
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO users (id, username, avatar, permission, openid) VALUES 
                 (1, 'author', 'author.png', 1, 'gh_author'),
                 (2, 'commenter', 'commenter.png', 0, 'gh_commenter')
-        `)
+        `
+    )
 
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO feeds (id, title, content, summary, uid, draft, listed) VALUES 
                 (1, 'First Post', 'Content of first post', 'Summary 1', 1, 0, 1)
-        `)
+        `
+    )
 
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO hashtags (id, name) VALUES 
                 (1, 'integration')
-        `)
+        `
+    )
 
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO feed_hashtags (feed_id, hashtag_id) VALUES (1, 1)
-        `)
+        `
+    )
   }
 
   function requireInsertedId(result: { data?: { insertedId?: number } }): number {
@@ -132,7 +143,7 @@ describe('Integration Tests - API Flow', () => {
       const commentsResult = await api.comment.list(feedId)
 
       expect(commentsResult.error).toBeUndefined()
-      expect(commentsResult.data).toBeArray()
+      expect(Array.isArray(commentsResult.data)).toBe(true)
       expect(commentsResult.data?.length).toBe(1)
       expect(commentsResult.data?.[0].content).toBe('Great post!')
     })
@@ -145,7 +156,7 @@ describe('Integration Tests - API Flow', () => {
 
       expect(result.error).toBeUndefined()
       expect(result.data?.name).toBe('integration')
-      expect(result.data?.feeds).toBeArray()
+      expect(Array.isArray(result.data?.feeds)).toBe(true)
       expect(result.data?.feeds.length).toBe(1)
       expect(result.data?.feeds[0].title).toBe('First Post')
     })
@@ -155,10 +166,13 @@ describe('Integration Tests - API Flow', () => {
     it('should paginate through feeds', async () => {
       // Add more feeds
       for (let i = 2; i <= 5; i++) {
-        sqlite.exec(`
+        await execSql(
+          sqlite,
+          `
                     INSERT INTO feeds (id, title, content, uid, draft, listed) 
                     VALUES (${i}, 'Feed ${i}', 'Content ${i}', 1, 0, 1)
-                `)
+                `
+        )
       }
 
       // Get first page using the type-safe API client
