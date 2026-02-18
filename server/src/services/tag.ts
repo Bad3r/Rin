@@ -20,7 +20,7 @@ export function TagService(router: Router): void {
 
       return tag_list.map(tag => ({
         ...tag,
-        feeds: tag.feeds.length,
+        count: tag.feeds.length,
       }))
     })
 
