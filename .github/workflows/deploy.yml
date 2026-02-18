@@ -336,7 +336,7 @@ jobs:
           fi
 
       - name: Log resolved artifact provenance
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+        if: ${{ success() && github.event_name == 'workflow_dispatch' }}
         env:
           ARTIFACT_SOURCE: ${{ steps.dispatch_artifact.outputs.artifact_source }}
           ARTIFACT_URL: ${{ steps.dispatch_artifact.outputs.artifact_url }}
@@ -378,9 +378,9 @@ jobs:
 
               REF=$(cat ./artifacts/build-meta/ref 2>/dev/null || echo "unknown")
               if [[ "$REF" == "unknown" && ( "${DISPATCH_ARTIFACT_SOURCE:-}" == "latest" || "${DISPATCH_ARTIFACT_SOURCE:-}" == "version" ) ]]; then
-                if [[ "${DISPATCH_RELEASE_TARGET:-}" == "main" || "${DISPATCH_RELEASE_TARGET:-}" == "refs/heads/main" ]]; then
+                if [[ "${DISPATCH_RELEASE_TARGET:-}" == "main" ]]; then
                   REF="refs/heads/main"
-                elif [[ "${DISPATCH_RELEASE_TARGET:-}" == "dev" || "${DISPATCH_RELEASE_TARGET:-}" == "refs/heads/dev" ]]; then
+                elif [[ "${DISPATCH_RELEASE_TARGET:-}" == "dev" ]]; then
                   REF="refs/heads/dev"
                 fi
               fi

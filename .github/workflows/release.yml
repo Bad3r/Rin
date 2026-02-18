@@ -95,6 +95,9 @@ jobs:
           set -euo pipefail
           mkdir -p ./build-meta
 
+          # Intentional policy: only releases whose tagged commit is already reachable
+          # from origin/main or origin/dev are marked production-eligible. Other tag
+          # lineages keep REF=unknown and are blocked by deploy production gating.
           REF="unknown"
           if git show-ref --verify --quiet refs/remotes/origin/main && git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main; then
             REF="refs/heads/main"
