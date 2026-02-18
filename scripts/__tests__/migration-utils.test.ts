@@ -16,4 +16,9 @@ describe('isKnownTopColumnCatchUpCase', () => {
     const output = 'SQLITE_ERROR: duplicate column name: top\nALTER TABLE feeds DROP COLUMN top'
     expect(isKnownTopColumnCatchUpCase('0009.sql', output)).toBe(false)
   })
+
+  it('does not match duplicate top-column output for non-feeds tables', () => {
+    const output = 'SQLITE_ERROR: duplicate column name: top\nALTER TABLE posts ADD COLUMN top INTEGER'
+    expect(isKnownTopColumnCatchUpCase('0009.sql', output)).toBe(false)
+  })
 })
