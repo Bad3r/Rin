@@ -106,7 +106,10 @@ describe('TagService', () => {
 
     it('should exclude draft feeds for non-admin users', async () => {
       // Create draft feed and link to test tag
-      await execSql(sqlite, `INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES (3, 'Draft', 'Content', 1, 1, 1)`)
+      await execSql(
+        sqlite,
+        `INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES (3, 'Draft', 'Content', 1, 1, 1)`
+      )
       await execSql(sqlite, `INSERT INTO feed_hashtags (feed_id, hashtag_id) VALUES (3, 1)`)
 
       const request = new Request('http://localhost/tag/test')
@@ -124,7 +127,10 @@ describe('TagService', () => {
 
     it('should include draft feeds for admin users', async () => {
       // Create draft feed and link to test tag
-      await execSql(sqlite, `INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES (3, 'Draft', 'Content', 1, 1, 1)`)
+      await execSql(
+        sqlite,
+        `INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES (3, 'Draft', 'Content', 1, 1, 1)`
+      )
       await execSql(sqlite, `INSERT INTO feed_hashtags (feed_id, hashtag_id) VALUES (3, 1)`)
 
       // User 2 is admin (permission=1), need to use JWT token
