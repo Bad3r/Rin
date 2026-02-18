@@ -515,19 +515,26 @@ describe('CacheImpl - edge cases and error handling', () => {
   })
 
   it('handles large numbers of key/value pairs', async () => {
-    const count = 25
+    const count = 50
     for (let i = 0; i < count; i++) {
-      await cacheImpl.set(`key${i}`, `value${i}`)
+      // Batch writes and persist once to avoid one D1 roundtrip per key.
+      await cacheImpl.set(`key${i}`, `value${i}`, false)
     }
+    await cacheImpl.save()
 
     const all = await cacheImpl.all()
     expect(all.size).toBe(count)
+    const rows = await db.select().from(cache).where(eq(cache.type, 'cache'))
+    expect(rows).toHaveLength(count)
 
-    // 验证随机几个键
+    // Verify a few representative keys, including after loading from DB.
     expect(await cacheImpl.get('key0')).toBe('value0')
-    expect(await cacheImpl.get('key12')).toBe('value12')
-    expect(await cacheImpl.get('key24')).toBe('value24')
-  }, 15000)
+    expect(await cacheImpl.get('key25')).toBe('value25')
+    expect(await cacheImpl.get('key49')).toBe('value49')
+
+    const reloadedCache = new CacheImpl(db as any, mockEnv, 'cache', 'database')
+    expect(await reloadedCache.get('key49')).toBe('value49')
+  })
 })
 
 describe('CacheImpl - getOrSet and getOrDefault', () => {
