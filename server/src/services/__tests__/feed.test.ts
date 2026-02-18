@@ -365,8 +365,8 @@ describe('FeedService', () => {
     it('imports a single-item export where channel.item is an object', async () => {
       const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"
-  xmlns:content="http://purl.org/rss/1.0/modules/content/"
-  xmlns:wp="http://wordpress.org/export/1.2/">
+  xmlns:content="https://purl.org/rss/1.0/modules/content/"
+  xmlns:wp="https://wordpress.org/export/1.2/">
   <channel>
     <item>
       <title>Imported Single Item</title>

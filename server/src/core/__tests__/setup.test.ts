@@ -12,7 +12,7 @@ function createContext(options: {
   profile: Record<string, unknown> | null
   findFirst: () => Promise<UserRow | undefined>
 }): Context {
-  const request = new Request('http://localhost/test', {
+  const request = new Request('https://example.test/test', {
     headers: { Authorization: 'Bearer test-token' },
   })
 
