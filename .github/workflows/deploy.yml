@@ -84,26 +84,56 @@ jobs:
             const pr = context.payload.pull_request;
             const headSha = pr.head.sha;
             const branch = pr.head.ref;
+            const workflowId = 'build.yml';
+            const maxAttempts = 24;
+            const pollMs = 5000;
 
-            const { data } = await github.rest.actions.listWorkflowRunsForRepo({
-              owner,
-              repo,
-              event: 'pull_request',
-              branch,
-              per_page: 100,
-            });
+            for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+              const { data } = await github.rest.actions.listWorkflowRuns({
+                owner,
+                repo,
+                workflow_id: workflowId,
+                event: 'pull_request',
+                branch,
+                per_page: 20,
+              });
 
-            const buildRun = data.workflow_runs.find(
-              run => run.name === 'Build' && run.head_sha === headSha && run.conclusion === 'success'
-            );
+              const matchingRuns = data.workflow_runs.filter(run => run.head_sha === headSha);
+              const latestRun = matchingRuns[0];
+              const successfulRun = matchingRuns.find(
+                run => run.status === 'completed' && run.conclusion === 'success'
+              );
 
-            if (!buildRun) {
-              core.setFailed(`No successful Build run found for PR head SHA ${headSha}.`);
-              return;
+              if (successfulRun) {
+                core.info(`Using Build run ${successfulRun.id} for PR #${pr.number}.`);
+                core.setOutput('run_id', String(successfulRun.id));
+                return;
+              }
+
+              if (
+                latestRun &&
+                latestRun.status === 'completed' &&
+                latestRun.conclusion &&
+                latestRun.conclusion !== 'success'
+              ) {
+                core.setFailed(
+                  `Build run ${latestRun.id} for PR head SHA ${headSha} finished with conclusion '${latestRun.conclusion}'.`
+                );
+                return;
+              }
+
+              if (attempt === maxAttempts) {
+                core.setFailed(
+                  `Timed out waiting for a successful Build run for PR head SHA ${headSha} after ${(maxAttempts * pollMs) / 1000}s.`
+                );
+                return;
+              }
+
+              core.info(
+                `Build run for PR head SHA ${headSha} not ready yet (attempt ${attempt}/${maxAttempts}). Waiting ${pollMs / 1000}s...`
+              );
+              await new Promise(resolve => setTimeout(resolve, pollMs));
             }
-
-            core.info(`Using Build run ${buildRun.id} for PR #${pr.number}.`);
-            core.setOutput('run_id', String(buildRun.id));
 
       - name: Download build artifacts from PR build
         if: ${{ github.event_name == 'pull_request' }}
