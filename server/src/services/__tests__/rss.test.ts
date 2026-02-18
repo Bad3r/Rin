@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanupTestDB, createMockDB, createMockEnv, execSql } from '../../../tests/fixtures'
 import { createBaseApp } from '../../core/base'
 import { RSSService, rssCrontab } from '../rss'
@@ -204,9 +204,7 @@ describe('RSSService', () => {
       appWithS3.state('env', envWithS3)
       RSSService(appWithS3)
 
-      // Mock fetch to return 404
-      const originalFetch = global.fetch
-      global.fetch = async () => new Response('Not Found', { status: 404 })
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('Not Found', { status: 404 }))
 
       try {
         const request = new Request(`${TEST_ORIGIN}/rss.xml`)
@@ -214,7 +212,7 @@ describe('RSSService', () => {
 
         expect(response.status).toBe(200)
       } finally {
-        global.fetch = originalFetch
+        fetchSpy.mockRestore()
       }
     })
 
@@ -228,11 +226,7 @@ describe('RSSService', () => {
       appWithS3.state('env', envWithS3)
       RSSService(appWithS3)
 
-      // Mock fetch to throw error
-      const originalFetch = global.fetch
-      global.fetch = async () => {
-        throw new Error('Network error')
-      }
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network error'))
 
       try {
         const request = new Request(`${TEST_ORIGIN}/rss.xml`)
@@ -241,7 +235,7 @@ describe('RSSService', () => {
         // Should still generate feed
         expect(response.status).toBe(200)
       } finally {
-        global.fetch = originalFetch
+        fetchSpy.mockRestore()
       }
     })
   })

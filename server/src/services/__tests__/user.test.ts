@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanupTestDB, createMockDB, createMockEnv, execSql, queryAll } from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
 import { createBaseApp } from '../../core/base'
@@ -161,9 +161,7 @@ describe('UserService', () => {
 
   describe('GET /user/github/callback - GitHub OAuth callback', () => {
     it('should authenticate existing user', async () => {
-      // Mock GitHub API response
-      const originalFetch = global.fetch
-      global.fetch = async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
         return new Response(
           JSON.stringify({
             id: 'gh_123',
@@ -173,7 +171,7 @@ describe('UserService', () => {
           }),
           { status: 200 }
         )
-      }
+      })
 
       try {
         // OAuth callbacks need custom Cookie header, using direct request
@@ -190,14 +188,12 @@ describe('UserService', () => {
         expect(location).toContain('/callback')
         expect(location).toContain('token=mock_token_1')
       } finally {
-        global.fetch = originalFetch
+        fetchSpy.mockRestore()
       }
     })
 
     it('should register new user', async () => {
-      // Mock GitHub API response for new user
-      const originalFetch = global.fetch
-      global.fetch = async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
         return new Response(
           JSON.stringify({
             id: 'gh_new',
@@ -207,7 +203,7 @@ describe('UserService', () => {
           }),
           { status: 200 }
         )
-      }
+      })
 
       try {
         // OAuth callbacks need custom Cookie header, using direct request
@@ -225,7 +221,7 @@ describe('UserService', () => {
         const result = await queryAll(sqlite, `SELECT * FROM users WHERE openid = 'gh_new'`)
         expect(result.length).toBe(1)
       } finally {
-        global.fetch = originalFetch
+        fetchSpy.mockRestore()
       }
     })
 
