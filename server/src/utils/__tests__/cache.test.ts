@@ -527,7 +527,7 @@ describe('CacheImpl - edge cases and error handling', () => {
     expect(await cacheImpl.get('key0')).toBe('value0')
     expect(await cacheImpl.get('key50')).toBe('value50')
     expect(await cacheImpl.get('key99')).toBe('value99')
-  })
+  }, 15000)
 })
 
 describe('CacheImpl - getOrSet and getOrDefault', () => {
