@@ -94,6 +94,14 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ./server/coverage/lcov.info,./client/coverage/lcov.info
           flags: unittests
           name: codecov-umbrella
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./server/coverage/junit.xml,./client/coverage/junit.xml

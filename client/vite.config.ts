@@ -1,10 +1,13 @@
 import react from '@vitejs/plugin-react-swc'
+import { codecovVitePlugin } from '@codecov/vite-plugin'
 import { visualizer } from 'rollup-plugin-visualizer'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const isDev = mode === 'development'
+  const env = loadEnv(mode, process.cwd(), '')
+  const codecovToken = env.CODECOV_TOKEN || process.env.CODECOV_TOKEN
 
   return {
     // Note: Client configuration is fetched from server at runtime
@@ -48,6 +51,12 @@ export default defineConfig(({ mode }) => {
       react(),
       // Only open visualizer in build mode
       visualizer({ open: !isDev }),
+      // Keep Codecov plugin at the end of the plugin array.
+      codecovVitePlugin({
+        enableBundleAnalysis: Boolean(codecovToken),
+        bundleName: 'rin-client',
+        uploadToken: codecovToken,
+      }),
     ],
     // Vitest configuration
     test: {

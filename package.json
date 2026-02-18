@@ -24,7 +24,7 @@
     "test:server": "cd server && bun run test:ci",
     "test:server:watch": "cd server && bun run test:watch",
     "test:coverage": "bun run test:coverage:ci",
-    "test:coverage:ci": "bun --filter './client' test:coverage:ci && bun --filter './server' test:coverage:ci && test -s ./client/coverage/lcov.info && test -s ./server/coverage/lcov.info && echo 'Coverage artifacts verified: client/coverage/lcov.info, server/coverage/lcov.info'",
+    "test:coverage:ci": "bun --filter './client' test:coverage:ci && bun --filter './server' test:coverage:ci && test -s ./client/coverage/lcov.info && test -s ./server/coverage/lcov.info && test -s ./client/coverage/junit.xml && test -s ./server/coverage/junit.xml && echo 'Coverage artifacts verified: client/coverage/lcov.info, server/coverage/lcov.info, client/coverage/junit.xml, server/coverage/junit.xml'",
     "db:migrate": "bun cli/bin/rin.ts db migrate",
     "db:generate": "bun --filter './server' db:gen",
     "db:fix": "bun scripts/db-fix-top-field.ts",
