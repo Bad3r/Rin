@@ -2,7 +2,9 @@ import { cleanup, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Helmet } from '../helmet'
 
-describe('Helmet', () => {
+const describeWithDom = typeof document !== 'undefined' ? describe : describe.skip
+
+describeWithDom('Helmet', () => {
   beforeEach(() => {
     document.head.querySelectorAll('[data-rin-helmet]').forEach(element => {
       element.remove()

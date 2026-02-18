@@ -15,14 +15,27 @@ function mockMatchMedia() {
   }))
 }
 
-describe('app bootstrap smoke', () => {
+const describeWithDom = typeof document !== 'undefined' ? describe : describe.skip
+
+describeWithDom('app bootstrap smoke', () => {
+  const originalFetch = globalThis.fetch
+  const originalMatchMedia = globalThis.matchMedia
+
   beforeEach(() => {
-    vi.resetModules()
     document.body.innerHTML = '<div id="root"></div>'
   })
 
   afterEach(() => {
-    vi.unstubAllGlobals()
+    Object.defineProperty(globalThis, 'fetch', {
+      value: originalFetch,
+      configurable: true,
+      writable: true,
+    })
+    Object.defineProperty(globalThis, 'matchMedia', {
+      value: originalMatchMedia,
+      configurable: true,
+      writable: true,
+    })
     document.head.querySelectorAll('[data-rin-helmet]').forEach(element => {
       element.remove()
     })
@@ -32,10 +45,14 @@ describe('app bootstrap smoke', () => {
   it('mounts the app into the real root element', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    vi.stubGlobal('matchMedia', mockMatchMedia())
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (input: string | URL | Request) => {
+    Object.defineProperty(globalThis, 'matchMedia', {
+      value: mockMatchMedia(),
+      configurable: true,
+      writable: true,
+    })
+
+    Object.defineProperty(globalThis, 'fetch', {
+      value: vi.fn(async (input: string | URL | Request) => {
         const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
         if (url.includes('/locales/')) {
@@ -83,8 +100,10 @@ describe('app bootstrap smoke', () => {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         })
-      })
-    )
+      }),
+      configurable: true,
+      writable: true,
+    })
 
     await act(async () => {
       await import('../main')
