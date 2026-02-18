@@ -44,6 +44,11 @@ permissions:
   pull-requests: write
   actions: read
 
+env:
+  WRANGLER_SEND_METRICS: 'false'
+  TURBO_TELEMETRY_DISABLED: '1'
+  DO_NOT_TRACK: '1'
+
 jobs:
   prepare:
     runs-on: ubuntu-latest

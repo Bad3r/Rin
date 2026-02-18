@@ -1,5 +1,7 @@
 import { $ } from 'bun'
 
+process.env.WRANGLER_SEND_METRICS ??= 'false'
+
 export async function fixTopField(typ: 'local' | 'remote', db: string, isInfoExistResult: boolean) {
   if (!isInfoExistResult) {
     console.log('Legacy database detected; checking feeds.top column')

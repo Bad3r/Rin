@@ -10,6 +10,8 @@ import * as net from 'node:net'
 import * as path from 'node:path'
 
 const ROOT_DIR = process.cwd()
+const WRANGLER_SEND_METRICS = process.env.WRANGLER_SEND_METRICS ?? 'false'
+process.env.WRANGLER_SEND_METRICS = WRANGLER_SEND_METRICS
 
 function parseEnv(content: string): Record<string, string> {
   const env: Record<string, string> = {}
@@ -165,7 +167,7 @@ function startServers() {
   // Start backend.
   const backend = spawn('bun', ['wrangler', 'dev', '--port', String(BACKEND_PORT)], {
     cwd: ROOT_DIR,
-    env: { ...process.env },
+    env: { ...process.env, WRANGLER_SEND_METRICS },
   })
 
   // Start frontend.

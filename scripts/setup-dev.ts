@@ -73,6 +73,7 @@ const wranglerContent = `#:schema node_modules/wrangler/config-schema.json
 name = "${env.WORKER_NAME || 'rin-server'}"
 main = "server/src/_worker.ts"
 compatibility_date = "2025-03-21"
+send_metrics = false
 
 # Assets configuration - serves static files from ./dist/client
 # For development, we use wrangler dev with ASSETS to serve both frontend and backend on same port
