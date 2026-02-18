@@ -13,21 +13,24 @@
     "preview": "wrangler pages dev dist --compatibility-date=2023-12-20",
     "migrate:visits": "bun run scripts/migrate-visits.ts",
     "test": "bun run test:ci",
-    "test:unit": "bun test --preload ./tests/helpers/no-network.ts --max-concurrency=1 src tests/security tests/unit --pass-with-no-tests",
-    "test:integration": "bun test --preload ./tests/helpers/no-network.ts tests/integration --pass-with-no-tests",
+    "test:watch": "vitest --config ./vitest.config.ts src tests/security tests/unit tests/integration --passWithNoTests",
+    "test:unit": "vitest run --config ./vitest.config.ts src tests/security tests/unit --passWithNoTests",
+    "test:integration": "vitest run --config ./vitest.config.ts tests/integration --passWithNoTests",
     "test:remote": "bun run scripts/run-remote-tests.ts",
     "test:ci": "bun run test:unit && bun run test:integration",
     "test:coverage": "bun run test:coverage:ci",
-    "test:coverage:ci": "bun test --preload ./tests/helpers/no-network.ts --max-concurrency=1 --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir=coverage src tests/security tests/unit tests/integration --pass-with-no-tests",
+    "test:coverage:ci": "vitest run --config ./vitest.config.ts --coverage src tests/security tests/unit tests/integration --passWithNoTests",
     "check": "tsc --noEmit"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.12.13",
     "@types/bun": "^1.1.2",
+    "@vitest/coverage-istanbul": "~3.2.4",
     "drizzle-kit": "^0.21.2",
-    "wrangler": "^4.61.1",
-    "@cloudflare/vitest-pool-workers": "^0.1.0",
+    "strip-indent": "^4.0.0",
     "typescript": "^5.0.4",
-    "strip-indent": "^4.0.0"
+    "vitest": "~3.2.4",
+    "wrangler": "^4.61.1"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"

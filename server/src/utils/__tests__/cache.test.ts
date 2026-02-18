@@ -1,61 +1,22 @@
-import { Database } from 'bun:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { drizzle } from 'drizzle-orm/bun-sqlite'
-import * as schema from '../../db/schema'
+import { cleanupTestDB, createMockDB, createMockEnv as createFixtureEnv } from '../../../tests/fixtures'
 import { cache } from '../../db/schema'
-import type { DB } from '../../server'
 import { CacheImpl, type CacheStorageMode, createClientConfig, createPublicCache, createServerConfig } from '../cache'
 
 /// <reference types="../../../worker-configuration" />
 
-// 测试数据库设置
 function createTestDB() {
-  const sqlite = new Database(':memory:')
-  const db = drizzle(sqlite, { schema })
-
-  // 创建缓存表 - 使用复合唯一约束 (key, type)
-  sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS cache (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            key TEXT NOT NULL,
-            value TEXT NOT NULL,
-            type TEXT DEFAULT 'cache' NOT NULL,
-            created_at INTEGER DEFAULT (unixepoch()),
-            updated_at INTEGER DEFAULT (unixepoch()),
-            UNIQUE(key, type)
-        );
-        CREATE INDEX IF NOT EXISTS idx_cache_type ON cache(type);
-        CREATE INDEX IF NOT EXISTS idx_cache_key ON cache(key);
-    `)
-
-  return { db: db as unknown as DB, sqlite }
+  return createMockDB()
 }
 
-// 模拟环境变量
 function createMockEnv(storageMode: CacheStorageMode = 'database'): Env {
-  return {
-    DB: {} as D1Database,
-    S3_FOLDER: 'images/',
-    S3_CACHE_FOLDER: 'cache/',
-    S3_REGION: 'auto',
-    S3_ENDPOINT: 'https://test.r2.cloudflarestorage.com',
-    S3_ACCESS_HOST: 'https://test-image-domain.com',
-    S3_BUCKET: 'test-bucket',
-    S3_FORCE_PATH_STYLE: 'false',
-    WEBHOOK_URL: '',
-    RSS_TITLE: 'Test',
-    RSS_DESCRIPTION: 'Test Environment',
-    RIN_GITHUB_CLIENT_ID: 'test-client-id',
-    RIN_GITHUB_CLIENT_SECRET: 'test-client-secret',
-    JWT_SECRET: 'test-jwt-secret',
-    S3_ACCESS_KEY_ID: 'test-access-key',
-    S3_SECRET_ACCESS_KEY: 'test-secret-key',
+  return createFixtureEnv({
     CACHE_STORAGE_MODE: storageMode,
-  } as unknown as Env
+  })
 }
 
-describe('CacheImpl - 基本功能测试', () => {
+describe('CacheImpl - basic functionality', () => {
   let { db, sqlite } = createTestDB()
   let mockEnv: Env
   let cacheImpl: CacheImpl
@@ -65,68 +26,68 @@ describe('CacheImpl - 基本功能测试', () => {
     db = testDB.db
     sqlite = testDB.sqlite
     mockEnv = createMockEnv('database')
-    cacheImpl = new CacheImpl(db, mockEnv, 'cache', 'database')
+    cacheImpl = new CacheImpl(db as any, mockEnv, 'cache', 'database')
   })
 
-  afterEach(() => {
-    sqlite.close()
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
-  describe('set 和 get', () => {
-    it('应该能够存储和检索字符串值', async () => {
+  describe('set and get', () => {
+    it('stores and retrieves string values', async () => {
       await cacheImpl.set('key1', 'value1')
       const value = await cacheImpl.get('key1')
       expect(value).toBe('value1')
     })
 
-    it('应该能够存储和检索对象值', async () => {
+    it('stores and retrieves object values', async () => {
       const obj = { name: 'test', value: 123 }
       await cacheImpl.set('key2', obj)
       const value = await cacheImpl.get('key2')
       expect(value).toEqual(obj)
     })
 
-    it('应该能够存储和检索数组值', async () => {
+    it('stores and retrieves array values', async () => {
       const arr = [1, 2, 3, 'test']
       await cacheImpl.set('key3', arr)
       const value = await cacheImpl.get('key3')
       expect(value).toEqual(arr)
     })
 
-    it('应该能够存储和检索数字值', async () => {
+    it('stores and retrieves number values', async () => {
       await cacheImpl.set('key4', 42)
       const value = await cacheImpl.get('key4')
       expect(value).toBe(42)
     })
 
-    it('应该能够存储和检索布尔值', async () => {
+    it('stores and retrieves boolean values', async () => {
       await cacheImpl.set('key5', true)
       const value = await cacheImpl.get('key5')
       expect(value).toBe(true)
     })
 
-    it('应该能够更新已存在的键', async () => {
+    it('updates an existing key', async () => {
       await cacheImpl.set('key1', 'value1')
       await cacheImpl.set('key1', 'value2')
       const value = await cacheImpl.get('key1')
       expect(value).toBe('value2')
     })
 
-    it('应该返回 undefined 对于不存在的键', async () => {
+    it('returns undefined for missing keys', async () => {
       const value = await cacheImpl.get('nonexistent')
       expect(value).toBeUndefined()
     })
   })
 
   describe('delete', () => {
-    it('应该能够删除已存在的键', async () => {
+    it('deletes an existing key', async () => {
       await cacheImpl.set('key1', 'value1')
       await cacheImpl.delete('key1')
       const value = await cacheImpl.get('key1')
       expect(value).toBeUndefined()
     })
 
-    it('删除不存在的键不应该报错', async () => {
+    it('does not throw when deleting a missing key', async () => {
       // 删除不存在的键应该正常完成，不抛出错误
       await cacheImpl.delete('nonexistent')
       // 如果执行到这里没有抛出错误，测试就通过了
@@ -143,7 +104,7 @@ describe('CacheImpl - 基本功能测试', () => {
       await cacheImpl.set('other', 'Other')
     })
 
-    it('应该返回匹配前缀的所有值', async () => {
+    it('returns all values matching a prefix', async () => {
       const users = await cacheImpl.getByPrefix('user:')
       expect(users).toHaveLength(3)
       expect(users).toContain('Alice')
@@ -151,12 +112,12 @@ describe('CacheImpl - 基本功能测试', () => {
       expect(users).toContain('Charlie')
     })
 
-    it('应该返回空数组当没有匹配的前缀', async () => {
+    it('returns empty array when no prefix matches', async () => {
       const result = await cacheImpl.getByPrefix('nonexistent:')
       expect(result).toEqual([])
     })
 
-    it('应该正确匹配特定前缀', async () => {
+    it('matches a specific prefix correctly', async () => {
       const posts = await cacheImpl.getByPrefix('post:')
       expect(posts).toHaveLength(1)
       expect(posts).toContain('Post 1')
@@ -171,14 +132,14 @@ describe('CacheImpl - 基本功能测试', () => {
       await cacheImpl.set('script.js', 'JavaScript')
     })
 
-    it('应该返回匹配后缀的所有值', async () => {
+    it('returns all values matching a suffix', async () => {
       const txtFiles = await cacheImpl.getBySuffix('.txt')
       expect(txtFiles).toHaveLength(2)
       expect(txtFiles).toContain('Text file')
       expect(txtFiles).toContain('Document')
     })
 
-    it('应该返回空数组当没有匹配的后缀', async () => {
+    it('returns empty array when no suffix matches', async () => {
       const result = await cacheImpl.getBySuffix('.zip')
       expect(result).toEqual([])
     })
@@ -192,7 +153,7 @@ describe('CacheImpl - 基本功能测试', () => {
       await cacheImpl.set('keep:1', 'Keep 1')
     })
 
-    it('应该删除匹配前缀的所有键', async () => {
+    it('deletes all keys matching a prefix', async () => {
       await cacheImpl.deletePrefix('temp:')
 
       expect(await cacheImpl.get('temp:1')).toBeUndefined()
@@ -201,7 +162,7 @@ describe('CacheImpl - 基本功能测试', () => {
       expect(await cacheImpl.get('keep:1')).toBe('Keep 1')
     })
 
-    it('应该正常工作当没有匹配的键', async () => {
+    it('works correctly when no keys match', async () => {
       // 删除不存在的前缀应该正常完成，不抛出错误
       await cacheImpl.deletePrefix('nonexistent:')
       // 如果执行到这里没有抛出错误，测试就通过了
@@ -216,7 +177,7 @@ describe('CacheImpl - 基本功能测试', () => {
       await cacheImpl.set('config.json', 'Config')
     })
 
-    it('应该删除匹配后缀的所有键', async () => {
+    it('deletes all keys matching a suffix', async () => {
       await cacheImpl.deleteSuffix('.tmp')
 
       expect(await cacheImpl.get('cache.tmp')).toBeUndefined()
@@ -226,7 +187,7 @@ describe('CacheImpl - 基本功能测试', () => {
   })
 
   describe('clear', () => {
-    it('应该清除所有缓存数据', async () => {
+    it('clears all cached data', async () => {
       await cacheImpl.set('key1', 'value1')
       await cacheImpl.set('key2', 'value2')
 
@@ -236,7 +197,7 @@ describe('CacheImpl - 基本功能测试', () => {
       expect(await cacheImpl.get('key2')).toBeUndefined()
     })
 
-    it('应该正常工作当缓存为空', async () => {
+    it('works correctly when cache is empty', async () => {
       // 清空空缓存应该正常完成，不抛出错误
       await cacheImpl.clear()
       // 如果执行到这里没有抛出错误，测试就通过了
@@ -245,7 +206,7 @@ describe('CacheImpl - 基本功能测试', () => {
   })
 
   describe('all', () => {
-    it('应该返回所有缓存项', async () => {
+    it('returns all cache entries', async () => {
       await cacheImpl.set('key1', 'value1')
       await cacheImpl.set('key2', 'value2')
 
@@ -258,7 +219,7 @@ describe('CacheImpl - 基本功能测试', () => {
   })
 })
 
-describe('CacheImpl - 数据库持久化测试', () => {
+describe('CacheImpl - database persistence', () => {
   let { db, sqlite } = createTestDB()
   let mockEnv: Env
   let cacheImpl: CacheImpl
@@ -268,14 +229,14 @@ describe('CacheImpl - 数据库持久化测试', () => {
     db = testDB.db
     sqlite = testDB.sqlite
     mockEnv = createMockEnv('database')
-    cacheImpl = new CacheImpl(db, mockEnv, 'cache', 'database')
+    cacheImpl = new CacheImpl(db as any, mockEnv, 'cache', 'database')
   })
 
-  afterEach(() => {
-    sqlite.close()
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
-  it('应该将数据持久化到数据库', async () => {
+  it('persists data to the database', async () => {
     await cacheImpl.set('key1', 'value1')
 
     // 直接查询数据库验证
@@ -286,19 +247,19 @@ describe('CacheImpl - 数据库持久化测试', () => {
     expect(rows[0].type).toBe('cache')
   })
 
-  it('应该能够从数据库加载数据', async () => {
+  it('loads data from the database', async () => {
     // 先存储数据
     await cacheImpl.set('key1', 'value1')
 
     // 创建新的 cache 实例（模拟重启）
-    const newCache = new CacheImpl(db, mockEnv, 'cache', 'database')
+    const newCache = new CacheImpl(db as any, mockEnv, 'cache', 'database')
 
     // 新实例应该能读取到数据
     const value = await newCache.get('key1')
     expect(value).toBe('value1')
   })
 
-  it('应该正确更新数据库中的现有键', async () => {
+  it('updates existing key in database', async () => {
     await cacheImpl.set('key1', 'value1')
     await cacheImpl.set('key1', 'value2')
 
@@ -308,7 +269,7 @@ describe('CacheImpl - 数据库持久化测试', () => {
     expect(rows[0].value).toBe('value2')
   })
 
-  it('删除时应该从数据库中移除', async () => {
+  it('removes key from database on delete', async () => {
     await cacheImpl.set('key1', 'value1')
     await cacheImpl.delete('key1')
 
@@ -316,7 +277,7 @@ describe('CacheImpl - 数据库持久化测试', () => {
     expect(rows).toHaveLength(0)
   })
 
-  it('clear 应该清空数据库中的所有缓存项', async () => {
+  it('clear removes all cache rows in database', async () => {
     await cacheImpl.set('key1', 'value1')
     await cacheImpl.set('key2', 'value2')
 
@@ -326,9 +287,9 @@ describe('CacheImpl - 数据库持久化测试', () => {
     expect(rows).toHaveLength(0)
   })
 
-  it('应该支持多个 cache 类型', async () => {
-    const cache1 = new CacheImpl(db, mockEnv, 'type1', 'database')
-    const cache2 = new CacheImpl(db, mockEnv, 'type2', 'database')
+  it('supports multiple cache types', async () => {
+    const cache1 = new CacheImpl(db as any, mockEnv, 'type1', 'database')
+    const cache2 = new CacheImpl(db as any, mockEnv, 'type2', 'database')
 
     await cache1.set('key', 'value1')
     await cache2.set('key', 'value2')
@@ -347,7 +308,7 @@ describe('CacheImpl - 数据库持久化测试', () => {
   })
 })
 
-describe('CacheImpl - 存储模式配置测试', () => {
+describe('CacheImpl - storage mode configuration', () => {
   let { db, sqlite } = createTestDB()
   let mockEnv: Env
 
@@ -357,34 +318,34 @@ describe('CacheImpl - 存储模式配置测试', () => {
     sqlite = testDB.sqlite
   })
 
-  afterEach(() => {
-    sqlite.close()
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
-  it('应该默认使用数据库存储', () => {
+  it('uses database storage by default', () => {
     mockEnv = createMockEnv('database')
-    const cache = new CacheImpl(db, mockEnv, 'cache')
+    const cache = new CacheImpl(db as any, mockEnv, 'cache')
 
     // 通过检查是否尝试加载数据库来验证
     expect(cache).toBeDefined()
   })
 
-  it('应该支持通过环境变量配置存储模式', () => {
+  it('supports storage mode from environment variable', () => {
     mockEnv = createMockEnv('s3')
-    const cache = new CacheImpl(db, mockEnv, 'cache')
+    const cache = new CacheImpl(db as any, mockEnv, 'cache')
 
     expect(cache).toBeDefined()
   })
 
-  it('storageMode 参数应该覆盖环境变量', () => {
+  it('storageMode parameter overrides environment variable', () => {
     mockEnv = createMockEnv('s3')
-    const cache = new CacheImpl(db, mockEnv, 'cache', 'database')
+    const cache = new CacheImpl(db as any, mockEnv, 'cache', 'database')
 
     expect(cache).toBeDefined()
   })
 })
 
-describe('CacheImpl - 工厂函数测试', () => {
+describe('CacheImpl - factory helpers', () => {
   let { db, sqlite } = createTestDB()
   let mockEnv: Env
 
@@ -395,32 +356,32 @@ describe('CacheImpl - 工厂函数测试', () => {
     mockEnv = createMockEnv('database')
   })
 
-  afterEach(() => {
-    sqlite.close()
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
-  it('createPublicCache 应该创建通用缓存', () => {
-    const cache = createPublicCache(db, mockEnv)
+  it('createPublicCache creates public cache', () => {
+    const cache = createPublicCache(db as any, mockEnv)
     expect(cache).toBeInstanceOf(CacheImpl)
   })
 
-  it('createServerConfig 应该创建服务器配置缓存', () => {
-    const cache = createServerConfig(db, mockEnv)
+  it('createServerConfig creates server config cache', () => {
+    const cache = createServerConfig(db as any, mockEnv)
     expect(cache).toBeInstanceOf(CacheImpl)
   })
 
-  it('createClientConfig 应该创建客户端配置缓存', () => {
-    const cache = createClientConfig(db, mockEnv)
+  it('createClientConfig creates client config cache', () => {
+    const cache = createClientConfig(db as any, mockEnv)
     expect(cache).toBeInstanceOf(CacheImpl)
   })
 
-  it('工厂函数应该支持自定义选项', () => {
-    const cache = createPublicCache(db, mockEnv, 'database')
+  it('factory helpers support custom options', () => {
+    const cache = createPublicCache(db as any, mockEnv, 'database')
     expect(cache).toBeInstanceOf(CacheImpl)
   })
 })
 
-describe('CacheImpl - 边界条件和错误处理', () => {
+describe('CacheImpl - edge cases and error handling', () => {
   let { db, sqlite } = createTestDB()
   let mockEnv: Env
   let cacheImpl: CacheImpl
@@ -430,20 +391,20 @@ describe('CacheImpl - 边界条件和错误处理', () => {
     db = testDB.db
     sqlite = testDB.sqlite
     mockEnv = createMockEnv('database')
-    cacheImpl = new CacheImpl(db, mockEnv, 'cache', 'database')
+    cacheImpl = new CacheImpl(db as any, mockEnv, 'cache', 'database')
   })
 
-  afterEach(() => {
-    sqlite.close()
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
-  it('应该处理空字符串键', async () => {
+  it('handles empty string keys', async () => {
     await cacheImpl.set('', 'empty key')
     const value = await cacheImpl.get('')
     expect(value).toBe('empty key')
   })
 
-  it('应该处理特殊字符键', async () => {
+  it('handles keys with special characters', async () => {
     const specialKeys = [
       'key with spaces',
       'key\nwith\nnewlines',
@@ -462,7 +423,7 @@ describe('CacheImpl - 边界条件和错误处理', () => {
     }
   })
 
-  it('应该处理嵌套对象', async () => {
+  it('handles nested objects', async () => {
     const nested = {
       level1: {
         level2: {
@@ -478,14 +439,14 @@ describe('CacheImpl - 边界条件和错误处理', () => {
     expect(value).toEqual(nested)
   })
 
-  it('应该处理循环引用（应该抛出错误或处理）', async () => {
-    const obj: { name: string; self?: unknown } = { name: 'test' }
+  it('handles circular references (throws or handles)', async () => {
+    const obj: any = { name: 'test' }
     obj.self = obj // 循环引用
 
     // JSON.stringify 会抛出错误，我们的实现应该处理这种情况
     // 当前实现会抛出错误，这是预期行为
     let errorThrown = false
-    let caughtError: unknown = null
+    let caughtError: any = null
     try {
       await cacheImpl.set('circular', obj)
     } catch (e) {
@@ -500,12 +461,13 @@ describe('CacheImpl - 边界条件和错误处理', () => {
 
     // 注意：值会被设置到内存缓存，但保存到数据库会失败
     // 所以缓存中会有这个值，但重启后会丢失
-    const value = (await cacheImpl.get('circular')) as { name?: string } | undefined
+    const value = await cacheImpl.get('circular')
     expect(value).toBeDefined()
-    expect(value?.name).toBe('test')
+    const circularValue = value as { name?: string }
+    expect(circularValue.name).toBe('test')
   })
 
-  it('应该处理 null 值', async () => {
+  it('handles null values', async () => {
     // null 会被存储为 "null" 字符串，读取时解析回 null
     await cacheImpl.set('nullKey', null)
     const value = await cacheImpl.get('nullKey')
@@ -513,7 +475,7 @@ describe('CacheImpl - 边界条件和错误处理', () => {
     expect(value).toBeNull()
   })
 
-  it('应该处理 undefined 值', async () => {
+  it('handles undefined values', async () => {
     // undefined 值会被跳过，不会存储到数据库
     // 内存中会有这个值，但不会被持久化
     await cacheImpl.set('undefinedKey', undefined)
@@ -523,35 +485,42 @@ describe('CacheImpl - 边界条件和错误处理', () => {
     expect(value).toBeUndefined()
 
     // 创建新实例验证数据库中确实没有存储
-    const newCache = new CacheImpl(db, mockEnv, 'cache', 'database')
+    const newCache = new CacheImpl(db as any, mockEnv, 'cache', 'database')
     const valueFromDb = await newCache.get('undefinedKey')
     expect(valueFromDb).toBeUndefined()
   })
 
-  it('应该处理大字符串值', async () => {
+  it('handles large string values', async () => {
     const largeString = 'x'.repeat(10000)
     await cacheImpl.set('large', largeString)
     const value = await cacheImpl.get('large')
     expect(value).toBe(largeString)
   })
 
-  it('应该处理大量键值对', async () => {
-    const count = 100
+  it('handles large numbers of key/value pairs', async () => {
+    const count = 50
     for (let i = 0; i < count; i++) {
-      await cacheImpl.set(`key${i}`, `value${i}`)
+      // Batch writes and persist once to avoid one D1 roundtrip per key.
+      await cacheImpl.set(`key${i}`, `value${i}`, false)
     }
+    await cacheImpl.save()
 
     const all = await cacheImpl.all()
     expect(all.size).toBe(count)
+    const rows = await db.select().from(cache).where(eq(cache.type, 'cache'))
+    expect(rows).toHaveLength(count)
 
-    // 验证随机几个键
+    // Verify a few representative keys, including after loading from DB.
     expect(await cacheImpl.get('key0')).toBe('value0')
-    expect(await cacheImpl.get('key50')).toBe('value50')
-    expect(await cacheImpl.get('key99')).toBe('value99')
+    expect(await cacheImpl.get('key25')).toBe('value25')
+    expect(await cacheImpl.get('key49')).toBe('value49')
+
+    const reloadedCache = new CacheImpl(db as any, mockEnv, 'cache', 'database')
+    expect(await reloadedCache.get('key49')).toBe('value49')
   })
 })
 
-describe('CacheImpl - getOrSet 和 getOrDefault', () => {
+describe('CacheImpl - getOrSet and getOrDefault', () => {
   let { db, sqlite } = createTestDB()
   let mockEnv: Env
   let cacheImpl: CacheImpl
@@ -561,15 +530,15 @@ describe('CacheImpl - getOrSet 和 getOrDefault', () => {
     db = testDB.db
     sqlite = testDB.sqlite
     mockEnv = createMockEnv('database')
-    cacheImpl = new CacheImpl(db, mockEnv, 'cache', 'database')
+    cacheImpl = new CacheImpl(db as any, mockEnv, 'cache', 'database')
   })
 
-  afterEach(() => {
-    sqlite.close()
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
   describe('getOrSet', () => {
-    it('当键不存在时应该计算并存储值', async () => {
+    it('computes and stores value when key is missing', async () => {
       let computed = false
       const value = await cacheImpl.getOrSet('computed', async () => {
         computed = true
@@ -581,7 +550,7 @@ describe('CacheImpl - getOrSet 和 getOrDefault', () => {
       expect(await cacheImpl.get('computed')).toBe('computed value')
     })
 
-    it('当键存在时应该返回缓存值而不重新计算', async () => {
+    it('returns cached value without recomputing when key exists', async () => {
       await cacheImpl.set('cached', 'existing value')
 
       let computed = false
@@ -594,7 +563,7 @@ describe('CacheImpl - getOrSet 和 getOrDefault', () => {
       expect(value).toBe('existing value')
     })
 
-    it('应该支持异步计算函数', async () => {
+    it('supports async compute function', async () => {
       const value = await cacheImpl.getOrSet('async', async () => {
         await new Promise(resolve => setTimeout(resolve, 10))
         return 'async value'
@@ -605,18 +574,18 @@ describe('CacheImpl - getOrSet 和 getOrDefault', () => {
   })
 
   describe('getOrDefault', () => {
-    it('当键不存在时应该返回默认值', async () => {
+    it('returns default value when key is missing', async () => {
       const value = await cacheImpl.getOrDefault('missing', 'default')
       expect(value).toBe('default')
     })
 
-    it('当键存在时应该返回缓存值', async () => {
+    it('returns cached value when key exists', async () => {
       await cacheImpl.set('exists', 'cached')
       const value = await cacheImpl.getOrDefault('exists', 'default')
       expect(value).toBe('cached')
     })
 
-    it('应该支持不同类型的默认值', async () => {
+    it('supports default values of multiple types', async () => {
       expect(await cacheImpl.getOrDefault('string', 'default')).toBe('default')
       expect(await cacheImpl.getOrDefault('number', 42)).toBe(42)
       expect(await cacheImpl.getOrDefault('boolean', true)).toBe(true)

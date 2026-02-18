@@ -1,7 +1,7 @@
-import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { fixTopField, getMigrationVersion, isInfoExist, updateMigrationVersion } from './db-fix-top-field'
+import { isKnownTopColumnCatchUpCase } from './migration-utils'
 
 const DB_NAME = 'rin'
 const SQL_DIR = path.join(__dirname, '..', 'server', 'sql')
@@ -27,14 +27,26 @@ console.log('migration_version:', migrationVersion, 'Migration SQL List: ', sqlF
 // For each file in the sorted list
 for (const file of sqlFiles) {
   const filePath = path.join(SQL_DIR, file)
-  // Run the migration
-  try {
-    execSync(`bunx wrangler d1 execute ${DB_NAME} --local --file "${filePath}"`, { stdio: 'inherit' })
+  const { exitCode, stdout, stderr } = await $`bunx wrangler d1 execute ${DB_NAME} --local --file ${filePath}`
+    .quiet()
+    .nothrow()
+
+  if (exitCode === 0) {
     console.log(`Executed ${file}`)
-  } catch (error) {
-    console.error(`Failed to execute ${file}: ${error}`)
-    process.exit(1)
+    continue
   }
+
+  const output = `${stdout.toString()}\n${stderr.toString()}`.trim()
+  if (isKnownTopColumnCatchUpCase(file, output)) {
+    console.warn(`[migration] Skipping ${file}: feeds.top already exists`)
+    continue
+  }
+
+  console.error(`Failed to execute ${file}`)
+  if (output) {
+    console.error(output)
+  }
+  process.exit(1)
 }
 
 if (sqlFiles.length === 0) {

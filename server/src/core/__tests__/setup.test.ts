@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it } from 'vitest'
 import type { Context, JWTUtils } from '../types'
 import { deriveAuth } from '../setup'
 

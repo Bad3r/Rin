@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'bun:test'
+import { beforeAll, describe, expect, it } from 'vitest'
 import worker from '../../src/_worker'
 import { createApp } from '../../src/server'
 import { createMockEnv } from '../fixtures'
@@ -27,7 +27,7 @@ for (const impl of ROUTER_IMPLS) {
         github: true,
         password: false,
       })
-    }, 15000)
+    })
 
     it('returns API 404 when service path is unknown', async () => {
       const env = createMockEnv({ ROUTER_IMPL: impl })

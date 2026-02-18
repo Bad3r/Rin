@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'bun:test'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { createMockEnv } from '../../../tests/fixtures'
 import { createBaseApp } from '../base'
 import type { Context, Handler } from '../types'

@@ -3,6 +3,7 @@ import { isIP } from 'node:net'
 import { $ } from 'bun'
 import stripIndent from 'strip-indent'
 import { fixTopField, getMigrationVersion, isInfoExist, updateMigrationVersion } from './db-fix-top-field'
+import { isKnownTopColumnCatchUpCase } from './migration-utils'
 
 function env(name: string, defaultValue?: string, required = false) {
   const env = process.env
@@ -289,7 +290,18 @@ mode = ${toTomlString('smart')}
       .sort()
     console.log('migration_version:', migrationVersion, 'Migration SQL List: ', sqlFiles)
     for (const file of sqlFiles) {
-      await $`bunx wrangler d1 execute ${DB_NAME} --remote --file ./server/sql/${file} -y`
+      const { exitCode, stdout, stderr } =
+        await $`bunx wrangler d1 execute ${DB_NAME} --remote --file ./server/sql/${file} -y`.quiet().nothrow()
+
+      if (exitCode !== 0) {
+        const output = `${stdout.toString()}\n${stderr.toString()}`.trim()
+        if (isKnownTopColumnCatchUpCase(file, output)) {
+          console.warn(`[migration] Skipping ${file}: feeds.top already exists`)
+          continue
+        }
+        throw new Error(output || `Failed to migrate ${file}`)
+      }
+
       console.log(`Migrated ${file}`)
     }
     if (sqlFiles.length === 0) {
