@@ -43,17 +43,25 @@ describe('TagService', () => {
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
-      const data = await response.json()
+      const data = (await response.json()) as Array<{ name: string; count: number; feeds?: unknown }>
       expect(Array.isArray(data)).toBe(true)
       expect(data.length).toBe(2)
 
-      const testTag = data.find((t: any) => t.name === 'test')
+      const testTag = data.find(t => t.name === 'test')
       expect(testTag).toBeDefined()
-      expect(testTag.feeds).toBe(2) // test has 2 feeds
+      if (!testTag) {
+        throw new Error('missing test tag')
+      }
+      expect(testTag.count).toBe(2) // test has 2 feeds
+      expect(testTag.feeds).toBeUndefined()
 
-      const integrationTag = data.find((t: any) => t.name === 'integration')
+      const integrationTag = data.find(t => t.name === 'integration')
       expect(integrationTag).toBeDefined()
-      expect(integrationTag.feeds).toBe(1) // integration has 1 feed
+      if (!integrationTag) {
+        throw new Error('missing integration tag')
+      }
+      expect(integrationTag.count).toBe(1) // integration has 1 feed
+      expect(integrationTag.feeds).toBeUndefined()
     })
 
     it('should return empty array when no tags exist', async () => {

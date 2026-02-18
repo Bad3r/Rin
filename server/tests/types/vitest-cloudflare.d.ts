@@ -7,6 +7,8 @@ declare module 'cloudflare:test' {
 declare module 'vitest' {
   interface ProvidedContext {
     d1Migrations: D1Migration[]
+    remoteBaseUrl: string
+    remoteTimeoutMs: number
   }
 }
 

@@ -11,6 +11,25 @@ describe('PasswordAuthService', () => {
   let app: any
   let api: ReturnType<typeof createTestClient>
 
+  const messageOf = (value: unknown): string | undefined => {
+    if (typeof value === 'string') {
+      return value
+    }
+    if (!value || typeof value !== 'object') {
+      return undefined
+    }
+    const message = (value as { message?: unknown }).message
+    if (typeof message === 'string') {
+      return message
+    }
+    const error = (value as { error?: unknown }).error
+    if (!error || typeof error !== 'object') {
+      return undefined
+    }
+    const nestedMessage = (error as { message?: unknown }).message
+    return typeof nestedMessage === 'string' ? nestedMessage : undefined
+  }
+
   beforeEach(async () => {
     const mockDB = createMockDB()
     db = mockDB.db
@@ -98,8 +117,7 @@ describe('PasswordAuthService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(403)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Invalid credentials')
+      expect(messageOf(result.error?.value)).toBe('Invalid credentials')
     })
 
     it('should login with regular user credentials', async () => {
@@ -123,8 +141,7 @@ describe('PasswordAuthService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(403)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Invalid credentials')
+      expect(messageOf(result.error?.value)).toBe('Invalid credentials')
     })
 
     it('should require username and password', async () => {
@@ -132,8 +149,7 @@ describe('PasswordAuthService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(400)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Username and password are required')
+      expect(messageOf(result.error?.value)).toBe('Username and password are required')
     })
 
     it('should return 400 if admin credentials not configured', async () => {
@@ -162,8 +178,7 @@ describe('PasswordAuthService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(400)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Admin credentials not configured')
+      expect(messageOf(result.error?.value)).toBe('Admin credentials not configured')
     })
 
     it('should reject user without password', async () => {
@@ -174,8 +189,7 @@ describe('PasswordAuthService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(403)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Invalid credentials')
+      expect(messageOf(result.error?.value)).toBe('Invalid credentials')
     })
   })
 

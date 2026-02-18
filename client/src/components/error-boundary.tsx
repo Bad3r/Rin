@@ -30,23 +30,46 @@ export interface ErrorBoundaryProps {
   resetKeys?: Array<string | number>
 }
 
+interface ErrorPayload {
+  message?: string
+  code?: string
+  status?: number
+  requestId?: string
+  details?: string
+}
+
+interface ErrorLike {
+  message?: string
+  code?: string
+  status?: number
+  error?: ErrorPayload
+}
+
+function asErrorLike(value: unknown): ErrorLike | null {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+  return value as ErrorLike
+}
+
 // ============================================================================
 // Error Parser
 // ============================================================================
 
 export function parseApiError(error: unknown): AppError {
-  if (error && typeof error === 'object') {
+  const err = asErrorLike(error)
+  if (err) {
     // Check if it's an API error response
-    const err = error as any
+    const nestedError = err.error
 
-    if (err.error && typeof err.error === 'object') {
+    if (nestedError && typeof nestedError === 'object') {
       return {
-        message: err.error.message || 'Unknown error',
-        code: err.error.code,
-        status: err.error.status,
-        requestId: err.error.requestId,
-        details: err.error.details,
-        severity: getSeverityFromStatus(err.error.status),
+        message: nestedError.message || 'Unknown error',
+        code: nestedError.code,
+        status: nestedError.status,
+        requestId: nestedError.requestId,
+        details: nestedError.details,
+        severity: getSeverityFromStatus(nestedError.status),
       }
     }
 
@@ -303,22 +326,22 @@ export function withErrorBoundary<P extends object>(
 // ============================================================================
 
 export function isNetworkError(error: unknown): boolean {
-  if (error && typeof error === 'object') {
-    const err = error as any
+  const err = asErrorLike(error)
+  if (err) {
     return (
       err.status === 0 ||
       err.code === 'NETWORK_ERROR' ||
-      err.message?.includes('network') ||
-      err.message?.includes('fetch') ||
-      err.message?.includes('Failed to fetch')
+      (err.message?.includes('network') ?? false) ||
+      (err.message?.includes('fetch') ?? false) ||
+      (err.message?.includes('Failed to fetch') ?? false)
     )
   }
   return false
 }
 
 export function isAuthError(error: unknown): boolean {
-  if (error && typeof error === 'object') {
-    const err = error as any
+  const err = asErrorLike(error)
+  if (err) {
     return (
       err.status === 401 || err.code === 'UNAUTHORIZED' || err.code === 'TOKEN_EXPIRED' || err.code === 'TOKEN_INVALID'
     )
@@ -327,8 +350,8 @@ export function isAuthError(error: unknown): boolean {
 }
 
 export function isNotFoundError(error: unknown): boolean {
-  if (error && typeof error === 'object') {
-    const err = error as any
+  const err = asErrorLike(error)
+  if (err) {
     return err.status === 404 || err.code === 'NOT_FOUND' || err.code === 'RESOURCE_NOT_FOUND'
   }
   return false

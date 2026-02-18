@@ -2,6 +2,16 @@
 // Shared API Types - Used by both client and server
 // ============================================================================
 
+// JSON wire format for date-time values in API requests/responses.
+export type IsoDateTimeString = string
+
+// JSON wire value helpers for request/response payloads.
+export type JsonPrimitive = string | number | boolean | null
+export type JsonValue = JsonPrimitive | JsonObject | JsonValue[]
+export interface JsonObject {
+  [key: string]: JsonValue
+}
+
 // Common types
 export interface ApiResponse<T> {
   data?: T
@@ -24,8 +34,8 @@ export interface Feed {
   title: string | null
   content: string
   uid: number
-  createdAt: string
-  updatedAt: string
+  createdAt: IsoDateTimeString
+  updatedAt: IsoDateTimeString
   ai_summary: string
   hashtags: Array<{ id: number; name: string }>
   user: {
@@ -51,8 +61,8 @@ export interface FeedListResponse {
       username: string
     }
     avatar: string | null
-    createdAt: string
-    updatedAt: string
+    createdAt: IsoDateTimeString
+    updatedAt: IsoDateTimeString
     pv: number
     uv: number
   }>
@@ -62,7 +72,7 @@ export interface FeedListResponse {
 export interface TimelineItem {
   id: number
   title: string | null
-  createdAt: string
+  createdAt: IsoDateTimeString
 }
 
 export interface CreateFeedRequest {
@@ -72,7 +82,7 @@ export interface CreateFeedRequest {
   alias?: string
   draft: boolean
   listed: boolean
-  createdAt?: string
+  createdAt?: IsoDateTimeString
   tags: string[]
 }
 
@@ -83,7 +93,7 @@ export interface UpdateFeedRequest {
   alias?: string
   listed: boolean
   draft?: boolean
-  createdAt?: string
+  createdAt?: IsoDateTimeString
   tags?: string[]
   top?: number
 }
@@ -93,8 +103,8 @@ export interface AdjacentFeed {
   title: string | null
   summary: string
   hashtags: Array<{ id: number; name: string }>
-  createdAt: string
-  updatedAt: string
+  createdAt: IsoDateTimeString
+  updatedAt: IsoDateTimeString
 }
 
 export interface AdjacentFeedResponse {
@@ -146,8 +156,8 @@ export interface Tag {
   id: number
   name: string
   count: number
-  createdAt: string
-  updatedAt: string
+  createdAt: IsoDateTimeString
+  updatedAt: IsoDateTimeString
 }
 
 export interface TagDetail extends Tag {
@@ -161,8 +171,8 @@ export interface TagDetail extends Tag {
 export interface Comment {
   id: number
   content: string
-  createdAt: string
-  updatedAt: string
+  createdAt: IsoDateTimeString
+  updatedAt: IsoDateTimeString
   user: {
     id: number
     username: string
@@ -187,9 +197,9 @@ export interface Friend {
   url: string
   accepted: number
   sort_order: number | null
-  createdAt: string
+  createdAt: IsoDateTimeString
   uid: number
-  updatedAt: string
+  updatedAt: IsoDateTimeString
   health: string
 }
 
@@ -206,10 +216,10 @@ export interface CreateFriendRequest {
 }
 
 export interface UpdateFriendRequest {
-  name: string
-  desc: string
+  name?: string
+  desc?: string
   avatar?: string
-  url: string
+  url?: string
   accepted?: number
   sort_order?: number
 }
@@ -221,8 +231,8 @@ export interface UpdateFriendRequest {
 export interface Moment {
   id: number
   content: string
-  createdAt: string
-  updatedAt: string
+  createdAt: IsoDateTimeString
+  updatedAt: IsoDateTimeString
   user: {
     id: number
     username: string
@@ -246,7 +256,7 @@ export interface MomentListResponse {
 export type ConfigType = 'client' | 'server'
 
 export interface ConfigResponse {
-  [key: string]: any
+  [key: string]: JsonValue
 }
 
 // ============================================================================

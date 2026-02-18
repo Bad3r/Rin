@@ -11,6 +11,25 @@ describe('UserService', () => {
   let app: any
   let api: ReturnType<typeof createTestClient>
 
+  const messageOf = (value: unknown): string | undefined => {
+    if (typeof value === 'string') {
+      return value
+    }
+    if (!value || typeof value !== 'object') {
+      return undefined
+    }
+    const message = (value as { message?: unknown }).message
+    if (typeof message === 'string') {
+      return message
+    }
+    const error = (value as { error?: unknown }).error
+    if (!error || typeof error !== 'object') {
+      return undefined
+    }
+    const nestedMessage = (error as { message?: unknown }).message
+    return typeof nestedMessage === 'string' ? nestedMessage : undefined
+  }
+
   beforeEach(async () => {
     const mockDB = createMockDB()
     db = mockDB.db
@@ -264,8 +283,7 @@ describe('UserService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(403)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Authentication required')
+      expect(messageOf(result.error?.value)).toBe('Authentication required')
     })
 
     it('should return 403 when user does not exist', async () => {
@@ -276,8 +294,7 @@ describe('UserService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(403)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Authentication required')
+      expect(messageOf(result.error?.value)).toBe('Authentication required')
     })
   })
 
@@ -319,8 +336,7 @@ describe('UserService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(403)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Authentication required')
+      expect(messageOf(result.error?.value)).toBe('Authentication required')
     })
 
     it('should require at least one field', async () => {
@@ -328,8 +344,7 @@ describe('UserService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(400)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('At least one field (username or avatar) is required')
+      expect(messageOf(result.error?.value)).toBe('At least one field (username or avatar) is required')
     })
   })
 

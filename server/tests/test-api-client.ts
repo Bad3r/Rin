@@ -13,9 +13,12 @@ import type {
   FeedListResponse,
   Friend,
   FriendListResponse,
+  JsonPrimitive,
   LoginRequest,
   LoginResponse,
   Moment,
+  JsonObject,
+  JsonValue,
   Tag,
   TagDetail,
   TimelineItem,
@@ -25,6 +28,7 @@ import type {
   UploadResponse,
   UserProfile,
 } from '@rin/api'
+import type { Router } from '../src/core/router'
 
 /**
  * Test API Client for Server-side Integration Tests
@@ -41,9 +45,17 @@ export interface TestAPIOptions {
   token?: string
 }
 
+type ErrorPayload =
+  | string
+  | {
+      error?: { message?: string } | string
+      message?: string
+    }
+type RequestBody = JsonValue | JsonPrimitive | JsonValue[] | object | FormData
+
 export class TestAPIClient {
   constructor(
-    private app: any,
+    private app: Router,
     private env: Env,
     private baseUrl: string = 'http://localhost'
   ) {}
@@ -51,7 +63,7 @@ export class TestAPIClient {
   private async request<T>(
     method: string,
     path: string,
-    body?: any,
+    body?: RequestBody,
     options?: TestAPIOptions
   ): Promise<ApiResponse<T>> {
     const headers: Record<string, string> = {
@@ -86,11 +98,11 @@ export class TestAPIClient {
 
       if (!response.ok) {
         const contentType = response.headers.get('content-type')
-        let errorValue: any
+        let errorValue: ErrorPayload
 
         if (contentType?.includes('application/json')) {
           try {
-            errorValue = await response.json()
+            errorValue = (await response.json()) as ErrorPayload
           } catch {
             errorValue = await response.text()
           }
@@ -98,10 +110,23 @@ export class TestAPIClient {
           errorValue = await response.text()
         }
 
+        let errorMessage: string
+        if (typeof errorValue === 'string') {
+          errorMessage = errorValue
+        } else {
+          const nestedMessage =
+            typeof errorValue.error === 'object' && errorValue.error ? errorValue.error.message : undefined
+          const inlineError = typeof errorValue.error === 'string' ? errorValue.error : undefined
+          errorMessage = nestedMessage || errorValue.message || inlineError || JSON.stringify(errorValue)
+        }
+        if (errorMessage === '') {
+          errorMessage = String(errorValue ?? response.statusText)
+        }
+
         return {
           error: {
             status: response.status,
-            value: errorValue || response.statusText,
+            value: errorMessage,
           },
         }
       }
@@ -113,7 +138,7 @@ export class TestAPIClient {
 
       const contentType = response.headers.get('content-type')
       if (contentType?.includes('application/json')) {
-        const data = await response.json()
+        const data = (await response.json()) as T
         return { data }
       }
 
@@ -133,15 +158,15 @@ export class TestAPIClient {
     return this.request<T>('GET', path, undefined, options)
   }
 
-  async post<T>(path: string, body?: any, options?: TestAPIOptions): Promise<ApiResponse<T>> {
+  async post<T>(path: string, body?: RequestBody, options?: TestAPIOptions): Promise<ApiResponse<T>> {
     return this.request<T>('POST', path, body, options)
   }
 
-  async put<T>(path: string, body?: any, options?: TestAPIOptions): Promise<ApiResponse<T>> {
+  async put<T>(path: string, body?: RequestBody, options?: TestAPIOptions): Promise<ApiResponse<T>> {
     return this.request<T>('PUT', path, body, options)
   }
 
-  async patch<T>(path: string, body?: any, options?: TestAPIOptions): Promise<ApiResponse<T>> {
+  async patch<T>(path: string, body?: RequestBody, options?: TestAPIOptions): Promise<ApiResponse<T>> {
     return this.request<T>('PATCH', path, body, options)
   }
 
@@ -307,11 +332,7 @@ export class TestAPIClient {
       return this.get<ConfigResponse>(`/config/${type}`, options)
     },
 
-    update: async (
-      type: ConfigType,
-      body: Record<string, any>,
-      options?: TestAPIOptions
-    ): Promise<ApiResponse<void>> => {
+    update: async (type: ConfigType, body: JsonObject, options?: TestAPIOptions): Promise<ApiResponse<void>> => {
       return this.post<void>(`/config/${type}`, body, options)
     },
 
@@ -350,7 +371,7 @@ export class TestAPIClient {
 
     update: async (body: Partial<AIConfig>, options?: TestAPIOptions): Promise<ApiResponse<void>> => {
       // Convert AI config to flat format for server config
-      const flatBody: Record<string, any> = {}
+      const flatBody: JsonObject = {}
       if (body.enabled !== undefined) flatBody['ai_summary.enabled'] = String(body.enabled)
       if (body.provider !== undefined) flatBody['ai_summary.provider'] = body.provider
       if (body.model !== undefined) flatBody['ai_summary.model'] = body.model
@@ -392,7 +413,7 @@ export class TestAPIClient {
  * Factory function to create a test API client
  * Mirrors the client-side createClient function for consistency
  */
-export function createTestClient(app: any, env: Env, baseUrl?: string): TestAPIClient {
+export function createTestClient(app: Router, env: Env, baseUrl?: string): TestAPIClient {
   return new TestAPIClient(app, env, baseUrl)
 }
 

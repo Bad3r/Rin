@@ -463,7 +463,8 @@ describe('CacheImpl - edge cases and error handling', () => {
     // 所以缓存中会有这个值，但重启后会丢失
     const value = await cacheImpl.get('circular')
     expect(value).toBeDefined()
-    expect(value.name).toBe('test')
+    const circularValue = value as { name?: string }
+    expect(circularValue.name).toBe('test')
   })
 
   it('handles null values', async () => {

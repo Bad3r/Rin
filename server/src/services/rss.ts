@@ -9,30 +9,41 @@ import { createS3Client, putObject } from '../utils/s3'
 import { FAVICON_ALLOWED_TYPES, getFaviconKey } from './favicon'
 
 // Lazy-loaded modules for RSS generation
-let Feed: any
-let unified: any
-let remarkParse: any
-let remarkGfm: any
-let remarkRehype: any
-let rehypeStringify: any
+type FeedCtor = typeof import('feed').Feed
+type FeedOptions = ConstructorParameters<typeof import('feed').Feed>[0]
+
+let Feed: FeedCtor | undefined
+let markdownToHtml: ((markdown: string) => Promise<string>) | undefined
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message
+  }
+  return String(error)
+}
 
 async function initRSSModules() {
   if (!Feed) {
     const feed = await import('feed')
     Feed = feed.Feed
   }
-  if (!unified) {
+  if (!markdownToHtml) {
     const unifiedMod = await import('unified')
     const remarkParseMod = await import('remark-parse')
     const remarkGfmMod = await import('remark-gfm')
     const remarkRehypeMod = await import('remark-rehype')
     const rehypeStringifyMod = await import('rehype-stringify')
 
-    unified = unifiedMod.unified
-    remarkParse = remarkParseMod.default
-    remarkGfm = remarkGfmMod.default
-    remarkRehype = remarkRehypeMod.default
-    rehypeStringify = rehypeStringifyMod.default
+    markdownToHtml = async (content: string) => {
+      const file = await unifiedMod
+        .unified()
+        .use(remarkParseMod.default)
+        .use(remarkGfmMod.default)
+        .use(remarkRehypeMod.default)
+        .use(rehypeStringifyMod.default)
+        .process(content)
+      return file.toString()
+    }
   }
 }
 
@@ -106,8 +117,8 @@ export function RSSService(router: Router): void {
         if (response.status !== 404) {
           console.log(`[RSS] S3 error: ${response.status}, falling back to generation`)
         }
-      } catch (e: any) {
-        console.log(`[RSS] S3 fetch failed: ${e.message}, falling back to generation`)
+      } catch (e: unknown) {
+        console.log(`[RSS] S3 fetch failed: ${getErrorMessage(e)}, falling back to generation`)
       }
     } else {
       console.log(`[RSS] S3 not configured, generating feed in real-time`)
@@ -141,10 +152,10 @@ export function RSSService(router: Router): void {
           'Cache-Control': 'public, max-age=300', // Shorter cache for real-time
         },
       })
-    } catch (genError: any) {
+    } catch (genError: unknown) {
       console.error('[RSS] Generation failed:', genError)
       set.status = 500
-      return `RSS generation failed: ${genError.message}`
+      return `RSS generation failed: ${getErrorMessage(genError)}`
     }
   })
 }
@@ -152,10 +163,13 @@ export function RSSService(router: Router): void {
 // Extract feed generation logic for reuse
 async function generateFeed(env: Env, db: DB, frontendUrl: string) {
   await initRSSModules()
+  if (!Feed || !markdownToHtml) {
+    throw new Error('RSS modules failed to initialize')
+  }
   const accessHost = env.S3_ACCESS_HOST || env.S3_ENDPOINT
   const faviconKey = getFaviconKey(env)
 
-  const feedConfig: any = {
+  const feedConfig: FeedOptions = {
     title: env.RSS_TITLE,
     description: env.RSS_DESCRIPTION || 'Feed from Rin',
     id: frontendUrl,
@@ -218,13 +232,7 @@ async function generateFeed(env: Env, db: DB, frontendUrl: string) {
     let contentHtml = ''
     if (content) {
       try {
-        const file = await unified()
-          .use(remarkParse)
-          .use(remarkGfm)
-          .use(remarkRehype)
-          .use(rehypeStringify)
-          .process(content)
-        contentHtml = file.toString()
+        contentHtml = await markdownToHtml(content)
       } catch (e) {
         console.error('[RSS] Markdown conversion error:', e)
         contentHtml = content
@@ -262,8 +270,8 @@ export async function rssCrontab(env: Env, db: DB) {
     try {
       await putObject(s3, env, hashkey, data, name.endsWith('.json') ? 'application/json' : 'application/xml')
       console.log(`[RSS] Saved ${name} to S3`)
-    } catch (e: any) {
-      console.error(`[RSS] Failed to save ${name}:`, e.message)
+    } catch (e: unknown) {
+      console.error(`[RSS] Failed to save ${name}:`, getErrorMessage(e))
     }
   }
 

@@ -4,7 +4,9 @@ interface HelmetProps {
   children?: ReactNode
 }
 
-type HelmetElement = ReactElement<Record<string, unknown>, string>
+type HelmetPropertyValue = ReactNode | string | number | boolean | null | undefined
+type HelmetElementProps = Record<string, HelmetPropertyValue>
+type HelmetElement = ReactElement<HelmetElementProps, string>
 
 function isHelmetElement(node: ReactNode): node is HelmetElement {
   return isValidElement(node) && typeof node.type === 'string'
@@ -25,7 +27,7 @@ function toAttributeName(name: string): string {
   }
 }
 
-function setAttributes(element: HTMLElement, props: Record<string, unknown>): void {
+function setAttributes(element: HTMLElement, props: HelmetElementProps): void {
   for (const [key, value] of Object.entries(props)) {
     if (key === 'children') {
       continue
@@ -60,7 +62,7 @@ function escapeAttributeValue(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 }
 
-function getDedupeSelectors(type: string, props: Record<string, unknown>): string[] {
+function getDedupeSelectors(type: string, props: HelmetElementProps): string[] {
   if (type === 'meta') {
     const name = typeof props.name === 'string' ? props.name : null
     const property = typeof props.property === 'string' ? props.property : null
@@ -102,7 +104,7 @@ function getDedupeSelectors(type: string, props: Record<string, unknown>): strin
   return []
 }
 
-function removeExistingHeadElements(type: string, props: Record<string, unknown>): void {
+function removeExistingHeadElements(type: string, props: HelmetElementProps): void {
   for (const selector of getDedupeSelectors(type, props)) {
     for (const element of document.querySelectorAll<HTMLElement>(selector)) {
       element.remove()
@@ -110,7 +112,7 @@ function removeExistingHeadElements(type: string, props: Record<string, unknown>
   }
 }
 
-function createHeadElement(type: string, props: Record<string, unknown>): HTMLElement | null {
+function createHeadElement(type: string, props: HelmetElementProps): HTMLElement | null {
   if (type !== 'meta' && type !== 'link') {
     return null
   }

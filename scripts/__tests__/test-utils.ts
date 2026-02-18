@@ -90,7 +90,9 @@ export const WranglerParsers = {
     try {
       const json = JSON.parse(stdout)
       if (Array.isArray(json) && json.length > 0 && json[0].results) {
-        return json[0].results.map((row: any) => parseInt(row.feed_id, 10)).filter((id: number) => !Number.isNaN(id))
+        return json[0].results
+          .map((row: unknown) => parseInt(row.feed_id, 10))
+          .filter((id: number) => !Number.isNaN(id))
       }
     } catch (_e) {
       return stdout
@@ -109,7 +111,7 @@ export const WranglerParsers = {
     try {
       const json = JSON.parse(stdout)
       if (Array.isArray(json) && json.length > 0 && json[0].results) {
-        return json[0].results.map((row: any) => row.ip).filter((ip: string) => ip && typeof ip === 'string')
+        return json[0].results.map((row: unknown) => row.ip).filter((ip: string) => ip && typeof ip === 'string')
       }
     } catch (_e) {
       // Fallback: 解析旧格式输出

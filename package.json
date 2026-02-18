@@ -23,7 +23,7 @@
     "test:server": "cd server && bun run test:ci",
     "test:server:watch": "cd server && bun run test:watch",
     "test:coverage": "bun run test:coverage:ci",
-    "test:coverage:ci": "cd client && bun run test:coverage && cd ../server && bun run test:coverage:ci",
+    "test:coverage:ci": "bun --filter './client' test:coverage:ci && bun --filter './server' test:coverage:ci && test -s ./client/coverage/lcov.info && test -s ./server/coverage/lcov.info && echo 'Coverage artifacts verified: client/coverage/lcov.info, server/coverage/lcov.info'",
     "db:migrate": "bun cli/bin/rin.ts db migrate",
     "db:generate": "bun --filter './server' db:gen",
     "db:fix": "bun scripts/db-fix-top-field.ts",
@@ -43,7 +43,6 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.0",
     "turbo": "^2.8.9",
-    "vitest": "~3.2.4",
     "wrangler": "^4.65.0"
   }
 }
