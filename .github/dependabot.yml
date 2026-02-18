@@ -18,17 +18,17 @@ updates:
     pull-request-branch-name:
       separator: "-"
     groups:
+      bun-major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
       bun-minor-patch:
         patterns:
           - "*"
         update-types:
           - "minor"
           - "patch"
-      bun-major:
-        patterns:
-          - "*"
-        update-types:
-          - "major"
 
   - package-ecosystem: "github-actions"
     directory: "/"
