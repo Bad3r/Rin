@@ -62,7 +62,7 @@ async function publish({
     onCompleted()
   }
   if (error) {
-    showAlert(error.value as string)
+    showAlert(error.value)
   }
   if (data) {
     showAlert(t('publish.success'), () => {
@@ -112,7 +112,7 @@ async function update({
     onCompleted()
   }
   if (error) {
-    showAlert(error.value as string)
+    showAlert(error.value)
   } else {
     showAlert(t('update.success'), () => {
       Cache.with(id).clear()

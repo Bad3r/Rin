@@ -64,7 +64,7 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
       if (!feed) return
       client.feed.delete(feed.id).then(({ error }) => {
         if (error) {
-          showAlert(error.value as string)
+          showAlert(error.value)
         } else {
           showAlert(t('delete.success'))
           setLocation('/')
@@ -83,7 +83,7 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
         if (!feed) return
         client.feed.setTop(feed.id, topNew).then(({ error }) => {
           if (error) {
-            showAlert(error.value as string)
+            showAlert(error.value)
           } else {
             showAlert(isUnTop ? t('article.top.success') : t('article.untop.success'))
             setTop(topNew)
@@ -99,7 +99,7 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
     setHeadImage(undefined)
     client.feed.get(id).then(({ data, error }) => {
       if (error) {
-        setError(error.value as string)
+        setError(error.value)
       } else if (data && typeof data !== 'string') {
         setTimeout(() => {
           setFeed(data)
@@ -352,7 +352,7 @@ function CommentInput({ id, onRefresh }: { id: string; onRefresh: () => void }) 
     }
     client.comment.create(parseInt(id, 10), { content }).then(({ error }) => {
       if (error) {
-        setError(errorHumanize(error.value as string))
+        setError(errorHumanize(error.value))
       } else {
         setContent('')
         setError('')
@@ -407,7 +407,7 @@ function Comments({ id }: { id: string }) {
   const loadComments = useCallback(() => {
     client.comment.list(parseInt(id, 10)).then(({ data, error }) => {
       if (error) {
-        setError(error.value as string)
+        setError(error.value)
       } else if (data && Array.isArray(data)) {
         setComments(data)
       }
@@ -454,7 +454,7 @@ function CommentItem({ comment, onRefresh }: { comment: ApiComment; onRefresh: (
     showConfirm(t('delete.comment.title'), t('delete.comment.confirm'), async () => {
       client.comment.delete(comment.id).then(({ error }) => {
         if (error) {
-          showAlert(error.value as string)
+          showAlert(error.value)
         } else {
           showAlert(t('delete.success'), () => {
             onRefresh()

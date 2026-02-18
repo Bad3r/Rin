@@ -180,7 +180,7 @@ export function FeedService(router: Router): void {
           body,
           store: { db, cache, env },
         } = ctx
-        const payload = body as Partial<CreateFeedRequest>
+        const payload = body as Partial<CreateFeedRequest> & { createdAt?: unknown }
         const { title, alias, listed, content, summary, draft, tags, createdAt } = payload
 
         if (!admin) {
@@ -464,7 +464,7 @@ export function FeedService(router: Router): void {
           store: { db, cache, env },
         } = ctx
         const { id } = params
-        const payload = body as Partial<UpdateFeedRequest>
+        const payload = body as Partial<UpdateFeedRequest> & { createdAt?: unknown }
         const { title, listed, content, summary, alias, draft, top, tags, createdAt } = payload
 
         const id_num = parseInt(id, 10)

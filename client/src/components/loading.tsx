@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react'
 import ReactLoading from './react-loading'
 
-export function Waiting({ for: wait, children }: { for?: unknown; children?: ReactNode }) {
+type WaitCondition = boolean | string | number | object | null | undefined
+
+export function Waiting({ for: wait, children }: { for?: WaitCondition; children?: ReactNode }) {
   return (
     <>
       {!wait ? (

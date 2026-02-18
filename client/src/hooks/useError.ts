@@ -18,15 +18,17 @@ export interface UseAsyncState<T> {
   error: AppError | null
 }
 
-export interface UseAsyncActions<T> {
-  execute: (...args: unknown[]) => Promise<T | null>
+type AsyncArgs = readonly unknown[]
+
+export interface UseAsyncActions<T, Args extends AsyncArgs = []> {
+  execute: (...args: Args) => Promise<T | null>
   reset: () => void
   retry: () => Promise<T | null>
 }
 
-export type UseAsyncReturn<T> = UseAsyncState<T> & UseAsyncActions<T>
+export type UseAsyncReturn<T, Args extends AsyncArgs = []> = UseAsyncState<T> & UseAsyncActions<T, Args>
 
-export interface UseAsyncOptions<T = unknown> {
+export interface UseAsyncOptions<T = never> {
   onSuccess?: (data: T | undefined) => void
   onError?: (error: AppError) => void
   immediate?: boolean
@@ -38,10 +40,10 @@ export interface UseAsyncOptions<T = unknown> {
 // useAsync Hook - For handling async operations with error handling
 // ============================================================================
 
-export function useAsync<T>(
-  asyncFunction: (...args: unknown[]) => Promise<T>,
+export function useAsync<T, Args extends AsyncArgs = []>(
+  asyncFunction: (...args: Args) => Promise<T>,
   options: UseAsyncOptions<T> = {}
-): UseAsyncReturn<T> {
+): UseAsyncReturn<T, Args> {
   const { onSuccess, onError, immediate = false, retryCount = 0, retryDelay = 1000 } = options
 
   const [state, setState] = useState<UseAsyncState<T>>({
@@ -51,7 +53,7 @@ export function useAsync<T>(
   })
 
   const retryCountRef = useRef(0)
-  const lastArgsRef = useRef<unknown[]>([])
+  const lastArgsRef = useRef<Args | null>(null)
   const isMountedRef = useRef(true)
 
   // Cleanup on unmount
@@ -62,7 +64,7 @@ export function useAsync<T>(
   }, [])
 
   const execute = useCallback(
-    async (...args: unknown[]): Promise<T | null> => {
+    async (...args: Args): Promise<T | null> => {
       lastArgsRef.current = args
       retryCountRef.current = 0
 
@@ -97,7 +99,7 @@ export function useAsync<T>(
   }, [])
 
   const retry = useCallback(async (): Promise<T | null> => {
-    if (retryCountRef.current < retryCount) {
+    if (retryCountRef.current < retryCount && lastArgsRef.current) {
       retryCountRef.current++
 
       // Delay before retry
@@ -112,7 +114,7 @@ export function useAsync<T>(
   // Execute immediately if option is set
   useEffect(() => {
     if (immediate) {
-      execute()
+      void (execute as () => Promise<T | null>)()
     }
   }, [immediate, execute])
 
@@ -128,10 +130,10 @@ export function useAsync<T>(
 // useApi Hook - For API calls with automatic error handling
 // ============================================================================
 
-export function useApi<T>(
-  apiFunction: (...args: unknown[]) => Promise<{ data?: T; error?: unknown }>,
+export function useApi<T, Args extends AsyncArgs = []>(
+  apiFunction: (...args: Args) => Promise<{ data?: T; error?: unknown }>,
   options: UseAsyncOptions<T> = {}
-): UseAsyncReturn<T> {
+): UseAsyncReturn<T, Args> {
   const { onSuccess, onError, immediate = false, retryCount = 0, retryDelay = 1000 } = options
 
   const [state, setState] = useState<UseAsyncState<T>>({
@@ -141,7 +143,7 @@ export function useApi<T>(
   })
 
   const retryCountRef = useRef(0)
-  const lastArgsRef = useRef<unknown[]>([])
+  const lastArgsRef = useRef<Args | null>(null)
   const isMountedRef = useRef(true)
 
   useEffect(() => {
@@ -151,7 +153,7 @@ export function useApi<T>(
   }, [])
 
   const execute = useCallback(
-    async (...args: unknown[]): Promise<T | null> => {
+    async (...args: Args): Promise<T | null> => {
       lastArgsRef.current = args
       retryCountRef.current = 0
 
@@ -190,7 +192,7 @@ export function useApi<T>(
   }, [])
 
   const retry = useCallback(async (): Promise<T | null> => {
-    if (retryCountRef.current < retryCount) {
+    if (retryCountRef.current < retryCount && lastArgsRef.current) {
       retryCountRef.current++
       await new Promise(resolve => setTimeout(resolve, retryDelay * retryCountRef.current))
       return execute(...lastArgsRef.current)
@@ -200,7 +202,7 @@ export function useApi<T>(
 
   useEffect(() => {
     if (immediate) {
-      execute()
+      void (execute as () => Promise<T | null>)()
     }
   }, [immediate, execute])
 

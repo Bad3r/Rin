@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test'
+import { beforeAll, describe, expect, it } from 'bun:test'
 import worker from '../../src/_worker'
 import { createMockEnv } from '../fixtures'
 
@@ -7,6 +7,13 @@ const ROUTER_IMPLS: RouterImpl[] = ['legacy', 'hono']
 
 for (const impl of ROUTER_IMPLS) {
   describe(`Worker routing (${impl})`, () => {
+    beforeAll(async () => {
+      // Warm dynamic service imports and router setup once per adapter.
+      // Coverage instrumentation can make first-load path significantly slower.
+      const env = createMockEnv({ ROUTER_IMPL: impl })
+      await worker.fetch(new Request('http://localhost/api/auth/status'), env)
+    })
+
     it('strips /api prefix before routing service handlers', async () => {
       const env = createMockEnv({ ROUTER_IMPL: impl })
 
@@ -18,7 +25,7 @@ for (const impl of ROUTER_IMPLS) {
         github: true,
         password: false,
       })
-    })
+    }, 15000)
 
     it('returns API 404 when service path is unknown', async () => {
       const env = createMockEnv({ ROUTER_IMPL: impl })

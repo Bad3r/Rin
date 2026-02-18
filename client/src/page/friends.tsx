@@ -35,7 +35,7 @@ async function publish({
     url,
   })
   if (error) {
-    showAlert(error.value as string)
+    showAlert(error.value)
   } else {
     showAlert(t('create.success'), () => {
       window.location.reload()
@@ -167,7 +167,7 @@ function Friend({ friend }: { friend: FriendItem }) {
     showConfirm(t('delete.title'), t('delete.confirm'), () => {
       client.friend.delete(friend.id).then(({ error }) => {
         if (error) {
-          showAlert(error.value as string)
+          showAlert(error.value)
         } else {
           showAlert(t('delete.success'), () => {
             window.location.reload()
@@ -189,7 +189,7 @@ function Friend({ friend }: { friend: FriendItem }) {
       })
       .then(({ error }) => {
         if (error) {
-          showAlert(error.value as string)
+          showAlert(error.value)
         } else {
           showAlert(t('update.success'), () => {
             window.location.reload()

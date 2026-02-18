@@ -1,4 +1,7 @@
 import { createContext } from 'react'
+import type { JsonValue } from '@rin/api'
+
+type ConfigValue = JsonValue | undefined
 
 export const defaultClientConfig = new Map(
   Object.entries({
@@ -23,9 +26,9 @@ export const defaultServerConfig = new Map(
 )
 
 export class ConfigWrapper {
-  config: Record<string, unknown>
-  defaultConfig: Map<string, unknown>
-  constructor(config: Record<string, unknown>, defaultConfig: Map<string, unknown>) {
+  config: Record<string, ConfigValue>
+  defaultConfig: Map<string, ConfigValue>
+  constructor(config: Record<string, ConfigValue>, defaultConfig: Map<string, ConfigValue>) {
     this.config = config
     this.defaultConfig = defaultConfig
   }

@@ -5,12 +5,19 @@
 // JSON wire format for date-time values in API requests/responses.
 export type IsoDateTimeString = string
 
+// JSON wire value helpers for request/response payloads.
+export type JsonPrimitive = string | number | boolean | null
+export type JsonValue = JsonPrimitive | JsonObject | JsonValue[]
+export interface JsonObject {
+  [key: string]: JsonValue
+}
+
 // Common types
 export interface ApiResponse<T> {
   data?: T
   error?: {
     status: number
-    value: unknown
+    value: string
   }
 }
 
@@ -249,7 +256,7 @@ export interface MomentListResponse {
 export type ConfigType = 'client' | 'server'
 
 export interface ConfigResponse {
-  [key: string]: unknown
+  [key: string]: JsonValue
 }
 
 // ============================================================================

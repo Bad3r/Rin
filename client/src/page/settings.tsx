@@ -1,6 +1,7 @@
 import * as Switch from '@radix-ui/react-switch'
 import { type ChangeEvent, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { JsonValue } from '@rin/api'
 import ReactLoading from '../components/react-loading'
 import Modal from 'react-modal'
 import { Button } from '../components/button.tsx'
@@ -335,7 +336,7 @@ function ItemSwitch({
       setChecked(value)
     }
   }, [config, configKey])
-  function updateConfig(type: 'client' | 'server', key: string, value: unknown) {
+  function updateConfig(type: 'client' | 'server', key: string, value: JsonValue) {
     const checkedValue = checked
     setChecked(!checkedValue)
     setLoading(true)
@@ -418,7 +419,7 @@ function ItemInput({
       setValue(value)
     }
   }, [config, configKey])
-  function updateConfig(type: 'client' | 'server', key: string, value: unknown) {
+  function updateConfig(type: 'client' | 'server', key: string, value: JsonValue) {
     setLoading(true)
     client.config
       .update(type, {
@@ -737,7 +738,7 @@ function AISummarySettings() {
     details?: string
   } | null>(null)
   const { showAlert, AlertUI } = useAlert()
-  const asString = useCallback((value: unknown, fallback = ''): string => {
+  const asString = useCallback((value: JsonValue | undefined, fallback = ''): string => {
     return typeof value === 'string' ? value : fallback
   }, [])
 
@@ -760,11 +761,11 @@ function AISummarySettings() {
     loadConfig()
   }, [asString])
 
-  const updateConfig = async (updates: Record<string, unknown>) => {
+  const updateConfig = async (updates: Record<string, JsonValue | undefined>) => {
     setLoading(true)
     try {
       // Convert nested updates to flat keys
-      const flatUpdates: Record<string, unknown> = {}
+      const flatUpdates: Record<string, JsonValue | undefined> = {}
       if (updates.enabled !== undefined) flatUpdates['ai_summary.enabled'] = String(updates.enabled)
       if (updates.provider !== undefined) flatUpdates['ai_summary.provider'] = updates.provider
       if (updates.model !== undefined) flatUpdates['ai_summary.model'] = updates.model

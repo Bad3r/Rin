@@ -15,6 +15,9 @@ describe('UserService', () => {
   let api: ReturnType<typeof createTestClient>
 
   const messageOf = (value: unknown): string | undefined => {
+    if (typeof value === 'string') {
+      return value
+    }
     if (!value || typeof value !== 'object') {
       return undefined
     }

@@ -56,6 +56,47 @@ const AVATAR = env('AVATAR', '')
 const PAGE_SIZE = env('PAGE_SIZE', '5')
 const RSS_ENABLE = env('RSS_ENABLE', 'false')
 
+type ShellProcessError = {
+  stdio?: string | Uint8Array | null
+  stdout?: string | Uint8Array | null
+  stderr?: string | Uint8Array | null
+}
+
+function toOptionalText(value: unknown): string | null {
+  if (typeof value === 'string') {
+    return value
+  }
+  if (value instanceof Uint8Array) {
+    return new TextDecoder().decode(value)
+  }
+  return null
+}
+
+function logShellProcessError(error: unknown): void {
+  if (typeof error === 'object' && error !== null) {
+    const shellError = error as ShellProcessError
+    const stdio = toOptionalText(shellError.stdio)
+    const stdout = toOptionalText(shellError.stdout)
+    const stderr = toOptionalText(shellError.stderr)
+
+    if (stdio) {
+      console.error(stdio)
+    }
+    if (stdout) {
+      console.error(stdout)
+    }
+    if (stderr) {
+      console.error(stderr)
+    }
+  }
+
+  if (error instanceof Error) {
+    console.error(error.message)
+  } else if (typeof error === 'string') {
+    console.error(error)
+  }
+}
+
 // Debug: Log environment variables
 console.log('Environment variables:')
 console.log(`  NAME: ${NAME}`)
@@ -255,10 +296,7 @@ mode = "smart"
       }
     }
   } catch (e: unknown) {
-    const error = e as { stdio?: unknown; stdout?: unknown; stderr?: unknown }
-    console.error(String(error.stdio ?? ''))
-    console.error(String(error.stdout ?? ''))
-    console.error(String(error.stderr ?? ''))
+    logShellProcessError(e)
     process.exit(1)
   }
 
@@ -353,7 +391,7 @@ function parseWranglerIPs(stdout: string): string[] {
   try {
     const json = JSON.parse(stdout)
     if (json.results) {
-      const rows = json.results as Array<{ ip?: unknown }>
+      const rows = json.results as Array<{ ip?: string | null }>
       return rows.map(row => row.ip).filter((ip): ip is string => typeof ip === 'string' && ip.length > 0)
     }
   } catch (_e) {

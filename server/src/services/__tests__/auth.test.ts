@@ -21,6 +21,9 @@ describe('PasswordAuthService', () => {
   }
 
   const messageOf = (value: unknown): string | undefined => {
+    if (typeof value === 'string') {
+      return value
+    }
     if (!value || typeof value !== 'object') {
       return undefined
     }
