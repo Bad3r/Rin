@@ -25,12 +25,12 @@ textarea:focus {
 }
 
 .wmde-markdown {
-  @apply bg-w;
+  @apply bg-white dark:bg-dark;
   font-family: Cantarell, "Source Han Serif CN VF", serif;
 }
 
 .w-md-editor {
-  @apply bg-w;
+  @apply bg-white dark:bg-dark;
 }
 
 .wmde-markdown img {
@@ -53,7 +53,7 @@ ul {
 }
 
 .wmde-markdown code {
-  @apply text-theme bg-secondary;
+  @apply text-theme bg-neutral-100 dark:bg-neutral-700;
 }
 
 .markdown-alert {
@@ -85,7 +85,7 @@ ul {
 }
 
 .p-inputtext {
-  @apply bg-secondary text-end px-2 py-2;
+  @apply bg-neutral-100 dark:bg-neutral-700 text-end px-2 py-2;
 }
 
 .octicon {
