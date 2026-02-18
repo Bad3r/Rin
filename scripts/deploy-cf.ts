@@ -5,6 +5,8 @@ import stripIndent from 'strip-indent'
 import { fixTopField, getMigrationVersion, isInfoExist, updateMigrationVersion } from './db-fix-top-field'
 import { isKnownTopColumnCatchUpCase } from './migration-utils'
 
+process.env.WRANGLER_SEND_METRICS ??= 'false'
+
 function env(name: string, defaultValue?: string, required = false) {
   const env = process.env
   const value = env[name] || defaultValue
@@ -193,6 +195,7 @@ async function deploy(): Promise<string> {
 name = ${toTomlString(WORKER_NAME)}
 main = ${toTomlString(serverMain)}
 compatibility_date = ${toTomlString('2026-01-20')}
+send_metrics = false
 
 [assets]
 directory = ${toTomlString('./dist/client')}

@@ -17,6 +17,9 @@ import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { $ } from 'bun'
 
+process.env.WRANGLER_SEND_METRICS ??= 'false'
+process.env.TURBO_TELEMETRY_DISABLED ??= '1'
+
 // Colors for terminal output
 const colors = {
   reset: '\x1b[0m',

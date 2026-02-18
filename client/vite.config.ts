@@ -1,10 +1,20 @@
+import path from 'node:path'
 import react from '@vitejs/plugin-react-swc'
+import { codecovVitePlugin } from '@codecov/vite-plugin'
 import { visualizer } from 'rollup-plugin-visualizer'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const isDev = mode === 'development'
+  const isAnalyze = mode === 'analyze'
+  const shouldEnableVisualizer = isAnalyze || process.env.VISUALIZER_OPEN === 'true'
+  const shouldOpenVisualizer = process.env.VISUALIZER_OPEN === 'true' && process.env.CI !== 'true'
+  // Intentionally load only CODECOV_* keys for build-time plugin upload auth.
+  // This token is consumed by Vite in Node at build time, not exposed at runtime.
+  // In this monorepo, local secrets are typically kept at repo-root .env.local.
+  const projectEnv = loadEnv(mode, process.cwd(), 'CODECOV_')
+  const repoEnv = loadEnv(mode, path.resolve(process.cwd(), '..'), 'CODECOV_')
+  const codecovToken = projectEnv.CODECOV_TOKEN || repoEnv.CODECOV_TOKEN || process.env.CODECOV_TOKEN
 
   return {
     // Note: Client configuration is fetched from server at runtime
@@ -46,8 +56,15 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
-      // Only open visualizer in build mode
-      visualizer({ open: !isDev }),
+      // Keep visualizer out of normal builds/tests; enable for analyze or explicit opt-in.
+      ...(shouldEnableVisualizer ? [visualizer({ open: shouldOpenVisualizer, filename: 'stats.html' })] : []),
+      // Keep Codecov plugin at the end of the plugin array.
+      codecovVitePlugin({
+        enableBundleAnalysis: Boolean(codecovToken),
+        bundleName: 'rin-client',
+        uploadToken: codecovToken,
+        telemetry: false,
+      }),
     ],
     // Vitest configuration
     test: {
