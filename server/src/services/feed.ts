@@ -684,7 +684,7 @@ export function FeedService(router: Router): void {
 
       const xml = await data.text()
       const parser = new XMLParser()
-      const result = await parser.parse(xml)
+      const result = parser.parse(xml)
       const parsed = result as { rss?: { channel?: { item?: WordPressItem[] | WordPressItem } } }
       const itemsRaw = parsed.rss?.channel?.item
       const items = Array.isArray(itemsRaw) ? itemsRaw : itemsRaw ? [itemsRaw] : []

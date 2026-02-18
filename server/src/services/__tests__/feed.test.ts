@@ -360,4 +360,50 @@ describe('FeedService', () => {
       expect(result.error?.status).toBe(404)
     })
   })
+
+  describe('POST /wp - WordPress import', () => {
+    it('imports a single-item export where channel.item is an object', async () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+  xmlns:content="http://purl.org/rss/1.0/modules/content/"
+  xmlns:wp="http://wordpress.org/export/1.2/">
+  <channel>
+    <item>
+      <title>Imported Single Item</title>
+      <content:encoded><![CDATA[Imported content]]></content:encoded>
+      <wp:status>publish</wp:status>
+      <wp:post_date>2024-01-01 00:00:00</wp:post_date>
+      <wp:post_modified>2024-01-02 00:00:00</wp:post_modified>
+    </item>
+  </channel>
+</rss>`
+
+      const formData = new FormData()
+      formData.append('data', new File([xml], 'export.xml', { type: 'text/xml' }))
+
+      const result = await api.post<{
+        success: number
+        skipped: number
+        skippedList: Array<{ title: string; reason: string }>
+      }>('/wp', formData, { token: 'mock_token_1' })
+
+      expect(result.error).toBeUndefined()
+      expect(result.data?.success).toBe(1)
+      expect(result.data?.skipped).toBe(0)
+
+      const row = sqlite
+        .query('SELECT title, content, uid, draft FROM feeds WHERE title = ?')
+        .get('Imported Single Item') as {
+        title: string
+        content: string
+        uid: number
+        draft: number
+      } | null
+      expect(row).not.toBeNull()
+      expect(row?.uid).toBe(1)
+      expect(row?.draft).toBe(0)
+      expect(typeof row?.content).toBe('string')
+      expect((row?.content || '').length).toBeGreaterThan(0)
+    })
+  })
 })
