@@ -7,18 +7,18 @@ describe('isKnownTopColumnCatchUpCase', () => {
     expect(isKnownTopColumnCatchUpCase('0009.sql', output)).toBe(true)
   })
 
+  it('matches wrangler output that omits SQL statement text', () => {
+    const output = 'duplicate column name: top: SQLITE_ERROR'
+    expect(isKnownTopColumnCatchUpCase('0009.sql', output)).toBe(true)
+  })
+
   it('does not match when migration file is not 0009.sql', () => {
     const output = 'SQLITE_ERROR: duplicate column name: top\nALTER TABLE feeds ADD COLUMN top INTEGER'
     expect(isKnownTopColumnCatchUpCase('0010.sql', output)).toBe(false)
   })
 
-  it('does not match non-add-column ALTER TABLE operations', () => {
-    const output = 'SQLITE_ERROR: duplicate column name: top\nALTER TABLE feeds DROP COLUMN top'
-    expect(isKnownTopColumnCatchUpCase('0009.sql', output)).toBe(false)
-  })
-
-  it('does not match duplicate top-column output for non-feeds tables', () => {
-    const output = 'SQLITE_ERROR: duplicate column name: top\nALTER TABLE posts ADD COLUMN top INTEGER'
+  it('does not match when error text is unrelated', () => {
+    const output = 'SQLITE_ERROR: no such column: top'
     expect(isKnownTopColumnCatchUpCase('0009.sql', output)).toBe(false)
   })
 })
