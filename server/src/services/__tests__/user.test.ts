@@ -50,7 +50,7 @@ describe('UserService', () => {
       authorize: async (_provider: string, code: string) =>
         code === 'valid_code' ? { accessToken: 'gh_token' } : null,
     })
-    app.state('anyUser', async () => false)
+    app.state('anyUser', async (_db: DB) => false)
 
     // Initialize service
     UserService(app)

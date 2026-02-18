@@ -51,7 +51,7 @@ describe('PasswordAuthService', () => {
         return match ? { id: parseInt(match[1], 10) } : null
       },
     })
-    app.state('anyUser', async () => false)
+    app.state('anyUser', async (_db: DB) => false)
 
     // Initialize service
     PasswordAuthService(app)
