@@ -1,7 +1,7 @@
 import type { Router } from '../core/router'
 import type { Context } from '../core/types'
 import { testAIModel } from '../utils/ai'
-import { getAIConfig, getAIConfigForFrontend, setAIConfig } from '../utils/db-config'
+import { getAIConfig, getAIConfigForFrontend, setAIConfig, type AIConfig } from '../utils/db-config'
 
 // Sensitive fields that should not be exposed to frontend
 const SENSITIVE_FIELDS = ['ai_summary.api_key']
@@ -23,8 +23,27 @@ const CLIENT_CONFIG_ENV_DEFAULTS: Record<string, string> = {
   'site.page_size': 'PAGE_SIZE',
 }
 
-function maskSensitiveFields(config: Record<string, any>): Record<string, any> {
-  const result: Record<string, any> = {}
+interface ConfigStoreLike {
+  all(): Promise<Map<string, unknown>>
+  set(key: string, value: unknown, save?: boolean): Promise<void>
+  save(): Promise<void>
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined
+}
+
+function asBoolean(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'string') {
+    if (value === 'true') return true
+    if (value === 'false') return false
+  }
+  return undefined
+}
+
+function maskSensitiveFields(config: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
   for (const key in config) {
     const value = config[key]
     if (SENSITIVE_FIELDS.includes(key) && value) {
@@ -42,9 +61,9 @@ function isAIConfigKey(key: string): boolean {
 }
 
 // Get client config with environment variable defaults
-async function getClientConfigWithDefaults(clientConfig: any, env: Env): Promise<Record<string, any>> {
+async function getClientConfigWithDefaults(clientConfig: ConfigStoreLike, env: Env): Promise<Record<string, unknown>> {
   const all = await clientConfig.all()
-  const result: Record<string, any> = Object.fromEntries(all)
+  const result: Record<string, unknown> = Object.fromEntries(all)
 
   // Apply environment variable defaults for unset configs
   for (const [configKey, envKey] of Object.entries(CLIENT_CONFIG_ENV_DEFAULTS)) {
@@ -77,6 +96,7 @@ export function ConfigService(router: Router): void {
           body,
           store: { db, env },
         } = ctx
+        const requestBody = body as Record<string, unknown>
 
         if (!admin) {
           set.status = 401
@@ -88,14 +108,15 @@ export function ConfigService(router: Router): void {
 
         // Build test config with overrides
         const testConfig = {
-          provider: body.provider || config.provider,
-          model: body.model || config.model,
-          api_url: body.api_url !== undefined ? body.api_url : config.api_url,
-          api_key: body.api_key !== undefined ? body.api_key : config.api_key,
+          provider: asString(requestBody.provider) || config.provider,
+          model: asString(requestBody.model) || config.model,
+          api_url: requestBody.api_url !== undefined ? asString(requestBody.api_url) || '' : config.api_url,
+          api_key: requestBody.api_key !== undefined ? asString(requestBody.api_key) || '' : config.api_key,
         }
 
         // Test prompt
-        const testPrompt = body.testPrompt || 'Hello! This is a test message. Please respond with a simple greeting.'
+        const testPrompt =
+          asString(requestBody.testPrompt) || 'Hello! This is a test message. Please respond with a simple greeting.'
 
         // Use unified test function
         return await testAIModel(env, testConfig, testPrompt)
@@ -168,6 +189,7 @@ export function ConfigService(router: Router): void {
           params,
           store: { db, serverConfig, clientConfig },
         } = ctx
+        const requestBody = body as Record<string, unknown>
         const { type } = params
 
         if (type !== 'server' && type !== 'client') {
@@ -181,21 +203,48 @@ export function ConfigService(router: Router): void {
         }
 
         // Separate AI config from regular config
-        const regularConfig: Record<string, any> = {}
-        const aiConfigUpdates: Record<string, any> = {}
+        const regularConfig: Record<string, unknown> = {}
+        const aiConfigUpdates: Partial<AIConfig> = {}
 
-        for (const key in body) {
+        for (const key in requestBody) {
+          const value = requestBody[key]
           if (isAIConfigKey(key)) {
             // Convert flat key to nested key for AI config
             const nestedKey = key.replace('ai_summary.', '')
-            aiConfigUpdates[nestedKey] = body[key]
+            if (nestedKey === 'enabled') {
+              const enabled = asBoolean(value)
+              if (enabled !== undefined) {
+                aiConfigUpdates.enabled = enabled
+              }
+            } else if (nestedKey === 'provider') {
+              const provider = asString(value)
+              if (provider !== undefined) {
+                aiConfigUpdates.provider = provider
+              }
+            } else if (nestedKey === 'model') {
+              const model = asString(value)
+              if (model !== undefined) {
+                aiConfigUpdates.model = model
+              }
+            } else if (nestedKey === 'api_key') {
+              const apiKey = asString(value)
+              if (apiKey !== undefined) {
+                aiConfigUpdates.api_key = apiKey
+              }
+            } else if (nestedKey === 'api_url') {
+              const apiUrl = asString(value)
+              if (apiUrl !== undefined) {
+                aiConfigUpdates.api_url = apiUrl
+              }
+            }
           } else {
-            regularConfig[key] = body[key]
+            regularConfig[key] = value
           }
         }
 
         // Save regular config
-        const config = type === 'server' ? serverConfig : clientConfig
+        const config: ConfigStoreLike =
+          type === 'server' ? (serverConfig as ConfigStoreLike) : (clientConfig as ConfigStoreLike)
         for (const key in regularConfig) {
           await config.set(key, regularConfig[key], false)
         }

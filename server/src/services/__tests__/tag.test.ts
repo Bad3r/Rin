@@ -2,17 +2,19 @@ import type { Database } from 'bun:sqlite'
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { cleanupTestDB, createMockDB, createMockEnv, seedTestData } from '../../../tests/fixtures'
 import { createBaseApp } from '../../core/base'
+import type { Router } from '../../core/router'
+import type { DB } from '../../server'
 import { bindTagToPost, TagService } from '../tag'
 
 describe('TagService', () => {
-  let db: any
+  let db: DB
   let sqlite: Database
   let env: Env
-  let app: any
+  let app: Router
 
   beforeEach(async () => {
     const mockDB = createMockDB()
-    db = mockDB.db
+    db = mockDB.db as unknown as DB
     sqlite = mockDB.sqlite
     env = createMockEnv()
 
@@ -20,7 +22,7 @@ describe('TagService', () => {
     app = createBaseApp(env)
     app.state('db', db)
     app.state('jwt', {
-      sign: async (payload: any) => `mock_token_${payload.id}`,
+      sign: async (payload: Record<string, unknown>) => `mock_token_${String(payload.id ?? '')}`,
       verify: async (token: string) => {
         const match = token.match(/mock_token_(\d+)/)
         return match ? { id: parseInt(match[1], 10) } : null
@@ -44,17 +46,25 @@ describe('TagService', () => {
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
-      const data = await response.json()
+      const data = (await response.json()) as Array<{ name: string; count: number; feeds?: unknown }>
       expect(data).toBeArray()
       expect(data.length).toBe(2)
 
-      const testTag = data.find((t: any) => t.name === 'test')
+      const testTag = data.find(t => t.name === 'test')
       expect(testTag).toBeDefined()
-      expect(testTag.feeds).toBe(2) // test has 2 feeds
+      if (!testTag) {
+        throw new Error('missing test tag')
+      }
+      expect(testTag.count).toBe(2) // test has 2 feeds
+      expect(testTag.feeds).toBeUndefined()
 
-      const integrationTag = data.find((t: any) => t.name === 'integration')
+      const integrationTag = data.find(t => t.name === 'integration')
       expect(integrationTag).toBeDefined()
-      expect(integrationTag.feeds).toBe(1) // integration has 1 feed
+      if (!integrationTag) {
+        throw new Error('missing integration tag')
+      }
+      expect(integrationTag.count).toBe(1) // integration has 1 feed
+      expect(integrationTag.feeds).toBeUndefined()
     })
 
     it('should return empty array when no tags exist', async () => {
@@ -77,7 +87,7 @@ describe('TagService', () => {
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
-      const data = await response.json()
+      const data = (await response.json()) as { name: string; feeds: Array<{ draft: number; hashtags: unknown[] }> }
       expect(data.name).toBe('test')
       expect(data.feeds).toBeArray()
       expect(data.feeds.length).toBe(2)
@@ -92,7 +102,7 @@ describe('TagService', () => {
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
-      const data = await response.json()
+      const data = (await response.json()) as { name: string }
       expect(data.name).toBe('web dev')
     })
 
@@ -114,9 +124,9 @@ describe('TagService', () => {
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
-      const data = await response.json()
+      const data = (await response.json()) as { feeds: Array<{ draft: number }> }
       // Should only show published feeds, not draft
-      expect(data.feeds.every((f: any) => f.draft !== 1)).toBe(true)
+      expect(data.feeds.every(f => f.draft !== 1)).toBe(true)
 
       // Cleanup
       sqlite.exec(`DELETE FROM feed_hashtags WHERE feed_id = 3`)
@@ -135,7 +145,7 @@ describe('TagService', () => {
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
-      const data = await response.json()
+      const data = (await response.json()) as { feeds: unknown[] }
       // Should show all feeds including draft (2 published + 1 draft = 3)
       expect(data.feeds.length).toBe(3)
 
@@ -149,7 +159,7 @@ describe('TagService', () => {
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
-      const data = await response.json()
+      const data = (await response.json()) as { feeds: Array<{ hashtags: unknown[] }> }
       expect(data.feeds.length).toBeGreaterThan(0)
       expect(data.feeds[0].hashtags).toBeArray()
     })
@@ -199,7 +209,7 @@ describe('TagService', () => {
             `)
         .all()
 
-      const tagNames = result.map((r: any) => r.name)
+      const tagNames = (result as Array<{ name: string }>).map(r => r.name)
       expect(tagNames).not.toContain('tag1')
       expect(tagNames).not.toContain('tag2')
       expect(tagNames).toContain('tag3')
@@ -210,7 +220,7 @@ describe('TagService', () => {
       await bindTagToPost(db, 1, ['reusable'])
 
       // Get the tag id
-      const tagResult = sqlite.prepare(`SELECT id FROM hashtags WHERE name = 'reusable'`).all() as any[]
+      const tagResult = sqlite.prepare(`SELECT id FROM hashtags WHERE name = 'reusable'`).all() as Array<{ id: number }>
       const tagId = tagResult[0]?.id
 
       // Second call should reuse the same tag
@@ -220,7 +230,7 @@ describe('TagService', () => {
         .prepare(`
                 SELECT hashtag_id FROM feed_hashtags WHERE feed_id = 2
             `)
-        .all() as any[]
+        .all() as Array<{ hashtag_id: number }>
 
       expect(feed2Tags[0]?.hashtag_id).toBe(tagId)
     })
@@ -237,7 +247,7 @@ describe('TagService', () => {
         .prepare(`
                 SELECT COUNT(*) as count FROM feed_hashtags WHERE feed_id = 1
             `)
-        .all() as any[]
+        .all() as Array<{ count: number }>
 
       expect(result[0]?.count).toBe(0)
     })

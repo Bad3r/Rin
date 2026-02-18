@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { info } from '../db/schema'
+import type { DB } from '../server'
 
 /**
  * Database-backed configuration storage for sensitive data like API keys
@@ -28,7 +29,7 @@ const defaultAIConfig: AIConfig = {
 /**
  * Get a configuration value from the database
  */
-export async function getDBConfig(db: any, key: string): Promise<string | null> {
+export async function getDBConfig(db: DB, key: string): Promise<string | null> {
   const result = await db.select().from(info).where(eq(info.key, key)).get()
   return result?.value ?? null
 }
@@ -36,7 +37,7 @@ export async function getDBConfig(db: any, key: string): Promise<string | null> 
 /**
  * Set a configuration value in the database (upsert)
  */
-export async function setDBConfig(db: any, key: string, value: string): Promise<void> {
+export async function setDBConfig(db: DB, key: string, value: string): Promise<void> {
   // Use SQLite's INSERT OR REPLACE to handle upsert
   await db.insert(info).values({ key, value }).onConflictDoUpdate({
     target: info.key,
@@ -47,7 +48,7 @@ export async function setDBConfig(db: any, key: string, value: string): Promise<
 /**
  * Get AI configuration from database
  */
-export async function getAIConfig(db: any): Promise<AIConfig> {
+export async function getAIConfig(db: DB): Promise<AIConfig> {
   const config: AIConfig = { ...defaultAIConfig }
 
   const enabled = await getDBConfig(db, `${AI_CONFIG_PREFIX}enabled`)
@@ -71,7 +72,7 @@ export async function getAIConfig(db: any): Promise<AIConfig> {
 /**
  * Set AI configuration in database
  */
-export async function setAIConfig(db: any, updates: Partial<AIConfig>): Promise<void> {
+export async function setAIConfig(db: DB, updates: Partial<AIConfig>): Promise<void> {
   if (updates.enabled !== undefined) {
     await setDBConfig(db, `${AI_CONFIG_PREFIX}enabled`, String(updates.enabled))
   }
@@ -93,7 +94,7 @@ export async function setAIConfig(db: any, updates: Partial<AIConfig>): Promise<
 /**
  * Get AI config for frontend (with masked API key)
  */
-export async function getAIConfigForFrontend(db: any): Promise<AIConfig & { api_key_set: boolean }> {
+export async function getAIConfigForFrontend(db: DB): Promise<AIConfig & { api_key_set: boolean }> {
   const config = await getAIConfig(db)
   return {
     ...config,

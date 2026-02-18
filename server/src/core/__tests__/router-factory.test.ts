@@ -30,7 +30,7 @@ describe('resolveRouterImpl', () => {
   })
 
   it('falls back to hono and warns on invalid values', () => {
-    expect(resolveRouterImpl({ ROUTER_IMPL: 'invalid' as any })).toBe('hono')
+    expect(resolveRouterImpl({ ROUTER_IMPL: 'invalid' as never })).toBe('hono')
     expect(warnings.length).toBe(1)
     expect(warnings[0]).toContain('Invalid ROUTER_IMPL "invalid"')
     expect(warnings[0]).toContain('falling back to hono')

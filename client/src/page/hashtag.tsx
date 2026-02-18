@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { TagDetail } from '@rin/api'
 import { Helmet } from '../components/helmet'
 import { useTranslation } from 'react-i18next'
 import { FeedCard } from '../components/feed_card'
@@ -7,43 +8,17 @@ import { useSiteConfig } from '../hooks/useSiteConfig'
 import { client } from '../main'
 import { siteName } from '../utils/constants'
 
-type FeedsData = {
-  name: string
-  id: number
-  createdAt: Date
-  updatedAt: Date
-  feeds:
-    | {
-        hashtags: {
-          name: string
-          id: number
-        }[]
-        id: number
-        title: string | null
-        summary: string
-        content: string
-        createdAt: Date
-        updatedAt: Date
-        user: {
-          id: number
-          username: string
-          avatar: string | null
-        }
-      }[]
-    | undefined
-}
-
 export function HashtagPage({ name }: { name: string }) {
   const { t } = useTranslation()
   const siteConfig = useSiteConfig()
   const [status, setStatus] = useState<'loading' | 'idle'>('idle')
-  const [hashtag, setHashtag] = useState<FeedsData>()
+  const [hashtag, setHashtag] = useState<TagDetail>()
   const ref = useRef('')
   const fetchFeeds = useCallback(() => {
     const nameDecoded = decodeURI(name)
     client.tag.get(nameDecoded).then(({ data }) => {
       if (data) {
-        setHashtag(data as any)
+        setHashtag(data)
         setStatus('idle')
       }
     })
@@ -76,9 +51,10 @@ export function HashtagPage({ name }: { name: string }) {
           </div>
           <Waiting for={status === 'idle'}>
             <div className='wauto flex flex-col'>
-              {hashtag?.feeds?.map(({ id, ...feed }: any) => (
-                <FeedCard key={id} id={id} {...feed} />
-              ))}
+              {hashtag?.feeds?.map(feedItem => {
+                const { id, ...feed } = feedItem
+                return <FeedCard key={id} id={`${id}`} {...feed} />
+              })}
             </div>
           </Waiting>
         </main>

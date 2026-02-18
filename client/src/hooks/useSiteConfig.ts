@@ -22,15 +22,15 @@ export function useSiteConfig() {
 }
 
 // Hook to get a specific site config value
-export function useSiteConfigValue<K extends keyof typeof SITE_CONFIG_KEYS>(
-  key: K
-): (typeof SITE_CONFIG_KEYS)[K] extends 'site.page_size' ? number : string {
+export function useSiteConfigValue(key: 'pageSize'): number
+export function useSiteConfigValue(key: Exclude<keyof typeof SITE_CONFIG_KEYS, 'pageSize'>): string
+export function useSiteConfigValue(key: keyof typeof SITE_CONFIG_KEYS): number | string {
   const config = useContext(ClientConfigContext)
   const configKey = SITE_CONFIG_KEYS[key]
 
   if (key === 'pageSize') {
-    return (config.get<number>(configKey) || 5) as any
+    return config.get<number>(configKey) || 5
   }
 
-  return (config.get<string>(configKey) || '') as any
+  return config.get<string>(configKey) || ''
 }

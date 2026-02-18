@@ -20,6 +20,8 @@ import type {
   LoginRequest,
   LoginResponse,
   Moment,
+  JsonPrimitive,
+  JsonValue,
   RequestOptions,
   Tag,
   TagDetail,
@@ -52,6 +54,8 @@ export type {
   LoginRequest,
   LoginResponse,
   Moment,
+  JsonPrimitive,
+  JsonValue,
   RequestOptions,
   Tag,
   TagDetail,
@@ -66,13 +70,21 @@ export type {
 /**
  * HTTP client for making API requests
  */
+type ErrorPayload =
+  | string
+  | {
+      error?: { message?: string } | string
+      message?: string
+    }
+type RequestBody = JsonValue | JsonPrimitive | JsonValue[] | object | FormData
+
 class HttpClient {
   constructor(private baseUrl: string) {}
 
   private async request<T>(
     method: string,
     path: string,
-    body?: unknown,
+    body?: RequestBody,
     options?: RequestOptions
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${path}`
@@ -105,9 +117,9 @@ class HttpClient {
       }
 
       if (!response.ok) {
-        let errorValue: unknown
+        let errorValue: ErrorPayload
         try {
-          errorValue = await response.json()
+          errorValue = (await response.json()) as ErrorPayload
         } catch {
           errorValue = await response.text()
         }
@@ -115,11 +127,13 @@ class HttpClient {
         let errorMessage: string
         if (typeof errorValue === 'string') {
           errorMessage = errorValue
-        } else if (errorValue && typeof errorValue === 'object') {
-          // Handle { error: { message: string } } format
-          const err = errorValue as any
-          errorMessage = err.error?.message || err.message || err.error || JSON.stringify(errorValue)
         } else {
+          const nestedMessage =
+            typeof errorValue.error === 'object' && errorValue.error ? errorValue.error.message : undefined
+          const inlineError = typeof errorValue.error === 'string' ? errorValue.error : undefined
+          errorMessage = nestedMessage || errorValue.message || inlineError || JSON.stringify(errorValue)
+        }
+        if (errorMessage === '') {
           errorMessage = String(errorValue ?? response.statusText)
         }
         return {
@@ -159,15 +173,15 @@ class HttpClient {
     return this.request<T>('GET', path, undefined, options)
   }
 
-  async post<T>(path: string, body?: unknown, options?: RequestOptions): Promise<ApiResponse<T>> {
+  async post<T>(path: string, body?: RequestBody, options?: RequestOptions): Promise<ApiResponse<T>> {
     return this.request<T>('POST', path, body, options)
   }
 
-  async put<T>(path: string, body?: unknown, options?: RequestOptions): Promise<ApiResponse<T>> {
+  async put<T>(path: string, body?: RequestBody, options?: RequestOptions): Promise<ApiResponse<T>> {
     return this.request<T>('PUT', path, body, options)
   }
 
-  async patch<T>(path: string, body?: unknown, options?: RequestOptions): Promise<ApiResponse<T>> {
+  async patch<T>(path: string, body?: RequestBody, options?: RequestOptions): Promise<ApiResponse<T>> {
     return this.request<T>('PATCH', path, body, options)
   }
 
@@ -370,7 +384,7 @@ class ConfigAPI {
   }
 
   // POST /api/config/:type
-  async update(type: ConfigType, body: Record<string, unknown>): Promise<ApiResponse<void>> {
+  async update<TBody extends object>(type: ConfigType, body: TBody): Promise<ApiResponse<void>> {
     return this.http.post<void>(`/api/config/${type}`, body)
   }
 
@@ -396,7 +410,14 @@ class ConfigAPI {
       model?: string
     }>
   > {
-    return this.http.post<any>('/api/config/test-ai', body)
+    return this.http.post<{
+      success: boolean
+      response?: string
+      error?: string
+      details?: string
+      provider?: string
+      model?: string
+    }>('/api/config/test-ai', body)
   }
 }
 
@@ -496,9 +517,9 @@ class RSSAPI {
   }
 
   // GET /rss.json
-  async getJSON(): Promise<unknown> {
+  async getJSON(): Promise<JsonValue> {
     const response = await fetch(`${this.baseUrl}/rss.json`)
-    return response.json()
+    return (await response.json()) as JsonValue
   }
 }
 

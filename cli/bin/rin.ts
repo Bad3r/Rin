@@ -69,7 +69,13 @@ async function _loadEnv(): Promise<Record<string, string>> {
 function checkPort(port: number): Promise<boolean> {
   return new Promise(resolve => {
     const server = net.createServer()
-    server.once('error', (err: any) => resolve(err.code !== 'EADDRINUSE'))
+    server.once('error', (err: unknown) => {
+      if (err && typeof err === 'object' && 'code' in err) {
+        resolve(err.code !== 'EADDRINUSE')
+        return
+      }
+      resolve(true)
+    })
     server.once('listening', () => {
       server.close()
       resolve(true)
@@ -366,10 +372,15 @@ Architecture:
         console.log('Run "rin --help" for available commands')
         process.exit(1)
     }
-  } catch (error: any) {
-    logger.error(error.message || error)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    logger.error(message)
     if (args.includes('-d') || args.includes('--debug')) {
-      console.error(error.stack)
+      if (error instanceof Error) {
+        console.error(error.stack)
+      } else {
+        console.error(error)
+      }
     }
     process.exit(1)
   }

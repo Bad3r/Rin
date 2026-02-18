@@ -31,7 +31,13 @@ i18n
       escapeValue: false, // react already safes from xss => https://www.i18next.com/translation-function/interpolation#unescape
     },
   })
-ReactDOM.createRoot(document.getElementById('root')!).render(
+
+const rootElement = document.getElementById('root')
+if (!rootElement) {
+  throw new Error('Missing #root element')
+}
+
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <GlobalErrorBoundary>
       <App />

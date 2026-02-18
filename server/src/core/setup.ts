@@ -22,9 +22,21 @@ export async function deriveAuth(context: Context): Promise<void> {
     return
   }
 
+  const profileIdRaw = profile.id
+  const profileId =
+    typeof profileIdRaw === 'number'
+      ? profileIdRaw
+      : typeof profileIdRaw === 'string'
+        ? Number.parseInt(profileIdRaw, 10)
+        : NaN
+
+  if (!Number.isFinite(profileId)) {
+    return
+  }
+
   const { users } = await import('../db/schema')
   const user = await store.db.query.users.findFirst({
-    where: eq(users.id, profile.id),
+    where: eq(users.id, profileId),
   })
 
   if (!user) {

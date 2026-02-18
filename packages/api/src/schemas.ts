@@ -76,10 +76,10 @@ export const friendCreateSchema = t.Object({
 })
 
 export const friendUpdateSchema = t.Object({
-  name: t.String(),
-  desc: t.String(),
+  name: t.String({ optional: true }),
+  desc: t.String({ optional: true }),
   avatar: t.String({ optional: true }),
-  url: t.String(),
+  url: t.String({ optional: true }),
   accepted: t.Numeric({ optional: true }),
   sort_order: t.Numeric({ optional: true }),
 })

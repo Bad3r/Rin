@@ -2,10 +2,22 @@ import { generateRequestId, handleError } from './error-handler'
 import { Router } from './router-contract'
 import type { Context, Handler, Middleware, RouteDefinition } from './types'
 
+type ParsedQueryValue = string | string[]
+
+interface SchemaPropertyDefinition {
+  type?: 'string' | 'number' | 'boolean' | 'array'
+  optional?: boolean
+}
+
+interface ValidationSchema {
+  type?: string
+  properties?: Record<string, SchemaPropertyDefinition>
+}
+
 export class LegacyRouterAdapter extends Router {
   private routes: Map<string, RouteDefinition[]> = new Map()
   private middlewares: Middleware[] = []
-  private appState: Map<string, any> = new Map()
+  private appState: Map<string, unknown> = new Map()
 
   use(middleware: Middleware): this {
     this.middlewares.push(middleware)
@@ -14,15 +26,15 @@ export class LegacyRouterAdapter extends Router {
 
   state<T>(key: string, value: T): this
   state<T>(key: string): T | undefined
-  state<T>(key: string, value?: T): this | T | undefined {
-    if (arguments.length === 2) {
-      this.appState.set(key, value!)
+  state<T>(key: string, ...rest: [] | [T]): this | T | undefined {
+    if (rest.length === 1) {
+      this.appState.set(key, rest[0])
       return this
     }
-    return this.appState.get(key)
+    return this.appState.get(key) as T | undefined
   }
 
-  private addRoute(method: string, path: string, handler: Handler, schema?: any): this {
+  private addRoute(method: string, path: string, handler: Handler, schema?: unknown): this {
     if (!this.routes.has(method)) {
       this.routes.set(method, [])
     }
@@ -30,23 +42,23 @@ export class LegacyRouterAdapter extends Router {
     return this
   }
 
-  get(path: string, handler: Handler, schema?: any): this {
+  get(path: string, handler: Handler, schema?: unknown): this {
     return this.addRoute('GET', path, handler, schema)
   }
 
-  post(path: string, handler: Handler, schema?: any): this {
+  post(path: string, handler: Handler, schema?: unknown): this {
     return this.addRoute('POST', path, handler, schema)
   }
 
-  put(path: string, handler: Handler, schema?: any): this {
+  put(path: string, handler: Handler, schema?: unknown): this {
     return this.addRoute('PUT', path, handler, schema)
   }
 
-  delete(path: string, handler: Handler, schema?: any): this {
+  delete(path: string, handler: Handler, schema?: unknown): this {
     return this.addRoute('DELETE', path, handler, schema)
   }
 
-  patch(path: string, handler: Handler, schema?: any): this {
+  patch(path: string, handler: Handler, schema?: unknown): this {
     return this.addRoute('PATCH', path, handler, schema)
   }
 
@@ -112,8 +124,8 @@ export class LegacyRouterAdapter extends Router {
     return params
   }
 
-  private parseQuery(searchParams: URLSearchParams): Record<string, any> {
-    const query: Record<string, any> = {}
+  private parseQuery(searchParams: URLSearchParams): Record<string, ParsedQueryValue> {
+    const query: Record<string, ParsedQueryValue> = {}
     searchParams.forEach((value, key) => {
       if (key in query) {
         if (Array.isArray(query[key])) {
@@ -128,16 +140,20 @@ export class LegacyRouterAdapter extends Router {
     return query
   }
 
-  private async parseBody(request: Request): Promise<any> {
+  private async parseBody(request: Request): Promise<Record<string, unknown>> {
     const contentType = request.headers.get('content-type') || ''
 
     if (contentType.includes('application/json')) {
-      return await request.json()
+      const jsonBody = await request.json()
+      if (jsonBody && typeof jsonBody === 'object') {
+        return jsonBody as Record<string, unknown>
+      }
+      return {}
     }
 
     if (contentType.includes('application/x-www-form-urlencoded')) {
       const formData = await request.formData()
-      const body: Record<string, any> = {}
+      const body: Record<string, FormDataEntryValue> = {}
       formData.forEach((value, key) => {
         body[key] = value
       })
@@ -145,21 +161,29 @@ export class LegacyRouterAdapter extends Router {
     }
 
     if (contentType.includes('multipart/form-data')) {
-      return await request.formData()
+      const formData = await request.formData()
+      const body: Record<string, unknown> = {}
+      formData.forEach((value, key) => {
+        body[key] = value
+      })
+      return body
     }
 
-    return await request.text()
+    return {}
   }
 
-  private validateSchema(schema: any, data: any): { valid: boolean; errors?: string[] } {
-    if (!schema) return { valid: true }
+  private validateSchema(schema: unknown, data: unknown): { valid: boolean; errors?: string[] } {
+    if (!schema || typeof schema !== 'object') return { valid: true }
+
+    const typedSchema = schema as ValidationSchema
 
     // Simple TypeBox-like validation
-    if (schema.type === 'object' && schema.properties) {
+    if (typedSchema.type === 'object' && typedSchema.properties) {
       const errors: string[] = []
-      for (const [key, propSchema] of Object.entries(schema.properties)) {
-        const prop = propSchema as any
-        const value = data?.[key]
+      const dataRecord = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {}
+      for (const [key, propSchema] of Object.entries(typedSchema.properties)) {
+        const prop = propSchema as SchemaPropertyDefinition
+        const value = dataRecord[key]
 
         if (prop.type === 'string' && value !== undefined && typeof value !== 'string') {
           errors.push(`${key} must be a string`)
@@ -191,15 +215,15 @@ export class LegacyRouterAdapter extends Router {
       params,
       query: this.parseQuery(url.searchParams),
       headers: {},
-      body: null,
-      store: Object.fromEntries(this.appState.entries()),
+      body: {},
+      store: Object.fromEntries(this.appState.entries()) as Context['store'],
       set: {
         status: 200,
         headers: new Headers(),
       },
       cookie: {},
-      jwt: this.appState.get('jwt'),
-      oauth2: this.appState.get('oauth2'),
+      jwt: this.appState.get('jwt') as Context['jwt'],
+      oauth2: this.appState.get('oauth2') as Context['oauth2'],
       uid: undefined,
       admin: false,
       username: undefined,

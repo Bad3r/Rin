@@ -3,18 +3,20 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
 import { createBaseApp } from '../../core/base'
+import type { Router } from '../../core/router'
+import type { DB } from '../../server'
 import { CommentService } from '../comments'
 
 describe('CommentService', () => {
-  let db: any
+  let db: DB
   let sqlite: Database
   let env: Env
-  let app: any
+  let app: Router
   let api: ReturnType<typeof createTestClient>
 
   beforeEach(async () => {
     const mockDB = createMockDB()
-    db = mockDB.db
+    db = mockDB.db as unknown as DB
     sqlite = mockDB.sqlite
     env = createMockEnv()
 
@@ -27,7 +29,7 @@ describe('CommentService', () => {
 
     // Add mock JWT for authentication
     app.state('jwt', {
-      sign: async (payload: any) => `mock_token_${payload.id}`,
+      sign: async (payload: Record<string, unknown>) => `mock_token_${String(payload.id ?? '')}`,
       verify: async (token: string) => {
         const match = token.match(/mock_token_(\d+)/)
         return match ? { id: parseInt(match[1], 10) } : null
@@ -48,7 +50,7 @@ describe('CommentService', () => {
     cleanupTestDB(sqlite)
   })
 
-  async function seedTestData(sqlite: any) {
+  async function seedTestData(sqlite: Database) {
     // Insert test users
     sqlite.exec(`
             INSERT INTO users (id, username, avatar, permission, openid) VALUES 
@@ -202,7 +204,7 @@ describe('CommentService', () => {
       expect(dbResult.length).toBe(0)
     })
 
-    it('should allow admin to delete any comment', async () => {
+    it('should allow admin to delete unknown comment', async () => {
       const result = await api.comment.delete(1, {
         token: 'mock_token_3',
         isAdmin: true,

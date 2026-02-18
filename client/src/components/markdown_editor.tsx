@@ -39,7 +39,7 @@ export function MarkdownEditor({
           onSuccess(data.url)
         }
       })
-      .catch((e: any) => {
+      .catch((e: unknown) => {
         console.error(e)
         showAlert(t('upload.failed'))
       })
@@ -74,12 +74,16 @@ export function MarkdownEditor({
   function UploadImageButton() {
     const uploadRef = useRef<HTMLInputElement>(null)
 
-    const upChange = (event: any) => {
-      for (let i = 0; i < event.currentTarget.files.length; i++) {
-        const file = event.currentTarget.files[i]
+    const upChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = event.currentTarget.files
+      if (!files) {
+        return
+      }
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
         if (file.size > 5 * 1024000) {
           alert('File too large (max 5MB)')
-          uploadRef.current!.value = ''
+          event.currentTarget.value = ''
         } else {
           const editor = editorRef.current
           if (!editor) return

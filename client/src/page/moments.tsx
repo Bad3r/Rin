@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
+import type { Moment } from '@rin/api'
 import { Helmet } from '../components/helmet'
 import { useTranslation } from 'react-i18next'
 import Modal from 'react-modal'
@@ -12,18 +13,6 @@ import { client } from '../main'
 import { ProfileContext } from '../state/profile'
 import { siteName } from '../utils/constants'
 import { tryInt } from '../utils/int'
-
-interface Moment {
-  id: number
-  content: string
-  createdAt: Date
-  updatedAt: Date
-  user: {
-    id: number
-    username: string
-    avatar: string
-  }
-}
 
 export function MomentsPage() {
   const [moments, setMoments] = useState<Moment[]>([])
@@ -68,9 +57,9 @@ export function MomentsPage() {
             setHasNextPage(data.hasNext)
 
             if (append) {
-              setMoments(prev => [...prev, ...data.data] as any)
+              setMoments(prev => [...prev, ...data.data])
             } else {
-              setMoments(data.data as any)
+              setMoments(data.data)
             }
 
             setCurrentPage(page)

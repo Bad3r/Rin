@@ -40,14 +40,14 @@ export interface ErrorLogEntry {
   ip?: string
 }
 
-export class ErrorLogger {
-  private static logs: ErrorLogEntry[] = []
-  private static maxLogs = 100
+const errorLogs: ErrorLogEntry[] = []
+const MAX_ERROR_LOGS = 100
 
-  static log(entry: ErrorLogEntry): void {
-    ErrorLogger.logs.push(entry)
-    if (ErrorLogger.logs.length > ErrorLogger.maxLogs) {
-      ErrorLogger.logs.shift()
+export const ErrorLogger = {
+  log(entry: ErrorLogEntry): void {
+    errorLogs.push(entry)
+    if (errorLogs.length > MAX_ERROR_LOGS) {
+      errorLogs.shift()
     }
 
     // Always log to console in development or for serious errors
@@ -59,15 +59,15 @@ export class ErrorLogger {
         stack: entry.stack,
       })
     }
-  }
+  },
 
-  static getRecentLogs(limit = 50): ErrorLogEntry[] {
-    return ErrorLogger.logs.slice(-limit)
-  }
+  getRecentLogs(limit = 50): ErrorLogEntry[] {
+    return errorLogs.slice(-limit)
+  },
 
-  static clear(): void {
-    ErrorLogger.logs = []
-  }
+  clear(): void {
+    errorLogs.length = 0
+  },
 }
 
 export function handleError(error: unknown, context: Context, requestId: string): Response {
@@ -144,7 +144,7 @@ export function createNotFoundHandler(): Middleware {
 // Async Handler Wrapper for Routes
 // ============================================================================
 
-export type RouteHandler = (context: Context) => Promise<any>
+export type RouteHandler = (context: Context) => Promise<unknown>
 
 export function asyncHandler(handler: RouteHandler): RouteHandler {
   return async (context: Context) => {

@@ -52,8 +52,9 @@ async function saveFile(filename: string, data: string) {
   try {
     await s3.send(new PutObjectCommand({ Bucket: bucket, Key: fileName, Body: data, ContentType: 'text/html' }))
     console.info(`Saved ${accessHost}/${fileName}.`)
-  } catch (e: any) {
-    console.error(e.message)
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e)
+    console.error(message)
   }
 }
 

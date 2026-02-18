@@ -239,10 +239,10 @@ export function createErrorResponse(error: unknown, requestId?: string): ErrorRe
 // Async Handler Wrapper
 // ============================================================================
 
-export type AsyncHandler<T = Response> = (...args: any[]) => Promise<T>
+export type AsyncHandler<T = Response> = (...args: unknown[]) => Promise<T>
 
 export function catchAsync<T>(fn: AsyncHandler<T>): AsyncHandler<T | Response> {
-  return async (...args: any[]) => {
+  return async (...args: unknown[]) => {
     return await fn(...args)
   }
 }

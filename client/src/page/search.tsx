@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { FeedListResponse } from '@rin/api'
 import { Helmet } from '../components/helmet'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearch } from 'wouter'
@@ -9,11 +10,7 @@ import { client } from '../main'
 import { siteName } from '../utils/constants'
 import { tryInt } from '../utils/int'
 
-type FeedsData = {
-  size: number
-  data: any[]
-  hasNext: boolean
-}
+type FeedsData = FeedListResponse
 
 export function SearchPage({ keyword }: { keyword: string }) {
   const { t } = useTranslation()
@@ -61,9 +58,10 @@ export function SearchPage({ keyword }: { keyword: string }) {
           </div>
           <Waiting for={status === 'idle'}>
             <div className='wauto flex flex-col'>
-              {feeds?.data.map(({ id, ...feed }: any) => (
-                <FeedCard key={id} id={id} {...feed} />
-              ))}
+              {feeds?.data.map(feedItem => {
+                const { id, ...feed } = feedItem
+                return <FeedCard key={id} id={`${id}`} {...feed} />
+              })}
             </div>
             <div className='wauto flex flex-row items-center mt-4 ani-show'>
               {page > 1 && (

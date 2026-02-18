@@ -9,7 +9,10 @@
       "!**/.turbo",
       "!**/.wrangler",
       "!**/dist",
-      "!**/node_modules"
+      "!**/coverage",
+      "!**/stats.html",
+      "!**/node_modules",
+      "!server/worker-configuration.d.ts"
     ]
   },
   "formatter": {

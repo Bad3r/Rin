@@ -20,7 +20,7 @@ for (const impl of ROUTER_IMPLS) {
     it('normalizes trailing slash routes (/x == /x/)', async () => {
       app.get('/slash', () => ({ ok: true }))
 
-      const response = await app.handle(new Request('http://localhost/slash/'), env)
+      const response = await app.handle(new Request('https://example.test/slash/'), env)
       expect(response.status).toBe(200)
       const payload = (await response.json()) as { ok: boolean }
       expect(payload).toEqual({ ok: true })
@@ -29,7 +29,7 @@ for (const impl of ROUTER_IMPLS) {
     it('keeps repeated query keys as arrays', async () => {
       app.get('/query', ctx => ctx.query)
 
-      const response = await app.handle(new Request('http://localhost/query?tag=security&tag=edge&limit=5'), env)
+      const response = await app.handle(new Request('https://example.test/query?tag=security&tag=edge&limit=5'), env)
 
       expect(response.status).toBe(200)
       const payload = (await response.json()) as { tag: string[]; limit: string }
@@ -37,6 +37,23 @@ for (const impl of ROUTER_IMPLS) {
         tag: ['security', 'edge'],
         limit: '5',
       })
+    })
+
+    it('keeps unsupported content types as empty object body', async () => {
+      app.post('/body', ctx => ctx.body)
+
+      const response = await app.handle(
+        new Request('https://example.test/body', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: 'plain-text payload',
+        }),
+        env
+      )
+
+      expect(response.status).toBe(200)
+      const payload = (await response.json()) as Record<string, unknown>
+      expect(payload).toEqual({})
     })
 
     it('propagates state mutations made after group registration', async () => {
@@ -47,7 +64,7 @@ for (const impl of ROUTER_IMPLS) {
 
       rawApp.state('routerMode', 'after-group')
 
-      const response = await rawApp.handle(new Request('http://localhost/state/check'), env)
+      const response = await rawApp.handle(new Request('https://example.test/state/check'), env)
       expect(response.status).toBe(200)
       const payload = (await response.json()) as { routerMode: string }
       expect(payload).toEqual({ routerMode: 'after-group' })
@@ -56,14 +73,14 @@ for (const impl of ROUTER_IMPLS) {
     it('decodes encoded path values consistently across adapters', async () => {
       app.get('/tag/:name', ctx => ({ name: ctx.params.name }))
 
-      const response = await app.handle(new Request('http://localhost/tag/hello%20world'), env)
+      const response = await app.handle(new Request('https://example.test/tag/hello%20world'), env)
       expect(response.status).toBe(200)
       const payload = (await response.json()) as { name: string }
       expect(payload).toEqual({ name: 'hello world' })
     })
 
     it('returns router-level OPTIONS preflight with shared CORS header contract', async () => {
-      const response = await app.handle(new Request('http://localhost/unknown', { method: 'OPTIONS' }), env)
+      const response = await app.handle(new Request('https://example.test/unknown', { method: 'OPTIONS' }), env)
 
       expect(response.status).toBe(204)
       expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, PUT, DELETE, PATCH, OPTIONS')
@@ -82,7 +99,7 @@ for (const impl of ROUTER_IMPLS) {
         return undefined
       })
 
-      const response = await rawApp.handle(new Request('http://localhost/unknown', { method: 'OPTIONS' }), env)
+      const response = await rawApp.handle(new Request('https://example.test/unknown', { method: 'OPTIONS' }), env)
 
       expect(response.status).toBe(204)
       expect(response.headers.get('x-preflight-source')).toBe('middleware')
@@ -92,7 +109,7 @@ for (const impl of ROUTER_IMPLS) {
       app.get('/cors', () => ({ ok: true }))
 
       const response = await app.handle(
-        new Request('http://localhost/cors', {
+        new Request('https://example.test/cors', {
           headers: { Origin: 'https://example.com' },
         }),
         env
@@ -105,7 +122,7 @@ for (const impl of ROUTER_IMPLS) {
     })
 
     it('keeps not-found payload shape contract', async () => {
-      const response = await app.handle(new Request('http://localhost/not-found'), env)
+      const response = await app.handle(new Request('https://example.test/not-found'), env)
 
       expect(response.status).toBe(404)
       const payload = (await response.json()) as {

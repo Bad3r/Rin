@@ -53,8 +53,8 @@ function log(label: string, message: string, color: string = colors.reset) {
 function checkPort(port: number): Promise<boolean> {
   return new Promise(resolve => {
     const server = net.createServer()
-    server.once('error', (err: any) => {
-      if (err.code === 'EADDRINUSE') {
+    server.once('error', (err: unknown) => {
+      if (err && typeof err === 'object' && 'code' in err && err.code === 'EADDRINUSE') {
         resolve(false)
       } else {
         resolve(true)

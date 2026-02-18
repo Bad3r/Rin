@@ -1,18 +1,7 @@
+import { asDate, type Moment as ApiMoment } from '@rin/api'
 import { useTranslation } from 'react-i18next'
 import { timeago } from '../utils/timeago'
 import { Markdown } from './markdown'
-
-interface Moment {
-  id: number
-  content: string
-  createdAt: Date
-  updatedAt: Date
-  user: {
-    id: number
-    username: string
-    avatar: string
-  }
-}
 
 export function MomentItem({
   moment,
@@ -20,13 +9,15 @@ export function MomentItem({
   onEdit,
   canManage,
 }: {
-  moment: Moment
+  moment: ApiMoment
   onDelete: (id: number) => void
-  onEdit: (moment: Moment) => void
+  onEdit: (moment: ApiMoment) => void
   canManage: boolean
 }) {
   const { t } = useTranslation()
-  const { createdAt, updatedAt } = moment
+  const createdAtDate = asDate(moment.createdAt, 'moment.createdAt')
+  const updatedAtDate = asDate(moment.updatedAt, 'moment.updatedAt')
+  const isUpdated = createdAtDate.getTime() !== updatedAtDate.getTime()
 
   return (
     <div className='bg-w p-4 rounded-lg'>
@@ -36,14 +27,12 @@ export function MomentItem({
           <div>
             <p className='t-primary'>{moment.user.username}</p>
             <p className='space-x-2 t-secondary text-sm'>
-              <span title={new Date(createdAt).toLocaleString()}>
-                {createdAt === updatedAt
-                  ? timeago(createdAt)
-                  : t('feed_card.published$time', { time: timeago(createdAt) })}
+              <span title={createdAtDate.toLocaleString()}>
+                {isUpdated ? t('feed_card.published$time', { time: timeago(createdAtDate) }) : timeago(createdAtDate)}
               </span>
-              {createdAt !== updatedAt && (
-                <span title={new Date(updatedAt).toLocaleString()}>
-                  {t('feed_card.updated$time', { time: timeago(updatedAt) })}
+              {isUpdated && (
+                <span title={updatedAtDate.toLocaleString()}>
+                  {t('feed_card.updated$time', { time: timeago(updatedAtDate) })}
                 </span>
               )}
             </p>

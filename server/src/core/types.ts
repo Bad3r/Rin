@@ -1,13 +1,28 @@
+import type { DB } from '../server'
+import type { CacheImpl } from '../utils/cache'
+
+export interface ContextStore {
+  db: DB
+  env: Env
+  cache: CacheImpl
+  serverConfig: CacheImpl
+  clientConfig: CacheImpl
+  jwt: JWTUtils
+  oauth2?: OAuth2Utils
+  anyUser: (db: DB) => Promise<boolean>
+  [key: string]: unknown
+}
+
 // Type definitions for the lightweight framework
 
 export interface Context {
   request: Request
   url: URL
   params: Record<string, string>
-  query: Record<string, any>
+  query: Record<string, string | string[]>
   headers: Record<string, string>
-  body: any
-  store: Record<string, any>
+  body: Record<string, unknown>
+  store: ContextStore
   set: {
     status: number
     headers: Headers
@@ -39,8 +54,8 @@ export interface CookieValue {
 }
 
 export interface JWTUtils {
-  sign(payload: any): Promise<string>
-  verify(token: string): Promise<any | null>
+  sign(payload: Record<string, unknown>): Promise<string>
+  verify(token: string): Promise<Record<string, unknown> | null>
 }
 
 export interface OAuth2Utils {
@@ -49,22 +64,22 @@ export interface OAuth2Utils {
   authorize(provider: string, code: string): Promise<{ accessToken: string } | null>
 }
 
-export type Handler = (context: Context) => Promise<any> | any
+export type Handler = (context: Context) => Promise<unknown> | unknown
 export type Middleware = (
   context: Context,
   env: Env,
-  container?: any
+  container?: unknown
 ) => Promise<Response | undefined | undefined> | Response | undefined | undefined
 
 export interface RouteDefinition {
   path: string
   handler: Handler
-  schema?: any
+  schema?: unknown
 }
 
 // Schema types (TypeBox compatible)
 export const t = {
-  Object: (properties: Record<string, any>, options?: { additionalProperties?: boolean }) => ({
+  Object: (properties: Record<string, unknown>, options?: { additionalProperties?: boolean }) => ({
     type: 'object',
     properties,
     ...options,
@@ -74,8 +89,8 @@ export const t = {
   Boolean: (options?: { optional?: boolean }) => ({ type: 'boolean', optional: options?.optional }),
   Integer: (options?: { optional?: boolean }) => ({ type: 'number', optional: options?.optional }),
   Date: (options?: { optional?: boolean }) => ({ type: 'string', format: 'date-time', optional: options?.optional }),
-  Array: (items: any, options?: { optional?: boolean }) => ({ type: 'array', items, optional: options?.optional }),
+  Array: (items: unknown, options?: { optional?: boolean }) => ({ type: 'array', items, optional: options?.optional }),
   File: (options?: { optional?: boolean }) => ({ type: 'file', optional: options?.optional }),
-  Optional: (schema: any) => ({ ...schema, optional: true }),
+  Optional: (schema: Record<string, unknown>) => ({ ...schema, optional: true }),
   Numeric: (options?: { optional?: boolean }) => ({ type: 'number', optional: options?.optional }),
 }
