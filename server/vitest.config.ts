@@ -4,12 +4,16 @@ import { createOutboundServiceGuard } from './tests/helpers/network-guard'
 
 const migrationsPath = fileURLToPath(new URL('./sql', import.meta.url))
 const d1Migrations = await readD1Migrations(migrationsPath)
+const remoteBaseUrl = process.env.RIN_REMOTE_BASE_URL ?? ''
+const remoteTimeoutMs = Number(process.env.RIN_REMOTE_TIMEOUT_MS || '10000')
 
 export default defineWorkersConfig({
   test: {
     setupFiles: ['./tests/helpers/no-network.ts', './tests/setup/apply-d1-migrations.ts'],
     provide: {
       d1Migrations,
+      remoteBaseUrl,
+      remoteTimeoutMs,
     },
     poolOptions: {
       workers: {
