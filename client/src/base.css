@@ -1,9 +1,9 @@
 /* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind directives are resolved at build time. */
-@tailwind base;
+@import "tailwindcss";
 /* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind directives are resolved at build time. */
-@tailwind components;
+@custom-variant dark (&:where([data-color-mode="dark"], [data-color-mode="dark"] *));
 /* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind directives are resolved at build time. */
-@tailwind utilities;
+@config "../tailwind.config.ts";
 @layer base {
   .bg-w {
     @apply bg-white dark:bg-dark;

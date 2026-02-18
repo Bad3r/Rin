@@ -1,6 +1,6 @@
 import DOMPurify from 'dompurify'
 import { useCallback, useContext, useEffect, useState } from 'react'
-import { Helmet } from 'react-helmet'
+import { Helmet } from './helmet'
 import { useTranslation } from 'react-i18next'
 import Popup from 'reactjs-popup'
 import { useLocation } from 'wouter'

@@ -1,4 +1,4 @@
-import { Helmet } from 'react-helmet'
+import { Helmet } from './helmet'
 import { useSiteConfig } from '../hooks/useSiteConfig'
 
 interface SiteMetaProps {

@@ -131,6 +131,7 @@ describe('RSSService', () => {
       const text = await response.text()
       expect(text).toContain('Test Blog') // RSS_TITLE from env
       expect(text).toContain('Test Environment') // RSS_DESCRIPTION
+      expect(text).toContain(`All rights reserved ${new Date().getFullYear()}`)
     })
 
     it('should include author information', async () => {

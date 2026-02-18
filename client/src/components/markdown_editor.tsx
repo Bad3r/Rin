@@ -3,7 +3,7 @@ import type { editor } from 'monaco-editor'
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import Loading from 'react-loading'
+import Loading from './react-loading'
 import { client } from '../main'
 import { useColorMode } from '../utils/darkModeUtils'
 import { Markdown } from './markdown'
@@ -23,7 +23,7 @@ export function MarkdownEditor({
 }: MarkdownEditorProps) {
   const { t } = useTranslation()
   const colorMode = useColorMode()
-  const editorRef = useRef<editor.IStandaloneCodeEditor>()
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const isComposingRef = useRef(false)
   const [preview, setPreview] = useState<'edit' | 'preview' | 'comparison'>('edit')
   const [uploading, setUploading] = useState(false)

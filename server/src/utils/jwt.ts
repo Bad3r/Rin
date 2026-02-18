@@ -1,4 +1,4 @@
-import { jwtVerify, type KeyLike, SignJWT } from 'jose'
+import { jwtVerify, SignJWT } from 'jose'
 
 export interface JWTPayloadSpec {
   iss?: string
@@ -15,7 +15,7 @@ export interface JWTUtils {
   verify: (jwt?: string) => Promise<any | false>
 }
 
-export function createJWT(secret: string | Uint8Array | KeyLike): JWTUtils {
+export function createJWT(secret: string | Uint8Array): JWTUtils {
   if (!secret) throw new Error("Secret can't be empty")
 
   const key = typeof secret === 'string' ? new TextEncoder().encode(secret) : secret

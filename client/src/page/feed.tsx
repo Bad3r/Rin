@@ -1,6 +1,6 @@
 import mermaid from 'mermaid'
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { Helmet } from 'react-helmet'
+import { Helmet } from '../components/helmet'
 import { useTranslation } from 'react-i18next'
 import ReactModal from 'react-modal'
 import Popup from 'reactjs-popup'

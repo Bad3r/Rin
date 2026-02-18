@@ -1,4 +1,4 @@
-import ReactLoading from 'react-loading'
+import ReactLoading from './react-loading'
 
 export function Waiting({ for: wait, children }: { for?: any; children?: React.ReactNode }) {
   return (
