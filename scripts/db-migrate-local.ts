@@ -1,14 +1,10 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { fixTopField, getMigrationVersion, isInfoExist, updateMigrationVersion } from './db-fix-top-field'
+import { isKnownTopColumnCatchUpCase } from './migration-utils'
 
 const DB_NAME = 'rin'
 const SQL_DIR = path.join(__dirname, '..', 'server', 'sql')
-
-function isKnownTopColumnCatchUpCase(file: string, output: string): boolean {
-  const normalized = output.toLowerCase()
-  return file.startsWith('0009') && normalized.includes('duplicate column name') && normalized.includes('top')
-}
 
 // Change to the server/sql directory
 process.chdir(SQL_DIR)

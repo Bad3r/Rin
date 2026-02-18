@@ -2,6 +2,7 @@ import { readdir } from 'node:fs/promises'
 import { $ } from 'bun'
 import stripIndent from 'strip-indent'
 import { fixTopField, getMigrationVersion, isInfoExist, updateMigrationVersion } from './db-fix-top-field'
+import { isKnownTopColumnCatchUpCase } from './migration-utils'
 
 function env(name: string, defaultValue?: string, required = false) {
   const env = process.env
@@ -17,11 +18,6 @@ const renv = (name: string, defaultValue?: string) => env(name, defaultValue, tr
 
 const DB_NAME = renv('DB_NAME', 'rin')
 const WORKER_NAME = renv('WORKER_NAME', 'rin-server')
-
-function isKnownTopColumnCatchUpCase(file: string, output: string): boolean {
-  const normalized = output.toLowerCase()
-  return file.startsWith('0009') && normalized.includes('duplicate column name') && normalized.includes('top')
-}
 
 // R2 bucket name (optional, only used if S3 is not explicitly configured)
 const R2_BUCKET_NAME = env('R2_BUCKET_NAME', '')
