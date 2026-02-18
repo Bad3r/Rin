@@ -1,4 +1,5 @@
 import { getAIConfig } from './db-config'
+import type { DB } from '../server'
 
 // AI Provider presets with their default API URLs
 const AI_PROVIDER_URLS: Record<string, string> = {
@@ -21,6 +22,31 @@ export const WORKER_AI_MODELS: Record<string, string> = {
   'qwen-7b': '@cf/qwen/qwen1.5-7b-chat-awq',
 }
 
+interface WorkerAIResponse {
+  response?: string
+  content?: string
+  output?: string
+  result?: string
+}
+
+interface ChatCompletionResponse {
+  choices?: Array<{
+    message?: {
+      content?: string
+    }
+  }>
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message
+  }
+  if (typeof error === 'string') {
+    return error
+  }
+  return 'Unknown error'
+}
+
 /**
  * Get full Worker AI model ID from short name
  */
@@ -32,21 +58,27 @@ export function getWorkerAIModelId(shortName: string): string {
  * Execute Worker AI request
  */
 async function executeWorkerAI(env: Env, modelId: string, input: string): Promise<string | null> {
-  // Worker AI uses messages format for chat models
-  const response = await env.AI.run(
-    modelId as any,
-    {
-      messages: [{ role: 'user', content: input }],
-    } as any
-  )
+  const runner = env.AI as unknown as {
+    run: (
+      model: string,
+      payload: {
+        messages: Array<{ role: 'user'; content: string }>
+      }
+    ) => Promise<unknown>
+  }
 
-  const responseObj = response as any
+  // Worker AI uses messages format for chat models
+  const response = await runner.run(modelId, {
+    messages: [{ role: 'user', content: input }],
+  })
+
+  const responseObj = response as WorkerAIResponse | string | null | undefined
   if (responseObj && typeof responseObj === 'object') {
     // Worker AI response structure: { response: string }
-    if ('response' in responseObj) return responseObj.response
-    if ('content' in responseObj) return responseObj.content
-    if ('output' in responseObj) return responseObj.output
-    if ('result' in responseObj) return responseObj.result
+    if (typeof responseObj.response === 'string') return responseObj.response
+    if (typeof responseObj.content === 'string') return responseObj.content
+    if (typeof responseObj.output === 'string') return responseObj.output
+    if (typeof responseObj.result === 'string') return responseObj.result
     return JSON.stringify(responseObj)
   }
 
@@ -99,7 +131,7 @@ async function executeExternalAI(
     throw new Error(`API error ${response.status}: ${errorText}`)
   }
 
-  const data = (await response.json()) as any
+  const data = (await response.json()) as ChatCompletionResponse
   return data.choices?.[0]?.message?.content?.trim() || null
 }
 
@@ -146,7 +178,7 @@ export async function testAIModel(
         error: 'Empty response from AI',
       }
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return processAIError(error, config.model, config.provider)
   }
 }
@@ -154,7 +186,7 @@ export async function testAIModel(
 /**
  * Generate AI summary for article content
  */
-export async function generateAISummary(env: Env, db: any, content: string): Promise<string | null> {
+export async function generateAISummary(env: Env, db: DB, content: string): Promise<string | null> {
   const config = await getAIConfig(db)
 
   if (!config.enabled) {
@@ -190,11 +222,11 @@ export async function generateAISummary(env: Env, db: any, content: string): Pro
  * Process AI error and return user-friendly message
  */
 function processAIError(
-  error: any,
+  error: unknown,
   model: string,
   provider: string
 ): { success: false; error: string; details?: string } {
-  const originalMessage = error.message || 'Unknown error'
+  const originalMessage = getErrorMessage(error)
   console.error('[AI] Error:', error)
 
   let errorMessage = originalMessage

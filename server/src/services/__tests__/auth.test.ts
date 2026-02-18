@@ -1,20 +1,43 @@
 import type { Database } from 'bun:sqlite'
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import type { LoginRequest } from '@rin/api'
+import type { Router } from '../../core/router'
+import type { DB } from '../../server'
 import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
 import { createBaseApp } from '../../core/base'
 import { PasswordAuthService } from '../auth'
 
 describe('PasswordAuthService', () => {
-  let db: any
+  let db: DB
   let sqlite: Database
   let env: Env
-  let app: any
+  let app: Router
   let api: ReturnType<typeof createTestClient>
+
+  const mockSign = async (payload: Record<string, unknown>) => {
+    const id = typeof payload.id === 'number' ? payload.id : Number.parseInt(String(payload.id ?? ''), 10)
+    return `mock_token_${Number.isFinite(id) ? id : 0}`
+  }
+
+  const messageOf = (value: unknown): string | undefined => {
+    if (typeof value === 'string') {
+      return value
+    }
+    if (!value || typeof value !== 'object') {
+      return undefined
+    }
+    const error = (value as { error?: unknown }).error
+    if (!error || typeof error !== 'object') {
+      return undefined
+    }
+    const message = (error as { message?: unknown }).message
+    return typeof message === 'string' ? message : undefined
+  }
 
   beforeEach(async () => {
     const mockDB = createMockDB()
-    db = mockDB.db
+    db = mockDB.db as unknown as DB
     sqlite = mockDB.sqlite
     env = createMockEnv({
       ADMIN_USERNAME: 'admin',
@@ -25,13 +48,13 @@ describe('PasswordAuthService', () => {
     app = createBaseApp(env)
     app.state('db', db)
     app.state('jwt', {
-      sign: async (payload: any) => `mock_token_${payload.id}`,
+      sign: mockSign,
       verify: async (token: string) => {
         const match = token.match(/mock_token_(\d+)/)
         return match ? { id: parseInt(match[1], 10) } : null
       },
     })
-    app.state('anyUser', async () => false)
+    app.state('anyUser', async (_db: DB) => false)
 
     // Initialize service
     PasswordAuthService(app)
@@ -85,7 +108,7 @@ describe('PasswordAuthService', () => {
       // Verify admin was created using raw SQLite
       const dbResult = sqlite.prepare(`SELECT * FROM users WHERE openid = 'admin'`).all()
       expect(dbResult.length).toBe(1)
-      expect((dbResult[0] as any)?.permission).toBe(1)
+      expect((dbResult[0] as { permission?: number } | undefined)?.permission).toBe(1)
     })
 
     it('should reject invalid admin password', async () => {
@@ -96,8 +119,7 @@ describe('PasswordAuthService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(403)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Invalid credentials')
+      expect(messageOf(result.error?.value)).toBe('Invalid credentials')
     })
 
     it('should login with regular user credentials', async () => {
@@ -121,17 +143,15 @@ describe('PasswordAuthService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(403)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Invalid credentials')
+      expect(messageOf(result.error?.value)).toBe('Invalid credentials')
     })
 
     it('should require username and password', async () => {
-      const result = await api.auth.login({} as any)
+      const result = await api.auth.login({} as unknown as LoginRequest)
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(400)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Username and password are required')
+      expect(messageOf(result.error?.value)).toBe('Username and password are required')
     })
 
     it('should return 400 if admin credentials not configured', async () => {
@@ -143,7 +163,7 @@ describe('PasswordAuthService', () => {
       const appNoCreds = createBaseApp(envNoCreds)
       appNoCreds.state('db', db)
       appNoCreds.state('jwt', {
-        sign: async (payload: any) => `mock_token_${payload.id}`,
+        sign: mockSign,
         verify: async (token: string) => {
           const match = token.match(/mock_token_(\d+)/)
           return match ? { id: parseInt(match[1], 10) } : null
@@ -160,8 +180,7 @@ describe('PasswordAuthService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(400)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Admin credentials not configured')
+      expect(messageOf(result.error?.value)).toBe('Admin credentials not configured')
     })
 
     it('should reject user without password', async () => {
@@ -172,8 +191,7 @@ describe('PasswordAuthService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(403)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Invalid credentials')
+      expect(messageOf(result.error?.value)).toBe('Invalid credentials')
     })
   })
 

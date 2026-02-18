@@ -1,10 +1,14 @@
 import { momentCreateSchema, momentUpdateSchema } from '@rin/api'
+import type { CreateMomentRequest } from '@rin/api'
 import { count, desc, eq } from 'drizzle-orm'
 import type { Router } from '../core/router'
 import type { Context } from '../core/types'
 import { moments } from '../db/schema'
 
 export function MomentsService(router: Router): void {
+  const getQueryValue = (value: string | string[] | undefined): string | undefined =>
+    Array.isArray(value) ? value[0] : value
+
   router.group('/moments', group => {
     // GET /moments
     group.get(
@@ -16,8 +20,10 @@ export function MomentsService(router: Router): void {
         } = ctx
         const { page, limit } = query
 
-        const page_num = (page ? (parseInt(page as string, 10) > 0 ? parseInt(page as string, 10) : 1) : 1) - 1
-        const limit_num = limit ? (parseInt(limit as string, 10) > 50 ? 50 : parseInt(limit as string, 10)) : 20
+        const pageValue = getQueryValue(page)
+        const limitValue = getQueryValue(limit)
+        const page_num = (pageValue ? (parseInt(pageValue, 10) > 0 ? parseInt(pageValue, 10) : 1) : 1) - 1
+        const limit_num = limitValue ? (parseInt(limitValue, 10) > 50 ? 50 : parseInt(limitValue, 10)) : 20
         const cacheKey = `moments_${page_num}_${limit_num}`
         const cached = await cache.get(cacheKey)
 
@@ -70,7 +76,7 @@ export function MomentsService(router: Router): void {
           body,
           store: { db, cache },
         } = ctx
-        const { content } = body
+        const { content } = body as Partial<CreateMomentRequest>
 
         if (!uid) {
           set.status = 401
@@ -82,7 +88,7 @@ export function MomentsService(router: Router): void {
           return 'Permission denied'
         }
 
-        if (!content) {
+        if (typeof content !== 'string' || content.length === 0) {
           set.status = 400
           return 'Content is required'
         }
@@ -122,7 +128,7 @@ export function MomentsService(router: Router): void {
           body,
           store: { db, cache },
         } = ctx
-        const { content } = body
+        const { content } = body as Partial<CreateMomentRequest>
 
         if (!uid) {
           set.status = 401
@@ -142,7 +148,7 @@ export function MomentsService(router: Router): void {
           return 'Not found'
         }
 
-        if (!content) {
+        if (typeof content !== 'string' || content.length === 0) {
           set.status = 400
           return 'Content is required'
         }

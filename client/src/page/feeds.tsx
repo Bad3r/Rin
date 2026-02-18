@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
+import type { FeedListResponse } from '@rin/api'
 import { Helmet } from '../components/helmet'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearch } from 'wouter'
@@ -10,11 +11,7 @@ import { ProfileContext } from '../state/profile'
 import { siteName } from '../utils/constants'
 import { tryInt } from '../utils/int'
 
-type FeedsData = {
-  size: number
-  data: any[]
-  hasNext: boolean
-}
+type FeedsData = FeedListResponse
 
 type FeedType = 'draft' | 'unlisted' | 'normal'
 
@@ -111,9 +108,10 @@ export function FeedsPage() {
           </div>
           <Waiting for={status === 'idle'}>
             <div className='wauto flex flex-col ani-show'>
-              {feeds[listState].data.map(({ id, ...feed }: any) => (
-                <FeedCard key={id} id={id} {...feed} />
-              ))}
+              {feeds[listState].data.map(feedItem => {
+                const { id, ...feed } = feedItem
+                return <FeedCard key={id} id={`${id}`} {...feed} />
+              })}
             </div>
             <div className='wauto flex flex-row items-center mt-4 ani-show'>
               {page > 1 && (

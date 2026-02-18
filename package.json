@@ -23,7 +23,7 @@
     "test:server": "cd server && bun run test:ci",
     "test:server:watch": "cd server && bun run test --watch",
     "test:coverage": "bun run test:coverage:ci",
-    "test:coverage:ci": "bun test --preload ./server/tests/helpers/no-network.ts --coverage client/src server/src server/tests/security server/tests/unit server/tests/integration --timeout 15000 --pass-with-no-tests",
+    "test:coverage:ci": "bun --filter './client' test:coverage:ci && bun --filter './server' test:coverage:ci && test -s ./client/coverage/lcov.info && test -s ./server/coverage/lcov.info && echo 'Coverage artifacts verified: client/coverage/lcov.info, server/coverage/lcov.info'",
     "db:migrate": "bun cli/bin/rin.ts db migrate",
     "db:generate": "bun --filter './server' db:gen",
     "db:fix": "bun scripts/db-fix-top-field.ts",

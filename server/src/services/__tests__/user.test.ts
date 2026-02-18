@@ -3,18 +3,35 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
 import { createBaseApp } from '../../core/base'
+import type { Router } from '../../core/router'
+import type { DB } from '../../server'
 import { UserService } from '../user'
 
 describe('UserService', () => {
-  let db: any
+  let db: DB
   let sqlite: Database
   let env: Env
-  let app: any
+  let app: Router
   let api: ReturnType<typeof createTestClient>
+
+  const messageOf = (value: unknown): string | undefined => {
+    if (typeof value === 'string') {
+      return value
+    }
+    if (!value || typeof value !== 'object') {
+      return undefined
+    }
+    const error = (value as { error?: unknown }).error
+    if (!error || typeof error !== 'object') {
+      return undefined
+    }
+    const message = (error as { message?: unknown }).message
+    return typeof message === 'string' ? message : undefined
+  }
 
   beforeEach(async () => {
     const mockDB = createMockDB()
-    db = mockDB.db
+    db = mockDB.db as unknown as DB
     sqlite = mockDB.sqlite
     env = createMockEnv({
       RIN_ALLOWED_REDIRECT_ORIGINS: 'http://localhost:5173',
@@ -24,7 +41,7 @@ describe('UserService', () => {
     app = createBaseApp(env)
     app.state('db', db)
     app.state('jwt', {
-      sign: async (payload: any) => `mock_token_${payload.id}`,
+      sign: async (payload: Record<string, unknown>) => `mock_token_${String(payload.id ?? '')}`,
       verify: async (token: string) => {
         const match = token.match(/mock_token_(\d+)/)
         return match ? { id: parseInt(match[1], 10) } : null
@@ -36,7 +53,7 @@ describe('UserService', () => {
       authorize: async (_provider: string, code: string) =>
         code === 'valid_code' ? { accessToken: 'gh_token' } : null,
     })
-    app.state('anyUser', async () => false)
+    app.state('anyUser', async (_db: DB) => false)
 
     // Initialize service
     UserService(app)
@@ -228,12 +245,20 @@ describe('UserService', () => {
         },
       })
 
-      const response = await app.handle(request, env)
+      const originalConsoleError = console.error
+      console.error = () => {}
+
+      let response: Response | undefined
+      try {
+        response = await app.handle(request, env)
+      } finally {
+        console.error = originalConsoleError
+      }
 
       // When OAuth fails, it may return 400 or 500 depending on implementation
       // The important thing is that it's not a successful 302 redirect
-      expect(response.status).not.toBe(302)
-      expect(response.status).toBeGreaterThanOrEqual(400)
+      expect(response?.status).not.toBe(302)
+      expect(response?.status ?? 0).toBeGreaterThanOrEqual(400)
     })
   })
 
@@ -262,8 +287,7 @@ describe('UserService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(403)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Authentication required')
+      expect(messageOf(result.error?.value)).toBe('Authentication required')
     })
 
     it('should return 403 when user does not exist', async () => {
@@ -274,8 +298,7 @@ describe('UserService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(403)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Authentication required')
+      expect(messageOf(result.error?.value)).toBe('Authentication required')
     })
   })
 
@@ -292,7 +315,7 @@ describe('UserService', () => {
       expect(result.data?.success).toBe(true)
 
       // Verify update
-      const dbResult = sqlite.prepare(`SELECT username FROM users WHERE id = 1`).all() as any[]
+      const dbResult = sqlite.prepare(`SELECT username FROM users WHERE id = 1`).all() as Array<{ username: string }>
       expect(dbResult[0]?.username).toBe('newname')
     })
 
@@ -306,7 +329,7 @@ describe('UserService', () => {
 
       expect(result.error).toBeUndefined()
 
-      const dbResult = sqlite.prepare(`SELECT avatar FROM users WHERE id = 1`).all() as any[]
+      const dbResult = sqlite.prepare(`SELECT avatar FROM users WHERE id = 1`).all() as Array<{ avatar: string }>
       expect(dbResult[0]?.avatar).toBe('https://new-avatar.png')
     })
 
@@ -317,8 +340,7 @@ describe('UserService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(403)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('Authentication required')
+      expect(messageOf(result.error?.value)).toBe('Authentication required')
     })
 
     it('should require at least one field', async () => {
@@ -326,8 +348,7 @@ describe('UserService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(400)
-      const errorData = result.error?.value as any
-      expect(errorData.error.message).toBe('At least one field (username or avatar) is required')
+      expect(messageOf(result.error?.value)).toBe('At least one field (username or avatar) is required')
     })
   })
 

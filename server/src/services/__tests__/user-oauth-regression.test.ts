@@ -33,7 +33,7 @@ for (const impl of ROUTER_IMPLS) {
         get: async () => undefined,
         set: async () => {},
         deletePrefix: async () => {},
-        getOrSet: async (_key: string, fn: Function) => fn(),
+        getOrSet: async (_key: string, fn: () => unknown) => fn(),
         getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
       })
       app.state('serverConfig', {

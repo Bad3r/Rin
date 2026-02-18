@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { asDate, type TimelineItem as ApiTimelineItem } from '@rin/api'
 import { Helmet } from '../components/helmet'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'wouter'
@@ -7,14 +8,8 @@ import { useSiteConfig } from '../hooks/useSiteConfig'
 import { client } from '../main'
 import { siteName } from '../utils/constants'
 
-interface FeedItem {
-  id: number
-  createdAt: Date
-  title: string | null
-}
-
 export function TimelinePage() {
-  const [feeds, setFeeds] = useState<Partial<Record<number, FeedItem[]>>>()
+  const [feeds, setFeeds] = useState<Partial<Record<number, ApiTimelineItem[]>>>()
   const [length, setLength] = useState(0)
   const ref = useRef(false)
   const { t } = useTranslation()
@@ -27,10 +22,18 @@ export function TimelinePage() {
           const arr = Array.isArray(data) ? data : []
           setLength(arr.length)
           // 兼容的分组逻辑
-          const groups = Object.groupBy
-            ? Object.groupBy(arr, ({ createdAt }) => new Date(createdAt).getFullYear())
-            : arr.reduce<Record<number, any[]>>((acc, item) => {
-                const key = new Date(item.createdAt).getFullYear()
+          const groups: Partial<Record<number, ApiTimelineItem[]>> = Object.groupBy
+            ? Object.entries(
+                Object.groupBy(arr, ({ createdAt }) => asDate(createdAt, 'timeline item createdAt').getFullYear())
+              ).reduce<Partial<Record<number, ApiTimelineItem[]>>>((acc, [year, items]) => {
+                const parsedYear = Number(year)
+                if (!Number.isNaN(parsedYear)) {
+                  acc[parsedYear] = items ?? []
+                }
+                return acc
+              }, {})
+            : arr.reduce<Partial<Record<number, ApiTimelineItem[]>>>((acc, item) => {
+                const key = asDate(item.createdAt, 'timeline item createdAt').getFullYear()
                 if (!acc[key]) {
                   acc[key] = []
                 }
@@ -38,7 +41,7 @@ export function TimelinePage() {
                 return acc
               }, {})
 
-          setFeeds(groups as any)
+          setFeeds(groups)
         }
       })
       .catch(err => {
@@ -86,7 +89,7 @@ export function TimelinePage() {
                         key={id}
                         id={id.toString()}
                         title={title || t('unlisted')}
-                        createdAt={new Date(createdAt)}
+                        createdAt={asDate(createdAt, 'timeline item createdAt')}
                       />
                     ))}
                   </div>
@@ -106,8 +109,8 @@ export function FeedItem({ id, title, createdAt }: { id: string; title: string; 
         <div className='w-2 h-2 bg-theme rounded-full'></div>
       </div>
       <div className='flex-1 rounded-2xl m-2 duration-300 flex flex-row items-center space-x-4   '>
-        <span className='t-secondary text-sm' title={new Date(createdAt).toLocaleString()}>
-          {formatter.format(new Date(createdAt))}
+        <span className='t-secondary text-sm' title={createdAt.toLocaleString()}>
+          {formatter.format(createdAt)}
         </span>
         <Link
           href={`/feed/${id}`}
