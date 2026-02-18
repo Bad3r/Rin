@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "bunx --bun vite",
     "build": "tsc && vite build",
+    "build:analyze": "tsc && vite build --mode analyze",
     "check": "tsc",
     "lint": "eslint . --max-warnings 0",
     "preview": "vite preview",

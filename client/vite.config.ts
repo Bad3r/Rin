@@ -7,6 +7,8 @@ import { defineConfig, loadEnv } from 'vite'
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const isDev = mode === 'development'
+  const isAnalyze = mode === 'analyze'
+  const shouldOpenVisualizer = (isAnalyze || process.env.VISUALIZER_OPEN === 'true') && process.env.CI !== 'true'
   // Intentionally load only CODECOV_* keys for build-time plugin upload auth.
   // This token is consumed by Vite in Node at build time, not exposed at runtime.
   // In this monorepo, local secrets are typically kept at repo-root .env.local.
@@ -54,8 +56,8 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
-      // Only open visualizer in build mode
-      visualizer({ open: !isDev }),
+      // Open stats.html only for explicit analysis mode or opt-in env var.
+      visualizer({ open: shouldOpenVisualizer, filename: 'stats.html' }),
       // Keep Codecov plugin at the end of the plugin array.
       codecovVitePlugin({
         enableBundleAnalysis: Boolean(codecovToken),
