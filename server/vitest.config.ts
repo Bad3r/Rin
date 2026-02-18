@@ -1,5 +1,6 @@
 import { defineWorkersConfig, readD1Migrations } from '@cloudflare/vitest-pool-workers/config'
 import { fileURLToPath } from 'node:url'
+import { createOutboundServiceGuard } from './tests/helpers/network-guard'
 
 const migrationsPath = fileURLToPath(new URL('./sql', import.meta.url))
 const d1Migrations = await readD1Migrations(migrationsPath)
@@ -14,6 +15,7 @@ export default defineWorkersConfig({
       workers: {
         main: './src/_worker.ts',
         miniflare: {
+          outboundService: createOutboundServiceGuard(),
           compatibilityDate: '2026-01-20',
           ai: {
             binding: 'AI',

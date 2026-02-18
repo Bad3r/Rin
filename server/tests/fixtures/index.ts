@@ -36,7 +36,7 @@ export function createMockEnv(overrides: MockEnvOverrides = {}): Env {
     S3_ACCESS_KEY_ID: 'test-access-key',
     S3_SECRET_ACCESS_KEY: 'test-secret-key',
     CACHE_STORAGE_MODE: 'database',
-    ROUTER_IMPL: 'legacy',
+    ROUTER_IMPL: 'hono',
     ...overrides,
   } as unknown as Env
 }
