@@ -2,7 +2,7 @@
   "compilerOptions": {
     // Enable latest features
     "lib": ["ESNext", "DOM"],
-    "types": ["./worker-configuration.d.ts", "@cloudflare/vitest-pool-workers"],
+    "types": ["./worker-configuration.d.ts", "@cloudflare/vitest-pool-workers", "bun"],
     "target": "ESNext",
     "module": "ESNext",
     "moduleDetection": "force",
