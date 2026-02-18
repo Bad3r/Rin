@@ -76,6 +76,7 @@ jobs:
         run: bun run check
 
   coverage:
+    needs: [test-server, test-client]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

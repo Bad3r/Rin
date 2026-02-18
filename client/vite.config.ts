@@ -1,3 +1,4 @@
+import path from 'node:path'
 import react from '@vitejs/plugin-react-swc'
 import { codecovVitePlugin } from '@codecov/vite-plugin'
 import { visualizer } from 'rollup-plugin-visualizer'
@@ -8,8 +9,10 @@ export default defineConfig(({ mode }) => {
   const isDev = mode === 'development'
   // Intentionally load only CODECOV_* keys for build-time plugin upload auth.
   // This token is consumed by Vite in Node at build time, not exposed at runtime.
-  const codecovEnv = loadEnv(mode, process.cwd(), 'CODECOV_')
-  const codecovToken = codecovEnv.CODECOV_TOKEN || process.env.CODECOV_TOKEN
+  // In this monorepo, local secrets are typically kept at repo-root .env.local.
+  const projectEnv = loadEnv(mode, process.cwd(), 'CODECOV_')
+  const repoEnv = loadEnv(mode, path.resolve(process.cwd(), '..'), 'CODECOV_')
+  const codecovToken = projectEnv.CODECOV_TOKEN || repoEnv.CODECOV_TOKEN || process.env.CODECOV_TOKEN
 
   return {
     // Note: Client configuration is fetched from server at runtime
