@@ -5,7 +5,7 @@ import { createMockEnv } from '../fixtures'
 
 type RouterImpl = 'legacy' | 'hono'
 const ROUTER_IMPLS: RouterImpl[] = ['legacy', 'hono']
-const TEST_ORIGIN = 'http://localhost'
+const TEST_ORIGIN = 'https://example.test'
 
 for (const impl of ROUTER_IMPLS) {
   describe(`Worker routing (${impl})`, () => {
