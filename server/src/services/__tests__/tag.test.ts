@@ -3,6 +3,8 @@ import { cleanupTestDB, createMockDB, createMockEnv, execSql, queryAll, seedTest
 import { createBaseApp } from '../../core/base'
 import { bindTagToPost, TagService } from '../tag'
 
+const TEST_ORIGIN = 'https://example.test'
+
 describe('TagService', () => {
   let db: any
   let sqlite: D1Database
@@ -39,7 +41,7 @@ describe('TagService', () => {
 
   describe('GET /tag - List all tags', () => {
     it('should return all tags with feed counts', async () => {
-      const request = new Request('http://localhost/tag')
+      const request = new Request(`${TEST_ORIGIN}/tag`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -69,7 +71,7 @@ describe('TagService', () => {
       await execSql(sqlite, 'DELETE FROM feed_hashtags')
       await execSql(sqlite, 'DELETE FROM hashtags')
 
-      const request = new Request('http://localhost/tag')
+      const request = new Request(`${TEST_ORIGIN}/tag`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -80,7 +82,7 @@ describe('TagService', () => {
 
   describe('GET /tag/:name - Get tag details', () => {
     it('should return tag with feeds', async () => {
-      const request = new Request('http://localhost/tag/test')
+      const request = new Request(`${TEST_ORIGIN}/tag/test`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -95,7 +97,7 @@ describe('TagService', () => {
       await execSql(sqlite, `INSERT INTO hashtags (id, name) VALUES (3, 'web dev')`)
       await execSql(sqlite, `INSERT INTO feed_hashtags (feed_id, hashtag_id) VALUES (1, 3)`)
 
-      const request = new Request('http://localhost/tag/web%20dev')
+      const request = new Request(`${TEST_ORIGIN}/tag/web%20dev`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -104,7 +106,7 @@ describe('TagService', () => {
     })
 
     it('should return 404 for non-existent tag', async () => {
-      const request = new Request('http://localhost/tag/nonexistent')
+      const request = new Request(`${TEST_ORIGIN}/tag/nonexistent`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(404)
@@ -128,7 +130,7 @@ describe('TagService', () => {
       })
 
       it('should exclude draft feeds for non-admin users', async () => {
-        const request = new Request('http://localhost/tag/test')
+        const request = new Request(`${TEST_ORIGIN}/tag/test`)
         const response = await app.handle(request, env)
 
         expect(response.status).toBe(200)
@@ -139,7 +141,7 @@ describe('TagService', () => {
 
       it('should include draft feeds for admin users', async () => {
         // User 2 is admin (permission=1), need to use JWT token
-        const request = new Request('http://localhost/tag/test', {
+        const request = new Request(`${TEST_ORIGIN}/tag/test`, {
           headers: { Authorization: 'Bearer mock_token_2' },
         })
         const response = await app.handle(request, env)
@@ -152,7 +154,7 @@ describe('TagService', () => {
     })
 
     it('should include hashtags in feed data', async () => {
-      const request = new Request('http://localhost/tag/test')
+      const request = new Request(`${TEST_ORIGIN}/tag/test`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
