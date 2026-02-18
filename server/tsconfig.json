@@ -23,5 +23,7 @@
     "noPropertyAccessFromIndexSignature": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true
-  }
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts", "worker-configuration.d.ts"],
+  "exclude": ["scripts/**/*.ts"]
 }
