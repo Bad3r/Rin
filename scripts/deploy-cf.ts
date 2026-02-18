@@ -18,6 +18,11 @@ const renv = (name: string, defaultValue?: string) => env(name, defaultValue, tr
 const DB_NAME = renv('DB_NAME', 'rin')
 const WORKER_NAME = renv('WORKER_NAME', 'rin-server')
 
+function isKnownTopColumnCatchUpCase(file: string, output: string): boolean {
+  const normalized = output.toLowerCase()
+  return file.startsWith('0009') && normalized.includes('duplicate column name') && normalized.includes('top')
+}
+
 // R2 bucket name (optional, only used if S3 is not explicitly configured)
 const R2_BUCKET_NAME = env('R2_BUCKET_NAME', '')
 
@@ -237,7 +242,18 @@ mode = "smart"
       .sort()
     console.log('migration_version:', migrationVersion, 'Migration SQL List: ', sqlFiles)
     for (const file of sqlFiles) {
-      await $`bunx wrangler d1 execute ${DB_NAME} --remote --file ./server/sql/${file} -y`
+      const { exitCode, stdout, stderr } =
+        await $`bunx wrangler d1 execute ${DB_NAME} --remote --file ./server/sql/${file} -y`.quiet().nothrow()
+
+      if (exitCode !== 0) {
+        const output = `${stdout.toString()}\n${stderr.toString()}`.trim()
+        if (isKnownTopColumnCatchUpCase(file, output)) {
+          console.warn(`[migration] Skipping ${file}: feeds.top already exists`)
+          continue
+        }
+        throw new Error(output || `Failed to migrate ${file}`)
+      }
+
       console.log(`Migrated ${file}`)
     }
     if (sqlFiles.length === 0) {
@@ -248,10 +264,19 @@ mode = "smart"
         await updateMigrationVersion(typ, DB_NAME, lastVersion)
       }
     }
-  } catch (e: any) {
-    console.error(e.stdio?.toString())
-    console.error(e.stdout?.toString())
-    console.error(e.stderr?.toString())
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message) {
+      console.error(e.message)
+    }
+
+    const cmdError = e as {
+      stdio?: { toString(): string }
+      stdout?: { toString(): string }
+      stderr?: { toString(): string }
+    }
+    console.error(cmdError.stdio?.toString())
+    console.error(cmdError.stdout?.toString())
+    console.error(cmdError.stderr?.toString())
     process.exit(1)
   }
 
