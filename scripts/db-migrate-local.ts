@@ -23,7 +23,8 @@ const sqlFiles = fs
   })
   .sort()
 
-console.log('migration_version:', migrationVersion, 'Migration SQL List: ', sqlFiles)
+console.log('Current migration_version:', migrationVersion)
+console.log('Pending migration files:', sqlFiles)
 
 // For each file in the sorted list
 for (const file of sqlFiles) {
@@ -33,7 +34,7 @@ for (const file of sqlFiles) {
     .nothrow()
 
   if (exitCode === 0) {
-    console.log(`Executed ${file}`)
+    console.log(`Executed migration ${file}`)
     continue
   }
 
@@ -43,7 +44,7 @@ for (const file of sqlFiles) {
     continue
   }
 
-  console.error(`Failed to execute ${file}`)
+  console.error(`Failed to execute migration ${file}`)
   if (output) {
     console.error(output)
   }
@@ -51,7 +52,7 @@ for (const file of sqlFiles) {
 }
 
 if (sqlFiles.length === 0) {
-  console.log('No migration needed.')
+  console.log('No pending migrations.')
 } else {
   const lastVersion = parseInt(sqlFiles[sqlFiles.length - 1].split('-')[0], 10)
   if (lastVersion > migrationVersion) {
