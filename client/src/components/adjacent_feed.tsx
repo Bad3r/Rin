@@ -1,3 +1,4 @@
+import { asDate, type IsoDateTimeString } from '@rin/api'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'wouter'
@@ -12,8 +13,8 @@ export type AdjacentFeed = {
     id: number
     name: string
   }[]
-  createdAt: Date | string
-  updatedAt: Date | string
+  createdAt: Date | IsoDateTimeString
+  updatedAt: Date | IsoDateTimeString
 }
 export type AdjacentFeeds = {
   nextFeed: AdjacentFeed | null
@@ -58,6 +59,10 @@ export function AdjacentCard({ data, type }: { data: AdjacentFeed | null | undef
       </div>
     )
   }
+  const createdAtDate = asDate(data.createdAt, 'adjacentFeed.createdAt')
+  const updatedAtDate = asDate(data.updatedAt, 'adjacentFeed.updatedAt')
+  const isUpdated = createdAtDate.getTime() !== updatedAtDate.getTime()
+
   return (
     <Link href={`/feed/${data.id}`} target='_blank' className={`w-full p-6 duration-300 bg-button ${radius}`}>
       <p className={`t-secondary w-full ${direction}`}>{type === 'previous' ? 'Previous' : 'Next'}</p>
@@ -65,14 +70,12 @@ export function AdjacentCard({ data, type }: { data: AdjacentFeed | null | undef
         {data.title}
       </h1>
       <p className={`space-x-2 ${direction}`}>
-        <span className='text-gray-400 text-sm' title={new Date(data.createdAt).toLocaleString()}>
-          {data.createdAt === data.updatedAt
-            ? timeago(data.createdAt)
-            : t('feed_card.published$time', { time: timeago(data.createdAt) })}
+        <span className='text-gray-400 text-sm' title={createdAtDate.toLocaleString()}>
+          {isUpdated ? t('feed_card.published$time', { time: timeago(createdAtDate) }) : timeago(createdAtDate)}
         </span>
-        {data.createdAt !== data.updatedAt && (
-          <span className='text-gray-400 text-sm' title={new Date(data.updatedAt).toLocaleString()}>
-            {t('feed_card.updated$time', { time: timeago(data.updatedAt) })}
+        {isUpdated && (
+          <span className='text-gray-400 text-sm' title={updatedAtDate.toLocaleString()}>
+            {t('feed_card.updated$time', { time: timeago(updatedAtDate) })}
           </span>
         )}
       </p>

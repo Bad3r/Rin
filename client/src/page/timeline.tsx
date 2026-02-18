@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { TimelineItem as ApiTimelineItem } from '@rin/api'
+import { asDate, type TimelineItem as ApiTimelineItem } from '@rin/api'
 import { Helmet } from '../components/helmet'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'wouter'
@@ -23,9 +23,9 @@ export function TimelinePage() {
           setLength(arr.length)
           // 兼容的分组逻辑
           const groups: Partial<Record<number, ApiTimelineItem[]>> = Object.groupBy
-            ? Object.entries(Object.groupBy(arr, ({ createdAt }) => new Date(createdAt).getFullYear())).reduce<
-                Partial<Record<number, ApiTimelineItem[]>>
-              >((acc, [year, items]) => {
+            ? Object.entries(
+                Object.groupBy(arr, ({ createdAt }) => asDate(createdAt, 'timeline item createdAt').getFullYear())
+              ).reduce<Partial<Record<number, ApiTimelineItem[]>>>((acc, [year, items]) => {
                 const parsedYear = Number(year)
                 if (!Number.isNaN(parsedYear)) {
                   acc[parsedYear] = items ?? []
@@ -33,7 +33,7 @@ export function TimelinePage() {
                 return acc
               }, {})
             : arr.reduce<Partial<Record<number, ApiTimelineItem[]>>>((acc, item) => {
-                const key = new Date(item.createdAt).getFullYear()
+                const key = asDate(item.createdAt, 'timeline item createdAt').getFullYear()
                 if (!acc[key]) {
                   acc[key] = []
                 }
@@ -89,7 +89,7 @@ export function TimelinePage() {
                         key={id}
                         id={id.toString()}
                         title={title || t('unlisted')}
-                        createdAt={new Date(createdAt)}
+                        createdAt={asDate(createdAt, 'timeline item createdAt')}
                       />
                     ))}
                   </div>
@@ -109,8 +109,8 @@ export function FeedItem({ id, title, createdAt }: { id: string; title: string; 
         <div className='w-2 h-2 bg-theme rounded-full'></div>
       </div>
       <div className='flex-1 rounded-2xl m-2 duration-300 flex flex-row items-center space-x-4   '>
-        <span className='t-secondary text-sm' title={new Date(createdAt).toLocaleString()}>
-          {formatter.format(new Date(createdAt))}
+        <span className='t-secondary text-sm' title={createdAt.toLocaleString()}>
+          {formatter.format(createdAt)}
         </span>
         <Link
           href={`/feed/${id}`}

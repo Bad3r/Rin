@@ -243,6 +243,23 @@ describe('FeedService', () => {
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(400)
     })
+
+    it('should reject invalid createdAt values', async () => {
+      const result = await api.feed.create(
+        {
+          title: 'Date Validation',
+          content: 'Date validation content',
+          listed: true,
+          draft: false,
+          tags: [],
+          createdAt: 'not-a-date',
+        },
+        { token: 'mock_token_1' }
+      )
+
+      expect(result.error).toBeDefined()
+      expect(result.error?.status).toBe(400)
+    })
   })
 
   describe('POST /feed/:id - Update feed', () => {
@@ -302,6 +319,34 @@ describe('FeedService', () => {
 
       expect(updateResult.error).toBeDefined()
       expect(updateResult.error?.status).toBe(403)
+    })
+
+    it('should reject invalid createdAt values on update', async () => {
+      const createResult = await api.feed.create(
+        {
+          title: 'Original',
+          content: 'Content',
+          listed: true,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+
+      expect(createResult.error).toBeUndefined()
+      const feedId = requireInsertedId(createResult.data?.insertedId)
+
+      const updateResult = await api.feed.update(
+        feedId,
+        {
+          listed: true,
+          createdAt: 'not-a-date',
+        },
+        { token: 'mock_token_1' }
+      )
+
+      expect(updateResult.error).toBeDefined()
+      expect(updateResult.error?.status).toBe(400)
     })
   })
 

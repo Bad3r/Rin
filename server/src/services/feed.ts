@@ -1,4 +1,5 @@
 import {
+  asDate,
   type CreateFeedRequest,
   type UpdateFeedRequest,
   feedCreateSchema,
@@ -209,7 +210,19 @@ export function FeedService(router: Router): void {
           return 'Content already exists'
         }
 
-        const date = typeof createdAt === 'string' ? new Date(createdAt) : new Date()
+        let date = new Date()
+        if (createdAt !== undefined) {
+          if (typeof createdAt !== 'string') {
+            set.status = 400
+            return 'Invalid createdAt: expected ISO 8601 date-time string'
+          }
+          try {
+            date = asDate(createdAt, 'createdAt')
+          } catch (error) {
+            set.status = 400
+            return error instanceof Error ? error.message : 'Invalid createdAt'
+          }
+        }
 
         // Generate AI summary if enabled and not a draft
         let ai_summary = ''
@@ -487,6 +500,20 @@ export function FeedService(router: Router): void {
           }
         }
 
+        let parsedCreatedAt: Date | undefined
+        if (createdAt !== undefined) {
+          if (typeof createdAt !== 'string') {
+            set.status = 400
+            return 'Invalid createdAt: expected ISO 8601 date-time string'
+          }
+          try {
+            parsedCreatedAt = asDate(createdAt, 'createdAt')
+          } catch (error) {
+            set.status = 400
+            return error instanceof Error ? error.message : 'Invalid createdAt'
+          }
+        }
+
         await db
           .update(feeds)
           .set({
@@ -498,7 +525,7 @@ export function FeedService(router: Router): void {
             top: typeof top === 'number' ? top : undefined,
             listed: listed === undefined ? undefined : listed ? 1 : 0,
             draft: draft === undefined ? undefined : draft ? 1 : 0,
-            createdAt: typeof createdAt === 'string' ? new Date(createdAt) : undefined,
+            createdAt: parsedCreatedAt,
             updatedAt: new Date(),
           })
           .where(eq(feeds.id, id_num))

@@ -5,7 +5,7 @@ import 'primereact/resources/primereact.css'
 import 'primereact/resources/themes/lara-light-indigo/theme.css'
 import mermaid from 'mermaid'
 import { useCallback, useEffect, useState } from 'react'
-import type { Feed } from '@rin/api'
+import { asDate, toIsoDateTimeString, type Feed } from '@rin/api'
 import { Helmet } from '../components/helmet'
 import { useTranslation } from 'react-i18next'
 import Loading from '../components/react-loading'
@@ -56,7 +56,7 @@ async function publish({
     tags,
     listed,
     draft,
-    createdAt: createdAt?.toISOString(),
+    createdAt: createdAt ? toIsoDateTimeString(createdAt, 'writing.createdAt') : undefined,
   })
   if (onCompleted) {
     onCompleted()
@@ -106,7 +106,7 @@ async function update({
     tags,
     listed,
     draft,
-    createdAt: createdAt?.toISOString(),
+    createdAt: createdAt ? toIsoDateTimeString(createdAt, 'writing.createdAt') : undefined,
   })
   if (onCompleted) {
     onCompleted()
@@ -200,7 +200,7 @@ export function WritingPage({ id }: { id?: number }) {
           if (summary === '') setSummary(feedData.summary || '')
           setListed(feedData.listed === 1)
           setDraft(feedData.draft === 1)
-          setCreatedAt(new Date(feedData.createdAt))
+          setCreatedAt(asDate(feedData.createdAt, 'feed.createdAt'))
         }
       })
     }

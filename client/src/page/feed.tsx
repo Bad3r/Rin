@@ -1,6 +1,6 @@
 import mermaid from 'mermaid'
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
-import type { Comment as ApiComment, Feed as ApiFeed } from '@rin/api'
+import { asDate, type Comment as ApiComment, type Feed as ApiFeed } from '@rin/api'
 import { Helmet } from '../components/helmet'
 import { useTranslation } from 'react-i18next'
 import ReactModal from 'react-modal'
@@ -137,6 +137,9 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
         })
       })
   }, [])
+  const feedCreatedAt = feed ? asDate(feed.createdAt, 'feed.createdAt') : undefined
+  const feedUpdatedAt = feed ? asDate(feed.updatedAt, 'feed.updatedAt') : undefined
+  const feedWasUpdated = feedCreatedAt && feedUpdatedAt ? feedCreatedAt.getTime() !== feedUpdatedAt.getTime() : false
 
   return (
     <Waiting for={feed || error}>
@@ -176,16 +179,16 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
                 <div className='flex justify-between'>
                   <div>
                     <div className='mt-1 mb-1 flex gap-1'>
-                      <p className='text-gray-400 text-[12px]' title={new Date(feed.createdAt).toLocaleString()}>
+                      <p className='text-gray-400 text-[12px]' title={feedCreatedAt?.toLocaleString()}>
                         {t('feed_card.published$time', {
-                          time: timeago(feed.createdAt),
+                          time: timeago(feedCreatedAt || feed.createdAt),
                         })}
                       </p>
 
-                      {feed.createdAt !== feed.updatedAt && (
-                        <p className='text-gray-400 text-[12px]' title={new Date(feed.updatedAt).toLocaleString()}>
+                      {feedWasUpdated && (
+                        <p className='text-gray-400 text-[12px]' title={feedUpdatedAt?.toLocaleString()}>
                           {t('feed_card.updated$time', {
-                            time: timeago(feed.updatedAt),
+                            time: timeago(feedUpdatedAt || feed.updatedAt),
                           })}
                         </p>
                       )}
@@ -446,6 +449,7 @@ function CommentItem({ comment, onRefresh }: { comment: ApiComment; onRefresh: (
   const { showAlert, AlertUI } = useAlert()
   const { t } = useTranslation()
   const profile = useContext(ProfileContext)
+  const commentCreatedAt = asDate(comment.createdAt, 'comment.createdAt')
   function deleteComment() {
     showConfirm(t('delete.comment.title'), t('delete.comment.confirm'), async () => {
       client.comment.delete(comment.id).then(({ error }) => {
@@ -466,8 +470,8 @@ function CommentItem({ comment, onRefresh }: { comment: ApiComment; onRefresh: (
         <div className='flex flex-row'>
           <span className='t-primary text-base font-bold'>{comment.user.username}</span>
           <div className='flex-1 w-0' />
-          <span title={new Date(comment.createdAt).toLocaleString()} className='text-gray-400 text-sm'>
-            {timeago(comment.createdAt)}
+          <span title={commentCreatedAt.toLocaleString()} className='text-gray-400 text-sm'>
+            {timeago(commentCreatedAt)}
           </span>
         </div>
         <p className='t-primary break-words'>{comment.content}</p>
