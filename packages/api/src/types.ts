@@ -7,7 +7,7 @@ export interface ApiResponse<T> {
   data?: T
   error?: {
     status: number
-    value: string
+    value: unknown
   }
 }
 
@@ -246,7 +246,7 @@ export interface MomentListResponse {
 export type ConfigType = 'client' | 'server'
 
 export interface ConfigResponse {
-  [key: string]: any
+  [key: string]: unknown
 }
 
 // ============================================================================

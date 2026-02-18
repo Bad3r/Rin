@@ -65,7 +65,7 @@ describe('Router', () => {
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
-      const data = (await response.json()) as any
+      const data = (await response.json()) as Record<string, string>
       expect(data.id).toBe('123')
     })
 
@@ -80,7 +80,7 @@ describe('Router', () => {
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
-      const data = (await response.json()) as any
+      const data = (await response.json()) as Record<string, string>
       expect(data.userId).toBe('1')
       expect(data.postId).toBe('2')
     })
@@ -95,7 +95,7 @@ describe('Router', () => {
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
-      const data = (await response.json()) as any
+      const data = (await response.json()) as Record<string, string>
       expect(data.q).toBe('test')
       expect(data.page).toBe('1')
     })
@@ -108,7 +108,7 @@ describe('Router', () => {
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
-      const data = (await response.json()) as any
+      const data = (await response.json()) as Record<string, string>
       expect(Object.keys(data).length).toBe(0)
     })
   })
@@ -116,8 +116,8 @@ describe('Router', () => {
   describe('Route groups', () => {
     it('should handle grouped routes', async () => {
       app.group('/api', group => {
-        group.get('/users', () => 'users list' as any)
-        group.get('/posts', () => 'posts list' as any)
+        group.get('/users', () => 'users list')
+        group.get('/posts', () => 'posts list')
       })
 
       const request1 = new Request('http://localhost/api/users')
@@ -134,7 +134,7 @@ describe('Router', () => {
     it('should handle nested groups', async () => {
       app.group('/api', api => {
         api.group('/v1', v1 => {
-          v1.get('/test', () => 'v1 test' as any)
+          v1.get('/test', () => 'v1 test')
         })
       })
 
@@ -196,10 +196,18 @@ describe('Router', () => {
       }
       app.get('/error', handler)
 
-      const request = new Request('http://localhost/error')
-      const response = await app.handle(request, env)
+      const originalConsoleError = console.error
+      console.error = () => {}
 
-      expect(response.status).toBe(500)
+      let response: Response | undefined
+      try {
+        const request = new Request('http://localhost/error')
+        response = await app.handle(request, env)
+      } finally {
+        console.error = originalConsoleError
+      }
+
+      expect(response?.status).toBe(500)
     })
   })
 

@@ -13,7 +13,13 @@ function env(name: string, defaultValue?: string, required = false) {
 }
 
 // must be defined
-const renv = (name: string, defaultValue?: string) => env(name, defaultValue, true)!
+const renv = (name: string, defaultValue?: string) => {
+  const value = env(name, defaultValue, true)
+  if (!value) {
+    throw new Error(`${name} is not defined`)
+  }
+  return value
+}
 
 const DB_NAME = renv('DB_NAME', 'rin')
 const WORKER_NAME = renv('WORKER_NAME', 'rin-server')
@@ -248,10 +254,11 @@ mode = "smart"
         await updateMigrationVersion(typ, DB_NAME, lastVersion)
       }
     }
-  } catch (e: any) {
-    console.error(e.stdio?.toString())
-    console.error(e.stdout?.toString())
-    console.error(e.stderr?.toString())
+  } catch (e: unknown) {
+    const error = e as { stdio?: unknown; stdout?: unknown; stderr?: unknown }
+    console.error(String(error.stdio ?? ''))
+    console.error(String(error.stdout ?? ''))
+    console.error(String(error.stderr ?? ''))
     process.exit(1)
   }
 
@@ -328,7 +335,8 @@ function parseWranglerFeedIds(stdout: string): number[] {
   try {
     const json = JSON.parse(stdout)
     if (Array.isArray(json) && json.length > 0 && json[0].results) {
-      return json[0].results.map((row: any) => parseInt(row.feed_id, 10)).filter((id: number) => !Number.isNaN(id))
+      const rows = json[0].results as Array<{ feed_id?: string | number }>
+      return rows.map(row => Number.parseInt(String(row.feed_id ?? ''), 10)).filter((id: number) => !Number.isNaN(id))
     }
   } catch (_e) {
     return stdout
@@ -345,7 +353,8 @@ function parseWranglerIPs(stdout: string): string[] {
   try {
     const json = JSON.parse(stdout)
     if (json.results) {
-      return json.results.map((row: any) => row.ip).filter((ip: string) => ip && typeof ip === 'string')
+      const rows = json.results as Array<{ ip?: unknown }>
+      return rows.map(row => row.ip).filter((ip): ip is string => typeof ip === 'string' && ip.length > 0)
     }
   } catch (_e) {
     return stdout

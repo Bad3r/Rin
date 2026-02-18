@@ -19,15 +19,15 @@ export interface UseAsyncState<T> {
 }
 
 export interface UseAsyncActions<T> {
-  execute: (...args: any[]) => Promise<T | null>
+  execute: (...args: unknown[]) => Promise<T | null>
   reset: () => void
   retry: () => Promise<T | null>
 }
 
 export type UseAsyncReturn<T> = UseAsyncState<T> & UseAsyncActions<T>
 
-export interface UseAsyncOptions {
-  onSuccess?: (data: any) => void
+export interface UseAsyncOptions<T = unknown> {
+  onSuccess?: (data: T | undefined) => void
   onError?: (error: AppError) => void
   immediate?: boolean
   retryCount?: number
@@ -39,8 +39,8 @@ export interface UseAsyncOptions {
 // ============================================================================
 
 export function useAsync<T>(
-  asyncFunction: (...args: any[]) => Promise<T>,
-  options: UseAsyncOptions = {}
+  asyncFunction: (...args: unknown[]) => Promise<T>,
+  options: UseAsyncOptions<T> = {}
 ): UseAsyncReturn<T> {
   const { onSuccess, onError, immediate = false, retryCount = 0, retryDelay = 1000 } = options
 
@@ -51,7 +51,7 @@ export function useAsync<T>(
   })
 
   const retryCountRef = useRef(0)
-  const lastArgsRef = useRef<any[]>([])
+  const lastArgsRef = useRef<unknown[]>([])
   const isMountedRef = useRef(true)
 
   // Cleanup on unmount
@@ -62,7 +62,7 @@ export function useAsync<T>(
   }, [])
 
   const execute = useCallback(
-    async (...args: any[]): Promise<T | null> => {
+    async (...args: unknown[]): Promise<T | null> => {
       lastArgsRef.current = args
       retryCountRef.current = 0
 
@@ -129,8 +129,8 @@ export function useAsync<T>(
 // ============================================================================
 
 export function useApi<T>(
-  apiFunction: (...args: any[]) => Promise<{ data?: T; error?: any }>,
-  options: UseAsyncOptions = {}
+  apiFunction: (...args: unknown[]) => Promise<{ data?: T; error?: unknown }>,
+  options: UseAsyncOptions<T> = {}
 ): UseAsyncReturn<T> {
   const { onSuccess, onError, immediate = false, retryCount = 0, retryDelay = 1000 } = options
 
@@ -141,7 +141,7 @@ export function useApi<T>(
   })
 
   const retryCountRef = useRef(0)
-  const lastArgsRef = useRef<any[]>([])
+  const lastArgsRef = useRef<unknown[]>([])
   const isMountedRef = useRef(true)
 
   useEffect(() => {
@@ -151,7 +151,7 @@ export function useApi<T>(
   }, [])
 
   const execute = useCallback(
-    async (...args: any[]): Promise<T | null> => {
+    async (...args: unknown[]): Promise<T | null> => {
       lastArgsRef.current = args
       retryCountRef.current = 0
 
@@ -268,7 +268,7 @@ export interface UseRetryOptions {
   maxRetries?: number
   delay?: number
   backoff?: number
-  shouldRetry?: (error: any) => boolean
+  shouldRetry?: (error: unknown) => boolean
 }
 
 export function useRetry<T>(fn: () => Promise<T>, options: UseRetryOptions = {}) {

@@ -11,8 +11,8 @@ export interface JWTPayloadSpec {
 }
 
 export interface JWTUtils {
-  sign: (payload: any) => Promise<string>
-  verify: (jwt?: string) => Promise<any | false>
+  sign: (payload: Record<string, unknown>) => Promise<string>
+  verify: (jwt?: string) => Promise<Record<string, unknown> | false>
 }
 
 export function createJWT(secret: string | Uint8Array): JWTUtils {
@@ -22,16 +22,16 @@ export function createJWT(secret: string | Uint8Array): JWTUtils {
   const alg = 'HS256'
 
   return {
-    sign: async (payload: any) => {
+    sign: async (payload: Record<string, unknown>) => {
       const jwt = new SignJWT(payload).setProtectedHeader({ alg }).setIssuedAt()
 
       return jwt.sign(key)
     },
-    verify: async (jwt?: string): Promise<any | false> => {
+    verify: async (jwt?: string): Promise<Record<string, unknown> | false> => {
       if (!jwt) return false
 
       try {
-        const data = (await jwtVerify(jwt, key)).payload
+        const data = (await jwtVerify(jwt, key)).payload as Record<string, unknown>
         return data
       } catch (_) {
         return false

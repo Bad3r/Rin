@@ -5,8 +5,8 @@ import { Markdown } from './markdown'
 interface Moment {
   id: number
   content: string
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string
+  updatedAt: string
   user: {
     id: number
     username: string

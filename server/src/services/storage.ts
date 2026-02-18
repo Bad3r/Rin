@@ -19,7 +19,8 @@ export function StorageService(router: Router): void {
           body,
           store: { env },
         } = ctx
-        const { key, file } = body
+        const keyValue = body.key
+        const fileValue = body.file
 
         const endpoint = env.S3_ENDPOINT
         const bucket = env.S3_BUCKET
@@ -49,19 +50,28 @@ export function StorageService(router: Router): void {
           set.status = 401
           return 'Unauthorized'
         }
+        if (typeof keyValue !== 'string' || keyValue.length === 0) {
+          set.status = 400
+          return 'Invalid key'
+        }
+        if (!(fileValue instanceof Blob)) {
+          set.status = 400
+          return 'Invalid file'
+        }
 
-        const suffix = key.includes('.') ? key.split('.').pop() : ''
-        const hashArray = await crypto.subtle.digest({ name: 'SHA-1' }, await file.arrayBuffer())
+        const suffix = keyValue.includes('.') ? keyValue.split('.').pop() : ''
+        const hashArray = await crypto.subtle.digest({ name: 'SHA-1' }, await fileValue.arrayBuffer())
         const hash = buf2hex(hashArray)
         const hashkey = path_join(folder, `${hash}.${suffix}`)
 
         try {
-          await putObject(s3, env, hashkey, file, file.type)
+          await putObject(s3, env, hashkey, fileValue, fileValue.type)
           return `${accessHost}/${hashkey}`
-        } catch (e: any) {
+        } catch (e: unknown) {
           set.status = 400
-          console.error(e.message)
-          return e.message
+          const message = e instanceof Error ? e.message : String(e)
+          console.error(message)
+          return message
         }
       },
       {

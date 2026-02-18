@@ -1,5 +1,6 @@
 import type { Database } from 'bun:sqlite'
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import type { CreateFeedRequest } from '@rin/api'
 import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
 import { createBaseApp } from '../../core/base'
@@ -8,10 +9,10 @@ import { FeedService } from '../feed'
 import { TagService } from '../tag'
 
 describe('FeedService', () => {
-  let db: any
+  let db: ReturnType<typeof createMockDB>['db']
   let sqlite: Database
   let env: Env
-  let app: any
+  let app: ReturnType<typeof createBaseApp>
   let api: ReturnType<typeof createTestClient>
 
   beforeEach(async () => {
@@ -24,7 +25,7 @@ describe('FeedService', () => {
     app = createBaseApp(env)
     app.state('db', db)
     app.state('jwt', {
-      sign: async (payload: any) => `mock_token_${payload.id}`,
+      sign: async (payload: { id: number }) => `mock_token_${payload.id}`,
       verify: async (token: string) => (token.startsWith('mock_token_') ? { id: 1 } : null),
     })
     app.state('cache', {
@@ -32,11 +33,11 @@ describe('FeedService', () => {
       set: async () => {},
       delete: async () => {},
       deletePrefix: async () => {},
-      getOrSet: async (_key: string, fn: Function) => fn(),
-      getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
+      getOrSet: async (_key: string, fn: () => unknown) => fn(),
+      getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
     })
     app.state('clientConfig', {
-      getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
+      getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
     })
 
     // Register all services
@@ -61,6 +62,13 @@ describe('FeedService', () => {
             INSERT INTO users (id, username, openid, avatar, permission) 
             VALUES (1, 'testuser', 'gh_test', 'avatar.png', 1)
         `)
+  }
+
+  function requireInsertedId(insertedId: number | undefined): number {
+    if (insertedId === undefined) {
+      throw new Error('Expected insertedId to be defined')
+    }
+    return insertedId
   }
 
   describe('GET /feed - List feeds', () => {
@@ -161,10 +169,9 @@ describe('FeedService', () => {
       )
 
       expect(createResult.error).toBeUndefined()
-      const feedId = createResult.data?.insertedId
-      expect(feedId).toBeDefined()
+      const feedId = requireInsertedId(createResult.data?.insertedId)
 
-      const getResult = await api.feed.get(feedId!)
+      const getResult = await api.feed.get(feedId)
 
       expect(getResult.error).toBeUndefined()
       expect(getResult.data?.title).toBe('Test Feed')
@@ -215,7 +222,7 @@ describe('FeedService', () => {
           tags: [],
           draft: false,
           listed: true,
-        } as any,
+        } as unknown as CreateFeedRequest,
         { token: 'mock_token_1' }
       )
 
@@ -229,7 +236,7 @@ describe('FeedService', () => {
           title: 'Test',
           content: '',
           tags: [],
-        } as any,
+        } as unknown as CreateFeedRequest,
         { token: 'mock_token_1' }
       )
 
@@ -253,11 +260,10 @@ describe('FeedService', () => {
       )
 
       expect(createResult.error).toBeUndefined()
-      const feedId = createResult.data?.insertedId
-      expect(feedId).toBeDefined()
+      const feedId = requireInsertedId(createResult.data?.insertedId)
 
       const updateResult = await api.feed.update(
-        feedId!,
+        feedId,
         {
           title: 'Updated Title',
           content: 'Updated content',
@@ -269,7 +275,7 @@ describe('FeedService', () => {
       expect(updateResult.error).toBeUndefined()
 
       // Verify update
-      const getResult = await api.feed.get(feedId!)
+      const getResult = await api.feed.get(feedId)
       expect(getResult.data?.title).toBe('Updated Title')
     })
 
@@ -287,10 +293,9 @@ describe('FeedService', () => {
       )
 
       expect(createResult.error).toBeUndefined()
-      const feedId = createResult.data?.insertedId
-      expect(feedId).toBeDefined()
+      const feedId = requireInsertedId(createResult.data?.insertedId)
 
-      const updateResult = await api.feed.update(feedId!, {
+      const updateResult = await api.feed.update(feedId, {
         title: 'New Title',
         listed: true,
       })
@@ -315,15 +320,14 @@ describe('FeedService', () => {
       )
 
       expect(createResult.error).toBeUndefined()
-      const feedId = createResult.data?.insertedId
-      expect(feedId).toBeDefined()
+      const feedId = requireInsertedId(createResult.data?.insertedId)
 
-      const deleteResult = await api.feed.delete(feedId!, { token: 'mock_token_1' })
+      const deleteResult = await api.feed.delete(feedId, { token: 'mock_token_1' })
 
       expect(deleteResult.error).toBeUndefined()
 
       // Verify deletion
-      const getResult = await api.feed.get(feedId!)
+      const getResult = await api.feed.get(feedId)
       expect(getResult.error?.status).toBe(404)
     })
 
@@ -341,10 +345,9 @@ describe('FeedService', () => {
       )
 
       expect(createResult.error).toBeUndefined()
-      const feedId = createResult.data?.insertedId
-      expect(feedId).toBeDefined()
+      const feedId = requireInsertedId(createResult.data?.insertedId)
 
-      const deleteResult = await api.feed.delete(feedId!)
+      const deleteResult = await api.feed.delete(feedId)
 
       expect(deleteResult.error).toBeDefined()
       expect(deleteResult.error?.status).toBe(403)

@@ -25,7 +25,7 @@ for (const impl of ROUTER_IMPLS) {
         get: async () => undefined,
         set: async () => {},
         deletePrefix: async () => {},
-        getOrSet: async (_key: string, fn: Function) => fn(),
+        getOrSet: async (_key: string, fn: () => unknown) => fn(),
         getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
       })
       app.state('serverConfig', {
@@ -37,7 +37,7 @@ for (const impl of ROUTER_IMPLS) {
         getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
       })
       app.state('jwt', {
-        sign: async (_payload: unknown) => 'token',
+        sign: async (_payload: Record<string, unknown>) => 'token',
         verify: async (_token: string) => null,
       })
 
@@ -54,7 +54,7 @@ for (const impl of ROUTER_IMPLS) {
 
       expect(result.error).toBeUndefined()
       expect(result.data).toBeDefined()
-      expect(Array.isArray((result.data as any).friend_list)).toBe(true)
+      expect(Array.isArray(result.data?.friend_list)).toBe(true)
     })
   })
 }

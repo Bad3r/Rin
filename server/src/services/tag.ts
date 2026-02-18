@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import type { Router } from '../core/router'
 import type { Context } from '../core/types'
 import { feedHashtags, hashtags } from '../db/schema'
@@ -18,7 +18,7 @@ export function TagService(router: Router): void {
         },
       })
 
-      return tag_list.map((tag: any) => ({
+      return tag_list.map(tag => ({
         ...tag,
         feeds: tag.feeds.length,
       }))
@@ -47,8 +47,8 @@ export function TagService(router: Router): void {
                   content: true,
                   createdAt: true,
                   updatedAt: true,
-                  draft: false,
-                  listed: false,
+                  draft: true,
+                  listed: true,
                 },
                 with: {
                   user: { columns: { id: true, username: true, avatar: true } },
@@ -57,22 +57,25 @@ export function TagService(router: Router): void {
                     with: { hashtag: { columns: { id: true, name: true } } },
                   },
                 },
-                where: (feeds: any) => (admin ? undefined : and(eq(feeds.draft, 0), eq(feeds.listed, 1))),
-              } as any,
+              },
             },
           },
         },
       })
 
       const tagFeeds = tag?.feeds
-        .map((tagFeed: any) => {
+        .map(tagFeed => {
           if (!tagFeed.feed) return null
+          if (!admin && (tagFeed.feed.draft === 1 || tagFeed.feed.listed === 0)) {
+            return null
+          }
+          const { draft: _draft, listed: _listed, ...feed } = tagFeed.feed
           return {
-            ...tagFeed.feed,
-            hashtags: tagFeed.feed.hashtags.map((hashtag: any) => hashtag.hashtag),
+            ...feed,
+            hashtags: tagFeed.feed.hashtags.map(hashtag => hashtag.hashtag),
           }
         })
-        .filter((feed: any) => feed !== null)
+        .filter(feed => feed !== null)
 
       if (!tag) {
         set.status = 404

@@ -1,6 +1,7 @@
+import type { ReactNode } from 'react'
 import ReactLoading from './react-loading'
 
-export function Waiting({ for: wait, children }: { for?: any; children?: React.ReactNode }) {
+export function Waiting({ for: wait, children }: { for?: unknown; children?: ReactNode }) {
   return (
     <>
       {!wait ? (

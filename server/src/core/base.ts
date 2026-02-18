@@ -5,23 +5,18 @@ import type { Context, OAuth2Utils } from './types'
 
 // Lazy initialization container
 class LazyInitContainer {
-  private readonly env: Env
-  private instances: Map<string, any> = new Map()
-  private initializing: Map<string, Promise<any>> = new Map()
-
-  constructor(env: Env) {
-    this.env = env
-  }
+  private instances: Map<string, unknown> = new Map()
+  private initializing: Map<string, Promise<unknown>> = new Map()
 
   async get<T>(key: string, factory: () => Promise<T>): Promise<T> {
     // Return cached instance
     if (this.instances.has(key)) {
-      return this.instances.get(key)
+      return this.instances.get(key) as T
     }
 
     // Return existing initialization promise
     if (this.initializing.has(key)) {
-      return this.initializing.get(key)
+      return this.initializing.get(key) as Promise<T>
     }
 
     // Create new initialization
@@ -37,7 +32,7 @@ class LazyInitContainer {
 }
 
 export function createBaseApp(env: Env): Router {
-  const container = new LazyInitContainer(env)
+  const container = new LazyInitContainer()
   const app = createRouter(env)
 
   // Add middlewares
@@ -134,7 +129,7 @@ export function createBaseApp(env: Env): Router {
       clientConfig,
       jwt,
       oauth2,
-      anyUser: async () => (await db.query.users.findMany())?.length > 0,
+      anyUser: async targetDb => (await targetDb.query.users.findMany())?.length > 0,
     }
 
     context.jwt = jwt

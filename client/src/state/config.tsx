@@ -23,9 +23,9 @@ export const defaultServerConfig = new Map(
 )
 
 export class ConfigWrapper {
-  config: any
-  defaultConfig: Map<string, any>
-  constructor(config: any, defaultConfig: Map<string, any>) {
+  config: Record<string, unknown>
+  defaultConfig: Map<string, unknown>
+  constructor(config: Record<string, unknown>, defaultConfig: Map<string, unknown>) {
     this.config = config
     this.defaultConfig = defaultConfig
   }

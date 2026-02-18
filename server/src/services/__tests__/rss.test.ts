@@ -2,17 +2,19 @@ import type { Database } from 'bun:sqlite'
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
 import { createBaseApp } from '../../core/base'
+import type { Router } from '../../core/router'
+import type { DB } from '../../server'
 import { RSSService, rssCrontab } from '../rss'
 
 describe('RSSService', () => {
-  let db: any
+  let db: DB
   let sqlite: Database
   let env: Env
-  let app: any
+  let app: Router
 
   beforeEach(async () => {
     const mockDB = createMockDB()
-    db = mockDB.db
+    db = mockDB.db as unknown as DB
     sqlite = mockDB.sqlite
     env = createMockEnv()
 
@@ -25,14 +27,14 @@ describe('RSSService', () => {
     RSSService(app)
 
     // Seed test data
-    await seedTestData(db)
+    await seedTestData()
   })
 
   afterEach(() => {
     cleanupTestDB(sqlite)
   })
 
-  async function seedTestData(_db: any) {
+  async function seedTestData() {
     // Insert test user
     sqlite.exec(`
             INSERT INTO users (id, username, avatar, openid) VALUES (1, 'testuser', 'avatar.png', 'gh_test')
@@ -83,7 +85,7 @@ describe('RSSService', () => {
       expect(response.status).toBe(200)
       expect(response.headers.get('Content-Type')).toBe('application/feed+json; charset=UTF-8')
 
-      const data = await response.json()
+      const data = (await response.json()) as { items: unknown[] }
       expect(data).toHaveProperty('items')
       expect(data.items.length).toBe(2)
     })
@@ -167,8 +169,8 @@ describe('RSSService', () => {
   describe('Real-time feed generation', () => {
     it('should generate feed when S3 is not configured', async () => {
       const envNoS3 = createMockEnv({
-        S3_ENDPOINT: '' as any,
-        S3_BUCKET: '' as any,
+        S3_ENDPOINT: '',
+        S3_BUCKET: '',
       })
 
       const appNoS3 = createBaseApp(envNoS3)
@@ -271,13 +273,13 @@ describe('RSSService', () => {
 })
 
 describe('rssCrontab', () => {
-  let db: any
+  let db: DB
   let sqlite: Database
   let env: Env
 
   beforeEach(async () => {
     const mockDB = createMockDB()
-    db = mockDB.db
+    db = mockDB.db as unknown as DB
     sqlite = mockDB.sqlite
     env = createMockEnv()
 

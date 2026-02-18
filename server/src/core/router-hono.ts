@@ -35,8 +35,8 @@ function buildNotFoundResponse(request: Request): Response {
   })
 }
 
-function parseQuery(searchParams: URLSearchParams): Record<string, unknown> {
-  const query: Record<string, unknown> = {}
+function parseQuery(searchParams: URLSearchParams): Record<string, string | string[]> {
+  const query: Record<string, string | string[]> = {}
   searchParams.forEach((value, key) => {
     if (key in query) {
       if (Array.isArray(query[key])) {
@@ -56,11 +56,15 @@ async function parseBody(request: {
   json: () => Promise<unknown>
   formData: () => Promise<FormData>
   text: () => Promise<string>
-}): Promise<unknown> {
+}): Promise<Record<string, unknown>> {
   const contentType = request.headers.get('content-type') || ''
 
   if (contentType.includes('application/json')) {
-    return await request.json()
+    const jsonBody = await request.json()
+    if (jsonBody && typeof jsonBody === 'object') {
+      return jsonBody as Record<string, unknown>
+    }
+    return {}
   }
 
   if (contentType.includes('application/x-www-form-urlencoded')) {
@@ -73,10 +77,15 @@ async function parseBody(request: {
   }
 
   if (contentType.includes('multipart/form-data')) {
-    return await request.formData()
+    const formData = await request.formData()
+    const body: Record<string, unknown> = {}
+    formData.forEach((value, key) => {
+      body[key] = value
+    })
+    return body
   }
 
-  return await request.text()
+  return { raw: await request.text() }
 }
 
 function validateSchema(schema: unknown, data: unknown): SchemaValidationResult {
@@ -189,9 +198,9 @@ export class HonoRouterAdapter extends Router {
 
   state<T>(key: string, value: T): this
   state<T>(key: string): T | undefined
-  state<T>(key: string, value?: T): this | T | undefined {
-    if (arguments.length === 2) {
-      this.rootState.appState.set(key, value as AppStateValue)
+  state<T>(key: string, ...rest: [] | [T]): this | T | undefined {
+    if (rest.length === 1) {
+      this.rootState.appState.set(key, rest[0] as AppStateValue)
       return this
     }
     return this.rootState.appState.get(key) as T | undefined
@@ -236,8 +245,8 @@ export class HonoRouterAdapter extends Router {
       params,
       query: parseQuery(url.searchParams),
       headers: {},
-      body: null,
-      store: Object.fromEntries(this.rootState.appState.entries()),
+      body: {},
+      store: Object.fromEntries(this.rootState.appState.entries()) as Context['store'],
       set: {
         status: 200,
         headers: new Headers(),

@@ -1,5 +1,6 @@
 import i18next from 'i18next'
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
+import type { Friend as FriendItem } from '@rin/api'
 import { Helmet } from '../components/helmet'
 import { useTranslation } from 'react-i18next'
 import Modal from 'react-modal'
@@ -12,20 +13,6 @@ import { client } from '../main'
 import { ClientConfigContext } from '../state/config'
 import { ProfileContext } from '../state/profile'
 import { siteName } from '../utils/constants'
-
-type FriendItem = {
-  name: string
-  id: number
-  uid: number
-  avatar: string
-  createdAt: Date
-  updatedAt: Date
-  desc: string | null
-  url: string
-  accepted: number
-  health: string
-  sort_order?: number
-}
 
 async function publish({
   name,
@@ -78,16 +65,14 @@ export function FriendsPage() {
     client.friend.list().then(({ data }) => {
       if (data) {
         const friend_list = data.friend_list || []
-        const friends_available =
-          friend_list.filter(({ health, accepted }: any) => health.length === 0 && accepted === 1) || []
-        setFriendsAvailable(friends_available as any)
-        const friends_unavailable =
-          friend_list.filter(({ health, accepted }: any) => health.length > 0 && accepted === 1) || []
-        setFriendsUnavailable(friends_unavailable as any)
-        const waitList = friend_list.filter(({ accepted }: any) => accepted === 0) || []
-        setWaitList(waitList as any)
-        const refuesdList = friend_list.filter(({ accepted }: any) => accepted === -1) || []
-        setRefusedList(refuesdList as any)
+        const friends_available = friend_list.filter(({ health, accepted }) => health.length === 0 && accepted === 1)
+        setFriendsAvailable(friends_available)
+        const friends_unavailable = friend_list.filter(({ health, accepted }) => health.length > 0 && accepted === 1)
+        setFriendsUnavailable(friends_unavailable)
+        const waitList = friend_list.filter(({ accepted }) => accepted === 0)
+        setWaitList(waitList)
+        const refuesdList = friend_list.filter(({ accepted }) => accepted === -1)
+        setRefusedList(refuesdList)
       }
       setStatus('idle')
     })

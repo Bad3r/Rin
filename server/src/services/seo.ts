@@ -41,10 +41,11 @@ export function SEOService(router: Router): void {
         status: response.status,
         statusText: response.statusText,
       })
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e)
       console.error(e)
       set.status = 500
-      return e.message
+      return message
     }
   })
 }

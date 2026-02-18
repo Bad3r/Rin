@@ -5,6 +5,7 @@ import 'primereact/resources/primereact.css'
 import 'primereact/resources/themes/lara-light-indigo/theme.css'
 import mermaid from 'mermaid'
 import { useCallback, useEffect, useState } from 'react'
+import type { Feed } from '@rin/api'
 import { Helmet } from '../components/helmet'
 import { useTranslation } from 'react-i18next'
 import Loading from '../components/react-loading'
@@ -15,6 +16,13 @@ import { useSiteConfig } from '../hooks/useSiteConfig'
 import { client } from '../main'
 import { Cache } from '../utils/cache'
 import { siteName } from '../utils/constants'
+
+type EditableFeed = Feed & {
+  alias?: string | null
+  summary?: string
+  listed?: number
+  draft?: number
+}
 
 async function publish({
   title,
@@ -183,15 +191,16 @@ export function WritingPage({ id }: { id?: number }) {
     if (id) {
       client.feed.get(id).then(({ data }) => {
         if (data) {
-          if (title === '' && data.title) setTitle(data.title)
-          if (tags === '' && data.hashtags)
-            setTags(data.hashtags.map(({ name }: { name: string }) => `#${name}`).join(' '))
-          if (alias === '' && (data as any).alias) setAlias((data as any).alias)
-          if (content === '') setContent(data.content)
-          if (summary === '') setSummary((data as any).summary || '')
-          setListed((data as any).listed === 1)
-          setDraft((data as any).draft === 1)
-          setCreatedAt(new Date(data.createdAt))
+          const feedData = data as EditableFeed
+          if (title === '' && feedData.title) setTitle(feedData.title)
+          if (tags === '' && feedData.hashtags)
+            setTags(feedData.hashtags.map(({ name }: { name: string }) => `#${name}`).join(' '))
+          if (alias === '' && feedData.alias) setAlias(feedData.alias)
+          if (content === '') setContent(feedData.content)
+          if (summary === '') setSummary(feedData.summary || '')
+          setListed(feedData.listed === 1)
+          setDraft(feedData.draft === 1)
+          setCreatedAt(new Date(feedData.createdAt))
         }
       })
     }

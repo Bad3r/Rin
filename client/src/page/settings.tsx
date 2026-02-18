@@ -1,5 +1,5 @@
 import * as Switch from '@radix-ui/react-switch'
-import { type ChangeEvent, useContext, useEffect, useRef, useState } from 'react'
+import { type ChangeEvent, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ReactLoading from '../components/react-loading'
 import Modal from 'react-modal'
@@ -17,6 +17,16 @@ import {
 } from '../state/config.tsx'
 
 import '../utils/thumb.css'
+
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message
+  }
+  if (typeof err === 'string') {
+    return err
+  }
+  return 'Unknown error'
+}
 
 export function Settings() {
   const { t } = useTranslation()
@@ -41,8 +51,8 @@ export function Settings() {
           setClientConfig(config)
         }
       })
-      .catch((err: any) => {
-        showAlert(t('settings.get_config_failed$message', { message: err.message }))
+      .catch((err: unknown) => {
+        showAlert(t('settings.get_config_failed$message', { message: getErrorMessage(err) }))
       })
       .finally(() => {
         setClientLoading(false)
@@ -55,8 +65,8 @@ export function Settings() {
           setServerConfig(config)
         }
       })
-      .catch(err => {
-        showAlert(t('settings.get_config_failed$message', { message: err.message }))
+      .catch((err: unknown) => {
+        showAlert(t('settings.get_config_failed$message', { message: getErrorMessage(err) }))
       })
       .finally(() => {
         setServerLoading(false)
@@ -325,7 +335,7 @@ function ItemSwitch({
       setChecked(value)
     }
   }, [config, configKey])
-  function updateConfig(type: 'client' | 'server', key: string, value: any) {
+  function updateConfig(type: 'client' | 'server', key: string, value: unknown) {
     const checkedValue = checked
     setChecked(!checkedValue)
     setLoading(true)
@@ -347,8 +357,8 @@ function ItemSwitch({
         }
         setLoading(false)
       })
-      .catch((err: any) => {
-        showAlert(t('settings.update_failed$message', { message: err.message }))
+      .catch((err: unknown) => {
+        showAlert(t('settings.update_failed$message', { message: getErrorMessage(err) }))
         setChecked(checkedValue)
         setLoading(false)
       })
@@ -408,7 +418,7 @@ function ItemInput({
       setValue(value)
     }
   }, [config, configKey])
-  function updateConfig(type: 'client' | 'server', key: string, value: any) {
+  function updateConfig(type: 'client' | 'server', key: string, value: unknown) {
     setLoading(true)
     client.config
       .update(type, {
@@ -425,8 +435,8 @@ function ItemInput({
         }
         setLoading(false)
       })
-      .catch((err: any) => {
-        showAlert(t('settings.update_failed$message', { message: err.message }))
+      .catch((err: unknown) => {
+        showAlert(t('settings.update_failed$message', { message: getErrorMessage(err) }))
         setValue(config?.get<string>(configKey) || '')
         setLoading(false)
       })
@@ -727,6 +737,9 @@ function AISummarySettings() {
     details?: string
   } | null>(null)
   const { showAlert, AlertUI } = useAlert()
+  const asString = useCallback((value: unknown, fallback = ''): string => {
+    return typeof value === 'string' ? value : fallback
+  }, [])
 
   // Load AI config from server config
   useEffect(() => {
@@ -735,23 +748,23 @@ function AISummarySettings() {
         const { data } = await client.config.get('server')
         if (data) {
           setEnabled(data['ai_summary.enabled'] === 'true')
-          setProvider(data['ai_summary.provider'] ?? 'openai')
-          setModel(data['ai_summary.model'] ?? 'gpt-4o-mini')
+          setProvider(asString(data['ai_summary.provider'], 'openai'))
+          setModel(asString(data['ai_summary.model'], 'gpt-4o-mini'))
           setApiKeySet(data['ai_summary.api_key'] === '••••••••')
-          setApiUrl(data['ai_summary.api_url'] ?? '')
+          setApiUrl(asString(data['ai_summary.api_url']))
         }
       } catch (err) {
         console.error('Failed to load AI config:', err)
       }
     }
     loadConfig()
-  }, [])
+  }, [asString])
 
-  const updateConfig = async (updates: Record<string, any>) => {
+  const updateConfig = async (updates: Record<string, unknown>) => {
     setLoading(true)
     try {
       // Convert nested updates to flat keys
-      const flatUpdates: Record<string, any> = {}
+      const flatUpdates: Record<string, unknown> = {}
       if (updates.enabled !== undefined) flatUpdates['ai_summary.enabled'] = String(updates.enabled)
       if (updates.provider !== undefined) flatUpdates['ai_summary.provider'] = updates.provider
       if (updates.model !== undefined) flatUpdates['ai_summary.model'] = updates.model
@@ -759,8 +772,8 @@ function AISummarySettings() {
       if (updates.api_key !== undefined) flatUpdates['ai_summary.api_key'] = updates.api_key
 
       await client.config.update('server', flatUpdates)
-    } catch (err: any) {
-      showAlert(t('settings.update_failed$message', { message: err.message }))
+    } catch (err: unknown) {
+      showAlert(t('settings.update_failed$message', { message: getErrorMessage(err) }))
       throw err
     } finally {
       setLoading(false)
@@ -820,7 +833,12 @@ function AISummarySettings() {
     try {
       const preset = AI_PROVIDER_PRESETS.find(p => p.value === provider)
       // Build request body - only include fields if they have value
-      const requestBody: any = {
+      const requestBody: {
+        provider: string
+        model: string
+        api_url?: string
+        api_key?: string
+      } = {
         provider: provider,
         model: model,
       }
@@ -838,7 +856,7 @@ function AISummarySettings() {
         setTestStatus('error')
         setTestResult({
           success: false,
-          error: error.value || t('settings.ai_summary.test.failed'),
+          error: getErrorMessage(error.value) || t('settings.ai_summary.test.failed'),
           details: t('settings.ai_summary.test.http_error$status', { status: error.status }),
         })
       } else if (data?.success) {
@@ -855,12 +873,14 @@ function AISummarySettings() {
           details: data?.details,
         })
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const details =
+        err && typeof err === 'object' && 'details' in err && typeof err.details === 'string' ? err.details : undefined
       setTestStatus('error')
       setTestResult({
         success: false,
-        error: err.message || t('settings.ai_summary.test.error'),
-        details: err?.details,
+        error: getErrorMessage(err) || t('settings.ai_summary.test.error'),
+        details,
       })
     }
   }

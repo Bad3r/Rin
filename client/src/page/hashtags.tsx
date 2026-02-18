@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { Tag } from '@rin/api'
 import { Helmet } from '../components/helmet'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'wouter'
@@ -8,24 +9,16 @@ import { useSiteConfig } from '../hooks/useSiteConfig'
 import { client } from '../main'
 import { siteName } from '../utils/constants'
 
-type Hashtag = {
-  id: number
-  name: string
-  createdAt: Date
-  updatedAt: Date
-  feeds: number
-}
-
 export function HashtagsPage() {
   const { t } = useTranslation()
   const siteConfig = useSiteConfig()
-  const [hashtags, setHashtags] = useState<Hashtag[]>()
+  const [hashtags, setHashtags] = useState<Tag[]>()
   const ref = useRef(false)
   useEffect(() => {
     if (ref.current) return
     client.tag.list().then(({ data }) => {
       if (data) {
-        setHashtags(data as any)
+        setHashtags(data)
       }
     })
     ref.current = true
@@ -48,7 +41,7 @@ export function HashtagsPage() {
 
           <div className='wauto flex flex-col flex-wrap items-start justify-start'>
             {hashtags
-              ?.filter(({ feeds }) => feeds > 0)
+              ?.filter(({ count }) => count > 0)
               .map(hashtag => {
                 return (
                   <div key={hashtag.id} className='w-full flex flex-row'>
@@ -61,7 +54,7 @@ export function HashtagsPage() {
                       </Link>
                       <div className='flex-1' />
                       <span className='t-secondary text-sm'>
-                        {t('article.total_short$count', { count: hashtag.feeds })}
+                        {t('article.total_short$count', { count: hashtag.count })}
                       </span>
                     </div>
                   </div>

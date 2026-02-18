@@ -1,6 +1,9 @@
 import type { Database } from 'bun:sqlite'
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import type { CreateFeedRequest } from '@rin/api'
 import { createBaseApp } from '../../src/core/base'
+import type { Router } from '../../src/core/router'
+import type { DB } from '../../src/server'
 import { CommentService } from '../../src/services/comments'
 import { FeedService } from '../../src/services/feed'
 import { TagService } from '../../src/services/tag'
@@ -8,15 +11,15 @@ import { cleanupTestDB, createMockDB, createMockEnv } from '../fixtures'
 import { createTestClient } from '../test-api-client'
 
 describe('Integration Tests - API Flow', () => {
-  let db: any
+  let db: DB
   let sqlite: Database
   let env: Env
-  let app: any
+  let app: Router
   let api: ReturnType<typeof createTestClient>
 
   beforeEach(async () => {
     const mockDB = createMockDB()
-    db = mockDB.db
+    db = mockDB.db as unknown as DB
     sqlite = mockDB.sqlite
     env = createMockEnv()
 
@@ -26,20 +29,20 @@ describe('Integration Tests - API Flow', () => {
       get: async () => undefined,
       set: async () => {},
       deletePrefix: async () => {},
-      getOrSet: async (_key: string, fn: Function) => fn(),
-      getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
+      getOrSet: async (_key: string, fn: () => unknown) => fn(),
+      getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
     })
     app.state('serverConfig', {
       get: async () => undefined,
-      getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
+      getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
     })
     app.state('clientConfig', {
       get: async () => undefined,
-      getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
+      getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
     })
     // Add JWT for authentication
     app.state('jwt', {
-      sign: async (payload: any) => `mock_token_${payload.id}`,
+      sign: async (payload: Record<string, unknown>) => `mock_token_${String(payload.id ?? '')}`,
       verify: async (token: string) => {
         const match = token.match(/mock_token_(\d+)/)
         return match ? { id: parseInt(match[1], 10) } : null
@@ -55,14 +58,14 @@ describe('Integration Tests - API Flow', () => {
     api = createTestClient(app, env)
 
     // Seed test data locally for integration tests
-    await seedTestData(db)
+    await seedTestData()
   })
 
   afterEach(() => {
     cleanupTestDB(sqlite)
   })
 
-  async function seedTestData(_db: any) {
+  async function seedTestData() {
     sqlite.exec(`
             INSERT INTO users (id, username, avatar, permission, openid) VALUES 
                 (1, 'author', 'author.png', 1, 'gh_author'),
@@ -211,7 +214,7 @@ describe('Integration Tests - API Flow', () => {
     it('should handle validation errors', async () => {
       // Try to create feed without required fields
       const result = await api.feed.create(
-        {} as any, // Missing required fields intentionally
+        {} as unknown as CreateFeedRequest, // Missing required fields intentionally
         { isAdmin: true }
       )
 

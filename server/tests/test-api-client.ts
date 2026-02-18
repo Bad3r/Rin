@@ -25,6 +25,7 @@ import type {
   UploadResponse,
   UserProfile,
 } from '@rin/api'
+import type { Router } from '../src/core/router'
 
 /**
  * Test API Client for Server-side Integration Tests
@@ -43,7 +44,7 @@ export interface TestAPIOptions {
 
 export class TestAPIClient {
   constructor(
-    private app: any,
+    private app: Router,
     private env: Env,
     private baseUrl: string = 'http://localhost'
   ) {}
@@ -51,7 +52,7 @@ export class TestAPIClient {
   private async request<T>(
     method: string,
     path: string,
-    body?: any,
+    body?: unknown,
     options?: TestAPIOptions
   ): Promise<ApiResponse<T>> {
     const headers: Record<string, string> = {
@@ -86,7 +87,7 @@ export class TestAPIClient {
 
       if (!response.ok) {
         const contentType = response.headers.get('content-type')
-        let errorValue: any
+        let errorValue: unknown
 
         if (contentType?.includes('application/json')) {
           try {
@@ -113,7 +114,7 @@ export class TestAPIClient {
 
       const contentType = response.headers.get('content-type')
       if (contentType?.includes('application/json')) {
-        const data = await response.json()
+        const data = (await response.json()) as T
         return { data }
       }
 
@@ -133,15 +134,15 @@ export class TestAPIClient {
     return this.request<T>('GET', path, undefined, options)
   }
 
-  async post<T>(path: string, body?: any, options?: TestAPIOptions): Promise<ApiResponse<T>> {
+  async post<T>(path: string, body?: unknown, options?: TestAPIOptions): Promise<ApiResponse<T>> {
     return this.request<T>('POST', path, body, options)
   }
 
-  async put<T>(path: string, body?: any, options?: TestAPIOptions): Promise<ApiResponse<T>> {
+  async put<T>(path: string, body?: unknown, options?: TestAPIOptions): Promise<ApiResponse<T>> {
     return this.request<T>('PUT', path, body, options)
   }
 
-  async patch<T>(path: string, body?: any, options?: TestAPIOptions): Promise<ApiResponse<T>> {
+  async patch<T>(path: string, body?: unknown, options?: TestAPIOptions): Promise<ApiResponse<T>> {
     return this.request<T>('PATCH', path, body, options)
   }
 
@@ -309,7 +310,7 @@ export class TestAPIClient {
 
     update: async (
       type: ConfigType,
-      body: Record<string, any>,
+      body: Record<string, unknown>,
       options?: TestAPIOptions
     ): Promise<ApiResponse<void>> => {
       return this.post<void>(`/config/${type}`, body, options)
@@ -350,7 +351,7 @@ export class TestAPIClient {
 
     update: async (body: Partial<AIConfig>, options?: TestAPIOptions): Promise<ApiResponse<void>> => {
       // Convert AI config to flat format for server config
-      const flatBody: Record<string, any> = {}
+      const flatBody: Record<string, unknown> = {}
       if (body.enabled !== undefined) flatBody['ai_summary.enabled'] = String(body.enabled)
       if (body.provider !== undefined) flatBody['ai_summary.provider'] = body.provider
       if (body.model !== undefined) flatBody['ai_summary.model'] = body.model
@@ -392,8 +393,8 @@ export class TestAPIClient {
  * Factory function to create a test API client
  * Mirrors the client-side createClient function for consistency
  */
-export function createTestClient(app: any, env: Env, baseUrl?: string): TestAPIClient {
-  return new TestAPIClient(app, env, baseUrl)
+export function createTestClient(app: unknown, env: Env, baseUrl?: string): TestAPIClient {
+  return new TestAPIClient(app as Router, env, baseUrl)
 }
 
 export default TestAPIClient

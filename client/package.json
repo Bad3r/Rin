@@ -12,7 +12,8 @@
     "i18n": "i18next",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:coverage:ci": "vitest run --coverage --coverage.reporter=text --coverage.reporter=lcov --coverage.reportsDirectory=coverage"
   },
   "dependencies": {
     "@astroimg/timeago": "^1.1.6",
@@ -60,6 +61,7 @@
     "@testing-library/jest-dom": "^6.4.5",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.5.2",
+    "@vitest/coverage-v8": "4.0.18",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.56.0",

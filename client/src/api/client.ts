@@ -117,8 +117,13 @@ class HttpClient {
           errorMessage = errorValue
         } else if (errorValue && typeof errorValue === 'object') {
           // Handle { error: { message: string } } format
-          const err = errorValue as any
-          errorMessage = err.error?.message || err.message || err.error || JSON.stringify(errorValue)
+          const err = errorValue as {
+            error?: { message?: string } | string
+            message?: string
+          }
+          const nestedMessage = typeof err.error === 'object' && err.error ? err.error.message : undefined
+          const inlineError = typeof err.error === 'string' ? err.error : undefined
+          errorMessage = nestedMessage || err.message || inlineError || JSON.stringify(errorValue)
         } else {
           errorMessage = String(errorValue ?? response.statusText)
         }
@@ -396,7 +401,14 @@ class ConfigAPI {
       model?: string
     }>
   > {
-    return this.http.post<any>('/api/config/test-ai', body)
+    return this.http.post<{
+      success: boolean
+      response?: string
+      error?: string
+      details?: string
+      provider?: string
+      model?: string
+    }>('/api/config/test-ai', body)
   }
 }
 

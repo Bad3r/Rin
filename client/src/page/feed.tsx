@@ -1,5 +1,6 @@
 import mermaid from 'mermaid'
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
+import type { Comment as ApiComment, Feed as ApiFeed } from '@rin/api'
 import { Helmet } from '../components/helmet'
 import { useTranslation } from 'react-i18next'
 import ReactModal from 'react-modal'
@@ -19,32 +20,11 @@ import { ProfileContext } from '../state/profile'
 import { siteName } from '../utils/constants'
 import { timeago } from '../utils/timeago'
 
-type Feed = {
-  id: number
-  title: string | null
-  content: string
-  uid: number
-  createdAt: Date
-  updatedAt: Date
-  ai_summary: string
-  hashtags: {
-    id: number
-    name: string
-  }[]
-  user: {
-    avatar: string | null
-    id: number
-    username: string
-  }
-  pv: number
-  uv: number
-}
-
 export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Element; clean: (id: string) => void }) {
   const { t } = useTranslation()
   const siteConfig = useSiteConfig()
   const profile = useContext(ProfileContext)
-  const [feed, setFeed] = useState<Feed>()
+  const [feed, setFeed] = useState<ApiFeed>()
   const [error, setError] = useState<string>()
   const [headImage, setHeadImage] = useState<string>()
   const ref = useRef('')
@@ -122,7 +102,7 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
         setError(error.value as string)
       } else if (data && typeof data !== 'string') {
         setTimeout(() => {
-          setFeed(data as any)
+          setFeed(data)
           setTop(data.top || 0)
           // Extract head image
           const img_reg = /!\[.*?\]\((.*?)\)/
@@ -414,22 +394,9 @@ function CommentInput({ id, onRefresh }: { id: string; onRefresh: () => void }) 
   )
 }
 
-type Comment = {
-  id: number
-  content: string
-  createdAt: Date
-  updatedAt: Date
-  user: {
-    id: number
-    username: string
-    avatar: string | null
-    permission: number | null
-  }
-}
-
 function Comments({ id }: { id: string }) {
   const config = useContext(ClientConfigContext)
-  const [comments, setComments] = useState<Comment[]>([])
+  const [comments, setComments] = useState<ApiComment[]>([])
   const [error, setError] = useState<string>()
   const ref = useRef('')
   const { t } = useTranslation()
@@ -439,7 +406,7 @@ function Comments({ id }: { id: string }) {
       if (error) {
         setError(error.value as string)
       } else if (data && Array.isArray(data)) {
-        setComments(data as any)
+        setComments(data)
       }
     })
   }, [id])
@@ -474,7 +441,7 @@ function Comments({ id }: { id: string }) {
   )
 }
 
-function CommentItem({ comment, onRefresh }: { comment: Comment; onRefresh: () => void }) {
+function CommentItem({ comment, onRefresh }: { comment: ApiComment; onRefresh: () => void }) {
   const { showConfirm, ConfirmUI } = useConfirm()
   const { showAlert, AlertUI } = useAlert()
   const { t } = useTranslation()

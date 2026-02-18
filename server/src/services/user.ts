@@ -4,6 +4,17 @@ import type { Context } from '../core/types'
 import { users } from '../db/schema'
 import { BadRequestError, ForbiddenError, InternalServerError, NotFoundError } from '../errors'
 
+interface GitHubUserResponse {
+  id: number | string
+  login: string
+  name?: string | null
+  avatar_url?: string
+}
+
+function queryValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value
+}
+
 function resolveAllowedRedirectOrigins(ctx: Context): Set<string> {
   const allowed = new Set<string>([ctx.url.origin])
   const configured = ctx.env.RIN_ALLOWED_REDIRECT_ORIGINS
@@ -89,7 +100,8 @@ export function UserService(router: Router): void {
       const { db, anyUser } = store
 
       // Verify state to prevent CSRF attacks
-      if (query.state !== cookie.state.value) {
+      const requestState = queryValue(query.state)
+      if (requestState !== cookie.state.value) {
         throw new BadRequestError('Invalid state parameter')
       }
 
@@ -117,7 +129,11 @@ export function UserService(router: Router): void {
       ensureAllowedRedirectOrigin(ctx, redirect_url.origin)
 
       // Exchange code for access token
-      const gh_token = await oauth2.authorize('GitHub', query.code)
+      const code = queryValue(query.code)
+      if (!code) {
+        throw new BadRequestError('Missing code parameter')
+      }
+      const gh_token = await oauth2.authorize('GitHub', code)
       if (!gh_token) {
         throw new BadRequestError('Failed to authorize with GitHub')
       }
@@ -131,16 +147,19 @@ export function UserService(router: Router): void {
         },
       })
 
-      const user: any = await response.json()
+      const user = (await response.json()) as Partial<GitHubUserResponse>
+      if (user.id === undefined || typeof user.login !== 'string') {
+        throw new InternalServerError('Failed to fetch GitHub user profile')
+      }
       const profile: {
         openid: string
         username: string
         avatar: string
         permission: number | null
       } = {
-        openid: user.id,
+        openid: String(user.id),
         username: user.name || user.login,
-        avatar: user.avatar_url,
+        avatar: user.avatar_url || '',
         permission: 0,
       }
 

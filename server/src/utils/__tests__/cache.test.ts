@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/bun-sqlite'
 import * as schema from '../../db/schema'
 import { cache } from '../../db/schema'
+import type { DB } from '../../server'
 import { CacheImpl, type CacheStorageMode, createClientConfig, createPublicCache, createServerConfig } from '../cache'
 
 /// <reference types="../../../worker-configuration" />
@@ -28,7 +29,7 @@ function createTestDB() {
         CREATE INDEX IF NOT EXISTS idx_cache_key ON cache(key);
     `)
 
-  return { db, sqlite }
+  return { db: db as unknown as DB, sqlite }
 }
 
 // 模拟环境变量
@@ -64,7 +65,7 @@ describe('CacheImpl - 基本功能测试', () => {
     db = testDB.db
     sqlite = testDB.sqlite
     mockEnv = createMockEnv('database')
-    cacheImpl = new CacheImpl(db as any, mockEnv, 'cache', 'database')
+    cacheImpl = new CacheImpl(db, mockEnv, 'cache', 'database')
   })
 
   afterEach(() => {
@@ -267,7 +268,7 @@ describe('CacheImpl - 数据库持久化测试', () => {
     db = testDB.db
     sqlite = testDB.sqlite
     mockEnv = createMockEnv('database')
-    cacheImpl = new CacheImpl(db as any, mockEnv, 'cache', 'database')
+    cacheImpl = new CacheImpl(db, mockEnv, 'cache', 'database')
   })
 
   afterEach(() => {
@@ -290,7 +291,7 @@ describe('CacheImpl - 数据库持久化测试', () => {
     await cacheImpl.set('key1', 'value1')
 
     // 创建新的 cache 实例（模拟重启）
-    const newCache = new CacheImpl(db as any, mockEnv, 'cache', 'database')
+    const newCache = new CacheImpl(db, mockEnv, 'cache', 'database')
 
     // 新实例应该能读取到数据
     const value = await newCache.get('key1')
@@ -326,8 +327,8 @@ describe('CacheImpl - 数据库持久化测试', () => {
   })
 
   it('应该支持多个 cache 类型', async () => {
-    const cache1 = new CacheImpl(db as any, mockEnv, 'type1', 'database')
-    const cache2 = new CacheImpl(db as any, mockEnv, 'type2', 'database')
+    const cache1 = new CacheImpl(db, mockEnv, 'type1', 'database')
+    const cache2 = new CacheImpl(db, mockEnv, 'type2', 'database')
 
     await cache1.set('key', 'value1')
     await cache2.set('key', 'value2')
@@ -362,7 +363,7 @@ describe('CacheImpl - 存储模式配置测试', () => {
 
   it('应该默认使用数据库存储', () => {
     mockEnv = createMockEnv('database')
-    const cache = new CacheImpl(db as any, mockEnv, 'cache')
+    const cache = new CacheImpl(db, mockEnv, 'cache')
 
     // 通过检查是否尝试加载数据库来验证
     expect(cache).toBeDefined()
@@ -370,14 +371,14 @@ describe('CacheImpl - 存储模式配置测试', () => {
 
   it('应该支持通过环境变量配置存储模式', () => {
     mockEnv = createMockEnv('s3')
-    const cache = new CacheImpl(db as any, mockEnv, 'cache')
+    const cache = new CacheImpl(db, mockEnv, 'cache')
 
     expect(cache).toBeDefined()
   })
 
   it('storageMode 参数应该覆盖环境变量', () => {
     mockEnv = createMockEnv('s3')
-    const cache = new CacheImpl(db as any, mockEnv, 'cache', 'database')
+    const cache = new CacheImpl(db, mockEnv, 'cache', 'database')
 
     expect(cache).toBeDefined()
   })
@@ -399,22 +400,22 @@ describe('CacheImpl - 工厂函数测试', () => {
   })
 
   it('createPublicCache 应该创建通用缓存', () => {
-    const cache = createPublicCache(db as any, mockEnv)
+    const cache = createPublicCache(db, mockEnv)
     expect(cache).toBeInstanceOf(CacheImpl)
   })
 
   it('createServerConfig 应该创建服务器配置缓存', () => {
-    const cache = createServerConfig(db as any, mockEnv)
+    const cache = createServerConfig(db, mockEnv)
     expect(cache).toBeInstanceOf(CacheImpl)
   })
 
   it('createClientConfig 应该创建客户端配置缓存', () => {
-    const cache = createClientConfig(db as any, mockEnv)
+    const cache = createClientConfig(db, mockEnv)
     expect(cache).toBeInstanceOf(CacheImpl)
   })
 
   it('工厂函数应该支持自定义选项', () => {
-    const cache = createPublicCache(db as any, mockEnv, 'database')
+    const cache = createPublicCache(db, mockEnv, 'database')
     expect(cache).toBeInstanceOf(CacheImpl)
   })
 })
@@ -429,7 +430,7 @@ describe('CacheImpl - 边界条件和错误处理', () => {
     db = testDB.db
     sqlite = testDB.sqlite
     mockEnv = createMockEnv('database')
-    cacheImpl = new CacheImpl(db as any, mockEnv, 'cache', 'database')
+    cacheImpl = new CacheImpl(db, mockEnv, 'cache', 'database')
   })
 
   afterEach(() => {
@@ -478,13 +479,13 @@ describe('CacheImpl - 边界条件和错误处理', () => {
   })
 
   it('应该处理循环引用（应该抛出错误或处理）', async () => {
-    const obj: any = { name: 'test' }
+    const obj: { name: string; self?: unknown } = { name: 'test' }
     obj.self = obj // 循环引用
 
     // JSON.stringify 会抛出错误，我们的实现应该处理这种情况
     // 当前实现会抛出错误，这是预期行为
     let errorThrown = false
-    let caughtError: any = null
+    let caughtError: unknown = null
     try {
       await cacheImpl.set('circular', obj)
     } catch (e) {
@@ -499,9 +500,9 @@ describe('CacheImpl - 边界条件和错误处理', () => {
 
     // 注意：值会被设置到内存缓存，但保存到数据库会失败
     // 所以缓存中会有这个值，但重启后会丢失
-    const value = await cacheImpl.get('circular')
+    const value = (await cacheImpl.get('circular')) as { name?: string } | undefined
     expect(value).toBeDefined()
-    expect(value.name).toBe('test')
+    expect(value?.name).toBe('test')
   })
 
   it('应该处理 null 值', async () => {
@@ -522,7 +523,7 @@ describe('CacheImpl - 边界条件和错误处理', () => {
     expect(value).toBeUndefined()
 
     // 创建新实例验证数据库中确实没有存储
-    const newCache = new CacheImpl(db as any, mockEnv, 'cache', 'database')
+    const newCache = new CacheImpl(db, mockEnv, 'cache', 'database')
     const valueFromDb = await newCache.get('undefinedKey')
     expect(valueFromDb).toBeUndefined()
   })
@@ -560,7 +561,7 @@ describe('CacheImpl - getOrSet 和 getOrDefault', () => {
     db = testDB.db
     sqlite = testDB.sqlite
     mockEnv = createMockEnv('database')
-    cacheImpl = new CacheImpl(db as any, mockEnv, 'cache', 'database')
+    cacheImpl = new CacheImpl(db, mockEnv, 'cache', 'database')
   })
 
   afterEach(() => {

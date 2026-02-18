@@ -16,16 +16,16 @@ export function FeedCard({
   createdAt,
   updatedAt,
 }: {
-  id: string
-  avatar?: string
+  id: string | number
+  avatar?: string | null
   draft?: number
   listed?: number
   top?: number
-  title: string
-  summary: string
+  title: string | null
+  summary?: string
   hashtags: { id: number; name: string }[]
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string | Date
+  updatedAt: string | Date
 }) {
   const { t } = useTranslation()
   return useMemo(
@@ -41,7 +41,7 @@ export function FeedCard({
               />
             </div>
           )}
-          <h1 className='text-xl font-bold text-gray-700 dark:text-white text-pretty overflow-hidden'>{title}</h1>
+          <h1 className='text-xl font-bold text-gray-700 dark:text-white text-pretty overflow-hidden'>{title || ''}</h1>
           <p className='space-x-2'>
             <span className='text-gray-400 text-sm' title={new Date(createdAt).toLocaleString()}>
               {createdAt === updatedAt
@@ -59,7 +59,7 @@ export function FeedCard({
             {listed === 0 && <span className='text-gray-400 text-sm'>{t('unlisted')}</span>}
             {top === 1 && <span className='text-theme text-sm'>{t('article.top.title')}</span>}
           </p>
-          <p className='text-pretty overflow-hidden dark:text-neutral-500'>{summary}</p>
+          <p className='text-pretty overflow-hidden dark:text-neutral-500'>{summary || ''}</p>
           {hashtags.length > 0 && (
             <div className='mt-2 flex flex-row flex-wrap justify-start gap-x-2'>
               {hashtags.map(({ name }) => (
