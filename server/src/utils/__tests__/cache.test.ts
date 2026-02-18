@@ -1,37 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { cleanupTestDB, createMockDB } from '../../../tests/fixtures'
+import { cleanupTestDB, createMockDB, createMockEnv as createFixtureEnv } from '../../../tests/fixtures'
 import { cache } from '../../db/schema'
 import { CacheImpl, type CacheStorageMode, createClientConfig, createPublicCache, createServerConfig } from '../cache'
 
 /// <reference types="../../../worker-configuration" />
 
-// 测试数据库设置
 function createTestDB() {
   return createMockDB()
 }
 
-// 模拟环境变量
 function createMockEnv(storageMode: CacheStorageMode = 'database'): Env {
-  return {
-    DB: {} as D1Database,
-    S3_FOLDER: 'images/',
-    S3_CACHE_FOLDER: 'cache/',
-    S3_REGION: 'auto',
-    S3_ENDPOINT: 'https://s3.invalid',
-    S3_ACCESS_HOST: 'https://assets.invalid',
-    S3_BUCKET: 'test-bucket',
-    S3_FORCE_PATH_STYLE: 'false',
-    WEBHOOK_URL: '',
-    RSS_TITLE: 'Test',
-    RSS_DESCRIPTION: 'Test Environment',
-    RIN_GITHUB_CLIENT_ID: 'test-client-id',
-    RIN_GITHUB_CLIENT_SECRET: 'test-client-secret',
-    JWT_SECRET: 'test-jwt-secret',
-    S3_ACCESS_KEY_ID: 'test-access-key',
-    S3_SECRET_ACCESS_KEY: 'test-secret-key',
+  return createFixtureEnv({
     CACHE_STORAGE_MODE: storageMode,
-  } as unknown as Env
+  })
 }
 
 describe('CacheImpl - basic functionality', () => {
