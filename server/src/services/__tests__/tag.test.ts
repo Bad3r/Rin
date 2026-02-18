@@ -112,49 +112,43 @@ describe('TagService', () => {
       expect(errorText).toContain('Not found')
     })
 
-    it('should exclude draft feeds for non-admin users', async () => {
-      // Create draft feed and link to test tag
-      await execSql(
-        sqlite,
-        `INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES (3, 'Draft', 'Content', 1, 1, 1)`
-      )
-      await execSql(sqlite, `INSERT INTO feed_hashtags (feed_id, hashtag_id) VALUES (3, 1)`)
-
-      const request = new Request('http://localhost/tag/test')
-      const response = await app.handle(request, env)
-
-      expect(response.status).toBe(200)
-      const data = await response.json()
-      // Should only show published feeds, not draft
-      expect(data.feeds.every((f: any) => f.draft !== 1)).toBe(true)
-
-      // Cleanup
-      await execSql(sqlite, `DELETE FROM feed_hashtags WHERE feed_id = 3`)
-      await execSql(sqlite, `DELETE FROM feeds WHERE id = 3`)
-    })
-
-    it('should include draft feeds for admin users', async () => {
-      // Create draft feed and link to test tag
-      await execSql(
-        sqlite,
-        `INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES (3, 'Draft', 'Content', 1, 1, 1)`
-      )
-      await execSql(sqlite, `INSERT INTO feed_hashtags (feed_id, hashtag_id) VALUES (3, 1)`)
-
-      // User 2 is admin (permission=1), need to use JWT token
-      const request = new Request('http://localhost/tag/test', {
-        headers: { Authorization: 'Bearer mock_token_2' },
+    describe('draft visibility', () => {
+      beforeEach(async () => {
+        // Create draft feed and link to test tag for each test.
+        await execSql(
+          sqlite,
+          `INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES (3, 'Draft', 'Content', 1, 1, 1)`
+        )
+        await execSql(sqlite, `INSERT INTO feed_hashtags (feed_id, hashtag_id) VALUES (3, 1)`)
       })
-      const response = await app.handle(request, env)
 
-      expect(response.status).toBe(200)
-      const data = await response.json()
-      // Should show all feeds including draft (2 published + 1 draft = 3)
-      expect(data.feeds.length).toBe(3)
+      afterEach(async () => {
+        await execSql(sqlite, `DELETE FROM feed_hashtags WHERE feed_id = 3`)
+        await execSql(sqlite, `DELETE FROM feeds WHERE id = 3`)
+      })
 
-      // Cleanup
-      await execSql(sqlite, `DELETE FROM feed_hashtags WHERE feed_id = 3`)
-      await execSql(sqlite, `DELETE FROM feeds WHERE id = 3`)
+      it('should exclude draft feeds for non-admin users', async () => {
+        const request = new Request('http://localhost/tag/test')
+        const response = await app.handle(request, env)
+
+        expect(response.status).toBe(200)
+        const data = await response.json()
+        // Should only show published feeds, not draft
+        expect(data.feeds.every((f: any) => f.draft !== 1)).toBe(true)
+      })
+
+      it('should include draft feeds for admin users', async () => {
+        // User 2 is admin (permission=1), need to use JWT token
+        const request = new Request('http://localhost/tag/test', {
+          headers: { Authorization: 'Bearer mock_token_2' },
+        })
+        const response = await app.handle(request, env)
+
+        expect(response.status).toBe(200)
+        const data = await response.json()
+        // Should show all feeds including draft (2 published + 1 draft = 3)
+        expect(data.feeds.length).toBe(3)
+      })
     })
 
     it('should include hashtags in feed data', async () => {
