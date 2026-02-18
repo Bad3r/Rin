@@ -1,6 +1,8 @@
 /* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind directives are resolved at build time. */
 @import "tailwindcss";
 /* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind directives are resolved at build time. */
+@custom-variant dark (&:where([data-color-mode="dark"], [data-color-mode="dark"] *));
+/* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind directives are resolved at build time. */
 @config "../tailwind.config.ts";
 @layer base {
   .bg-w {
