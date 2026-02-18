@@ -90,10 +90,30 @@ jobs:
           mkdir -p ./dist/server
           bunx wrangler deploy --dry-run --outdir=dist/server
 
+      - name: Save build metadata
+        run: |
+          set -euo pipefail
+          mkdir -p ./build-meta
+
+          REF="unknown"
+          if git show-ref --verify --quiet refs/remotes/origin/main && git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main; then
+            REF="refs/heads/main"
+          elif git show-ref --verify --quiet refs/remotes/origin/dev && git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/dev; then
+            REF="refs/heads/dev"
+          fi
+
+          echo "release" > ./build-meta/event_name
+          echo "$REF" > ./build-meta/ref
+          echo "0" > ./build-meta/pr_number
+          echo "${GITHUB_SHA}" > ./build-meta/sha
+          echo "${GITHUB_SHA}" > ./build-meta/head_sha
+          echo "${GITHUB_REF}" > ./build-meta/source_ref
+          echo "${GITHUB_REF_NAME}" > ./build-meta/release_tag
+
       - name: Package build artifacts
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
-          tar -czf "build-v${VERSION}-cloudflare.tar.gz" dist/
+          tar -czf "build-v${VERSION}-cloudflare.tar.gz" dist/ build-meta/
           echo "Artifact packaged: build-v${VERSION}-cloudflare.tar.gz"
           ls -lh build-v*.tar.gz
 

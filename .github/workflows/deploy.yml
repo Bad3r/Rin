@@ -27,7 +27,7 @@ on:
         required: false
         type: string
       artifact_url:
-        description: 'Cloudflare build artifact URL (.tar.gz/.zip). Used when artifact_source=url (legacy fallback).'
+        description: 'GitHub release download URL (.tar.gz/.zip) for this repository. Used when artifact_source=url.'
         required: false
         type: string
       environment:
@@ -154,21 +154,52 @@ jobs:
             }
 
             const buildAssetPattern = /^build-v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?-cloudflare\.tar\.gz$/;
+            const repoReleaseDownloadPrefix = `/${owner}/${repo}/releases/download/`;
             let resolvedUrl = '';
             let releaseTag = 'unknown';
+            let releaseTargetCommitish = 'unknown';
             let assetName = 'unknown';
+            let downloadAuthMode = 'none';
 
             if (artifactSource === 'url') {
               if (!artifactUrlInput) {
                 core.setFailed('artifact_source=url requires artifact_url to be set.');
                 return;
               }
+
+              let parsed;
               try {
-                const parsed = new URL(artifactUrlInput);
-                resolvedUrl = parsed.toString();
-                assetName = decodeURIComponent(parsed.pathname.split('/').pop() || 'unknown');
+                parsed = new URL(artifactUrlInput);
               } catch (error) {
                 core.setFailed(`Invalid artifact_url '${artifactUrlInput}': ${error.message}`);
+                return;
+              }
+
+              if (parsed.protocol !== 'https:') {
+                core.setFailed(`artifact_url must use https. Received protocol '${parsed.protocol}'.`);
+                return;
+              }
+
+              if (parsed.hostname !== 'github.com') {
+                core.setFailed(
+                  `artifact_url host '${parsed.hostname}' is not allowed. Use github.com release download URLs for this repository.`
+                );
+                return;
+              }
+
+              if (!parsed.pathname.startsWith(repoReleaseDownloadPrefix)) {
+                core.setFailed(
+                  `artifact_url path '${parsed.pathname}' is not a release asset for ${owner}/${repo}. Expected prefix '${repoReleaseDownloadPrefix}'.`
+                );
+                return;
+              }
+
+              resolvedUrl = parsed.toString();
+              assetName = decodeURIComponent(parsed.pathname.split('/').pop() || 'unknown');
+              if (!(assetName.endsWith('.tar.gz') || assetName.endsWith('.zip'))) {
+                core.setFailed(
+                  `artifact_url must reference a .tar.gz or .zip artifact. Received asset '${assetName}'.`
+                );
                 return;
               }
             } else if (artifactSource === 'version') {
@@ -202,9 +233,11 @@ jobs:
                 return;
               }
 
-              resolvedUrl = asset.browser_download_url;
+              resolvedUrl = asset.url;
               releaseTag = release.tag_name;
+              releaseTargetCommitish = release.target_commitish || 'unknown';
               assetName = asset.name;
+              downloadAuthMode = 'github_api_asset';
             } else {
               const { data: release } = await github.rest.repos.getLatestRelease({ owner, repo });
 
@@ -224,24 +257,33 @@ jobs:
                 return;
               }
 
-              resolvedUrl = asset.browser_download_url;
+              resolvedUrl = asset.url;
               releaseTag = release.tag_name;
+              releaseTargetCommitish = release.target_commitish || 'unknown';
               assetName = asset.name;
+              downloadAuthMode = 'github_api_asset';
             }
 
             core.info(`Resolved artifact source: ${artifactSource}`);
             core.info(`Resolved artifact URL: ${resolvedUrl}`);
             core.info(`Resolved release tag: ${releaseTag}`);
+            core.info(`Resolved release target commitish: ${releaseTargetCommitish}`);
             core.info(`Resolved asset name: ${assetName}`);
+            core.info(`Resolved download auth mode: ${downloadAuthMode}`);
             core.setOutput('artifact_source', artifactSource);
             core.setOutput('artifact_url', resolvedUrl);
             core.setOutput('release_tag', releaseTag);
+            core.setOutput('release_target_commitish', releaseTargetCommitish);
             core.setOutput('asset_name', assetName);
+            core.setOutput('download_auth_mode', downloadAuthMode);
 
       - name: Download artifacts from resolved source
         if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
           RESOLVED_ARTIFACT_URL: ${{ steps.dispatch_artifact.outputs.artifact_url }}
+          RESOLVED_ASSET_NAME: ${{ steps.dispatch_artifact.outputs.asset_name }}
+          DOWNLOAD_AUTH_MODE: ${{ steps.dispatch_artifact.outputs.download_auth_mode }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           URL="$RESOLVED_ARTIFACT_URL"
@@ -250,15 +292,37 @@ jobs:
             exit 1
           fi
 
+          ASSET_NAME="$RESOLVED_ASSET_NAME"
+          if [[ -z "$ASSET_NAME" || "$ASSET_NAME" == "unknown" ]]; then
+            ASSET_NAME="$(basename "${URL%%\?*}")"
+          fi
+
           echo "Downloading from: $URL"
+          echo "Resolved asset name: $ASSET_NAME"
 
           mkdir -p ./artifacts
-          if [[ "$URL" == *.zip ]]; then
-            curl -fSL "$URL" -o ./artifacts/build.zip
+          if [[ "$ASSET_NAME" == *.zip ]]; then
+            OUT_PATH="./artifacts/build.zip"
+          elif [[ "$ASSET_NAME" == *.tar.gz || "$ASSET_NAME" == *.tgz ]]; then
+            OUT_PATH="./artifacts/build.tar.gz"
+          else
+            echo "::error::Unsupported artifact format for '$ASSET_NAME'. Expected .zip or .tar.gz."
+            exit 1
+          fi
+
+          if [[ "$DOWNLOAD_AUTH_MODE" == "github_api_asset" ]]; then
+            curl -fSL \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              -H "Accept: application/octet-stream" \
+              "$URL" -o "$OUT_PATH"
+          else
+            curl -fSL "$URL" -o "$OUT_PATH"
+          fi
+
+          if [[ "$OUT_PATH" == *.zip ]]; then
             unzip -q ./artifacts/build.zip -d ./artifacts
             rm ./artifacts/build.zip
           else
-            curl -fSL "$URL" -o ./artifacts/build.tar.gz
             tar -xzf ./artifacts/build.tar.gz -C ./artifacts
             rm ./artifacts/build.tar.gz
           fi
@@ -275,7 +339,9 @@ jobs:
           ARTIFACT_SOURCE: ${{ steps.dispatch_artifact.outputs.artifact_source }}
           ARTIFACT_URL: ${{ steps.dispatch_artifact.outputs.artifact_url }}
           RELEASE_TAG: ${{ steps.dispatch_artifact.outputs.release_tag }}
+          RELEASE_TARGET_COMMITISH: ${{ steps.dispatch_artifact.outputs.release_target_commitish }}
           ASSET_NAME: ${{ steps.dispatch_artifact.outputs.asset_name }}
+          DOWNLOAD_AUTH_MODE: ${{ steps.dispatch_artifact.outputs.download_auth_mode }}
         run: |
           set -euo pipefail
           URL_HOST=$(echo "$ARTIFACT_URL" | sed -E 's#^https?://([^/]+)/?.*$#\1#')
@@ -287,19 +353,37 @@ jobs:
           echo "Artifact provenance:"
           echo "- source: ${ARTIFACT_SOURCE}"
           echo "- release_tag: ${RELEASE_TAG}"
+          echo "- release_target_commitish: ${RELEASE_TARGET_COMMITISH}"
           echo "- asset_name: ${ASSET_NAME}"
+          echo "- download_auth_mode: ${DOWNLOAD_AUTH_MODE}"
           echo "- url_host: ${URL_HOST}"
           echo "- url_path: ${URL_PATH}"
 
       - name: Set deployment type
         id: meta
+        env:
+          DISPATCH_ARTIFACT_SOURCE: ${{ steps.dispatch_artifact.outputs.artifact_source }}
+          DISPATCH_RELEASE_TARGET: ${{ steps.dispatch_artifact.outputs.release_target_commitish }}
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             # Manual deployment
             if [ "${{ github.event.inputs.environment }}" == "production" ]; then
+              if [[ "${DISPATCH_ARTIFACT_SOURCE:-latest}" == "url" ]]; then
+                echo "::error::Production manual deploys do not allow artifact_source=url. Use artifact_source=latest or artifact_source=version."
+                exit 1
+              fi
+
               REF=$(cat ./artifacts/build-meta/ref 2>/dev/null || echo "unknown")
+              if [[ "$REF" == "unknown" && ( "${DISPATCH_ARTIFACT_SOURCE:-}" == "latest" || "${DISPATCH_ARTIFACT_SOURCE:-}" == "version" ) ]]; then
+                if [[ "${DISPATCH_RELEASE_TARGET:-}" == "main" || "${DISPATCH_RELEASE_TARGET:-}" == "refs/heads/main" ]]; then
+                  REF="refs/heads/main"
+                elif [[ "${DISPATCH_RELEASE_TARGET:-}" == "dev" || "${DISPATCH_RELEASE_TARGET:-}" == "refs/heads/dev" ]]; then
+                  REF="refs/heads/dev"
+                fi
+              fi
+
               if [[ "$REF" != "refs/heads/main" && "$REF" != "refs/heads/dev" ]]; then
-                echo "::error::Production deploys require artifacts from the main or dev branch. Found ref: ${REF}"
+                echo "::error::Production deploys require artifacts from the main or dev branch. Found ref: ${REF}. For release artifacts without build-meta, ensure the release target branch is main/dev."
                 exit 1
               fi
               echo "is_production=true" >> $GITHUB_OUTPUT
