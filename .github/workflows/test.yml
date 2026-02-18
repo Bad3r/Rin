@@ -91,20 +91,44 @@ jobs:
       - name: Run tests with coverage
         run: bun run test:coverage:ci
 
-      - name: Upload coverage to Codecov
+      - name: Upload client coverage to Codecov
         if: ${{ !cancelled() }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
-          files: ./server/coverage/lcov.info,./client/coverage/lcov.info
-          flags: unittests
-          name: codecov-umbrella
+          disable_search: true
+          files: ./client/coverage/lcov.info
+          flags: client
+          name: codecov-client
 
-      - name: Upload test results to Codecov
+      - name: Upload server coverage to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          disable_search: true
+          files: ./server/coverage/lcov.info
+          flags: server
+          name: codecov-server
+
+      - name: Upload client test results to Codecov
         if: ${{ !cancelled() }}
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
-          files: ./server/coverage/junit.xml,./client/coverage/junit.xml
+          disable_search: true
+          file: ./client/coverage/junit.xml
+          flags: client
+
+      - name: Upload server test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          disable_search: true
+          file: ./server/coverage/junit.xml
+          flags: server
