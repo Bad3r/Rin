@@ -1,13 +1,12 @@
-import type { Database } from 'bun:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { cleanupTestDB, createMockDB, createMockEnv, execSql, queryAll } from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
 import { createBaseApp } from '../../core/base'
 import { PasswordAuthService } from '../auth'
 
 describe('PasswordAuthService', () => {
   let db: any
-  let sqlite: Database
+  let sqlite: D1Database
   let env: Env
   let app: any
   let api: ReturnType<typeof createTestClient>
@@ -43,17 +42,20 @@ describe('PasswordAuthService', () => {
     await seedTestData(sqlite)
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
-  async function seedTestData(sqlite: Database) {
+  async function seedTestData(sqlite: D1Database) {
     // Insert a regular user with password
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO users (id, username, avatar, permission, openid, password) VALUES 
                 (1, 'user1', 'avatar1.png', 0, 'gh_123', NULL),
                 (2, 'regular', 'regular.png', 0, 'gh_regular', 'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3')
-        `)
+        `
+    )
   }
 
   describe('POST /auth/login - Login with password', () => {
@@ -72,7 +74,7 @@ describe('PasswordAuthService', () => {
 
     it('should create admin user on first login', async () => {
       // Clear existing users
-      sqlite.exec('DELETE FROM users')
+      await execSql(sqlite, 'DELETE FROM users')
 
       const result = await api.auth.login({
         username: 'admin',
@@ -83,7 +85,7 @@ describe('PasswordAuthService', () => {
       expect(result.data?.success).toBe(true)
 
       // Verify admin was created using raw SQLite
-      const dbResult = sqlite.prepare(`SELECT * FROM users WHERE openid = 'admin'`).all()
+      const dbResult = await queryAll(sqlite, `SELECT * FROM users WHERE openid = 'admin'`)
       expect(dbResult.length).toBe(1)
       expect((dbResult[0] as any)?.permission).toBe(1)
     })

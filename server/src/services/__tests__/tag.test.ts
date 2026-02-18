@@ -1,12 +1,11 @@
-import type { Database } from 'bun:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { cleanupTestDB, createMockDB, createMockEnv, seedTestData } from '../../../tests/fixtures'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { cleanupTestDB, createMockDB, createMockEnv, execSql, queryAll, seedTestData } from '../../../tests/fixtures'
 import { createBaseApp } from '../../core/base'
 import { bindTagToPost, TagService } from '../tag'
 
 describe('TagService', () => {
   let db: any
-  let sqlite: Database
+  let sqlite: D1Database
   let env: Env
   let app: any
 
@@ -31,11 +30,11 @@ describe('TagService', () => {
     TagService(app)
 
     // Seed test data using sqlite directly
-    seedTestData(sqlite)
+    await seedTestData(sqlite)
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
   describe('GET /tag - List all tags', () => {
@@ -45,7 +44,7 @@ describe('TagService', () => {
 
       expect(response.status).toBe(200)
       const data = await response.json()
-      expect(data).toBeArray()
+      expect(Array.isArray(data)).toBe(true)
       expect(data.length).toBe(2)
 
       const testTag = data.find((t: any) => t.name === 'test')
@@ -59,8 +58,8 @@ describe('TagService', () => {
 
     it('should return empty array when no tags exist', async () => {
       // Clear all tags
-      sqlite.exec('DELETE FROM feed_hashtags')
-      sqlite.exec('DELETE FROM hashtags')
+      await execSql(sqlite, 'DELETE FROM feed_hashtags')
+      await execSql(sqlite, 'DELETE FROM hashtags')
 
       const request = new Request('http://localhost/tag')
       const response = await app.handle(request, env)
@@ -79,14 +78,14 @@ describe('TagService', () => {
       expect(response.status).toBe(200)
       const data = await response.json()
       expect(data.name).toBe('test')
-      expect(data.feeds).toBeArray()
+      expect(Array.isArray(data.feeds)).toBe(true)
       expect(data.feeds.length).toBe(2)
     })
 
     it('should decode URL-encoded tag names', async () => {
       // Insert tag with space in name
-      sqlite.exec(`INSERT INTO hashtags (id, name) VALUES (3, 'web dev')`)
-      sqlite.exec(`INSERT INTO feed_hashtags (feed_id, hashtag_id) VALUES (1, 3)`)
+      await execSql(sqlite, `INSERT INTO hashtags (id, name) VALUES (3, 'web dev')`)
+      await execSql(sqlite, `INSERT INTO feed_hashtags (feed_id, hashtag_id) VALUES (1, 3)`)
 
       const request = new Request('http://localhost/tag/web%20dev')
       const response = await app.handle(request, env)
@@ -107,8 +106,8 @@ describe('TagService', () => {
 
     it('should exclude draft feeds for non-admin users', async () => {
       // Create draft feed and link to test tag
-      sqlite.exec(`INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES (3, 'Draft', 'Content', 1, 1, 1)`)
-      sqlite.exec(`INSERT INTO feed_hashtags (feed_id, hashtag_id) VALUES (3, 1)`)
+      await execSql(sqlite, `INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES (3, 'Draft', 'Content', 1, 1, 1)`)
+      await execSql(sqlite, `INSERT INTO feed_hashtags (feed_id, hashtag_id) VALUES (3, 1)`)
 
       const request = new Request('http://localhost/tag/test')
       const response = await app.handle(request, env)
@@ -119,14 +118,14 @@ describe('TagService', () => {
       expect(data.feeds.every((f: any) => f.draft !== 1)).toBe(true)
 
       // Cleanup
-      sqlite.exec(`DELETE FROM feed_hashtags WHERE feed_id = 3`)
-      sqlite.exec(`DELETE FROM feeds WHERE id = 3`)
+      await execSql(sqlite, `DELETE FROM feed_hashtags WHERE feed_id = 3`)
+      await execSql(sqlite, `DELETE FROM feeds WHERE id = 3`)
     })
 
     it('should include draft feeds for admin users', async () => {
       // Create draft feed and link to test tag
-      sqlite.exec(`INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES (3, 'Draft', 'Content', 1, 1, 1)`)
-      sqlite.exec(`INSERT INTO feed_hashtags (feed_id, hashtag_id) VALUES (3, 1)`)
+      await execSql(sqlite, `INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES (3, 'Draft', 'Content', 1, 1, 1)`)
+      await execSql(sqlite, `INSERT INTO feed_hashtags (feed_id, hashtag_id) VALUES (3, 1)`)
 
       // User 2 is admin (permission=1), need to use JWT token
       const request = new Request('http://localhost/tag/test', {
@@ -140,8 +139,8 @@ describe('TagService', () => {
       expect(data.feeds.length).toBe(3)
 
       // Cleanup
-      sqlite.exec(`DELETE FROM feed_hashtags WHERE feed_id = 3`)
-      sqlite.exec(`DELETE FROM feeds WHERE id = 3`)
+      await execSql(sqlite, `DELETE FROM feed_hashtags WHERE feed_id = 3`)
+      await execSql(sqlite, `DELETE FROM feeds WHERE id = 3`)
     })
 
     it('should include hashtags in feed data', async () => {
@@ -151,7 +150,7 @@ describe('TagService', () => {
       expect(response.status).toBe(200)
       const data = await response.json()
       expect(data.feeds.length).toBeGreaterThan(0)
-      expect(data.feeds[0].hashtags).toBeArray()
+      expect(Array.isArray(data.feeds[0].hashtags)).toBe(true)
     })
   })
 
@@ -160,13 +159,14 @@ describe('TagService', () => {
       await bindTagToPost(db, 1, ['newtag1', 'newtag2'])
 
       // Verify tags were created and linked
-      const result = sqlite
-        .prepare(`
-                SELECT h.name FROM hashtags h
-                JOIN feed_hashtags fh ON h.id = fh.hashtag_id
-                WHERE fh.feed_id = 1
-            `)
-        .all()
+      const result = await queryAll(
+        sqlite,
+        `
+          SELECT h.name FROM hashtags h
+          JOIN feed_hashtags fh ON h.id = fh.hashtag_id
+          WHERE fh.feed_id = 1
+        `
+      )
 
       expect(result.length).toBeGreaterThan(0)
     })
@@ -174,11 +174,12 @@ describe('TagService', () => {
     it('should create new tags if they do not exist', async () => {
       await bindTagToPost(db, 1, ['brandnewtag'])
 
-      const tagResult = sqlite
-        .prepare(`
-                SELECT * FROM hashtags WHERE name = 'brandnewtag'
-            `)
-        .all()
+      const tagResult = await queryAll(
+        sqlite,
+        `
+          SELECT * FROM hashtags WHERE name = 'brandnewtag'
+        `
+      )
 
       expect(tagResult.length).toBe(1)
     })
@@ -191,13 +192,14 @@ describe('TagService', () => {
       await bindTagToPost(db, 1, ['tag3'])
 
       // Verify only tag3 is linked
-      const result = sqlite
-        .prepare(`
-                SELECT h.name FROM hashtags h
-                JOIN feed_hashtags fh ON h.id = fh.hashtag_id
-                WHERE fh.feed_id = 1
-            `)
-        .all()
+      const result = await queryAll(
+        sqlite,
+        `
+          SELECT h.name FROM hashtags h
+          JOIN feed_hashtags fh ON h.id = fh.hashtag_id
+          WHERE fh.feed_id = 1
+        `
+      )
 
       const tagNames = result.map((r: any) => r.name)
       expect(tagNames).not.toContain('tag1')
@@ -210,17 +212,18 @@ describe('TagService', () => {
       await bindTagToPost(db, 1, ['reusable'])
 
       // Get the tag id
-      const tagResult = sqlite.prepare(`SELECT id FROM hashtags WHERE name = 'reusable'`).all() as any[]
+      const tagResult = await queryAll<{ id: number }>(sqlite, `SELECT id FROM hashtags WHERE name = 'reusable'`)
       const tagId = tagResult[0]?.id
 
       // Second call should reuse the same tag
       await bindTagToPost(db, 2, ['reusable'])
 
-      const feed2Tags = sqlite
-        .prepare(`
-                SELECT hashtag_id FROM feed_hashtags WHERE feed_id = 2
-            `)
-        .all() as any[]
+      const feed2Tags = await queryAll<{ hashtag_id: number }>(
+        sqlite,
+        `
+          SELECT hashtag_id FROM feed_hashtags WHERE feed_id = 2
+        `
+      )
 
       expect(feed2Tags[0]?.hashtag_id).toBe(tagId)
     })
@@ -233,11 +236,12 @@ describe('TagService', () => {
       await bindTagToPost(db, 1, [])
 
       // Verify all tags were removed
-      const result = sqlite
-        .prepare(`
-                SELECT COUNT(*) as count FROM feed_hashtags WHERE feed_id = 1
-            `)
-        .all() as any[]
+      const result = await queryAll<{ count: number }>(
+        sqlite,
+        `
+          SELECT COUNT(*) as count FROM feed_hashtags WHERE feed_id = 1
+        `
+      )
 
       expect(result[0]?.count).toBe(0)
     })

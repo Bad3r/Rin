@@ -1,6 +1,5 @@
-import type { Database } from 'bun:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { cleanupTestDB, createMockDB, createMockEnv, execSql } from '../../../tests/fixtures'
 import { createBaseApp } from '../../core/base'
 import type { Context } from '../../core/types'
 import { UserService } from '../user'
@@ -14,7 +13,7 @@ for (const impl of ROUTER_IMPLS) {
   describe(`User OAuth regression (${impl})`, () => {
     let env: Env
     let app: ReturnType<typeof createBaseApp>
-    let sqlite: Database
+    let sqlite: D1Database
 
     beforeEach(() => {
       const mockDB = createMockDB()
@@ -68,9 +67,9 @@ for (const impl of ROUTER_IMPLS) {
       globalThis.fetch = originalFetch
     })
 
-    afterEach(() => {
+    afterEach(async () => {
       globalThis.fetch = originalFetch
-      cleanupTestDB(sqlite)
+      await cleanupTestDB(sqlite)
     })
 
     it('GET /user/github requires referer header', async () => {
@@ -142,10 +141,13 @@ for (const impl of ROUTER_IMPLS) {
     })
 
     it('GET /user/github/callback validates state and propagates token to redirect URL', async () => {
-      sqlite.exec(`
+      await execSql(
+        sqlite,
+        `
         INSERT INTO users (id, username, avatar, openid, permission)
         VALUES (7, 'oauth-user', 'avatar.png', '12345', 0)
-      `)
+      `
+      )
 
       globalThis.fetch = async () =>
         new Response(

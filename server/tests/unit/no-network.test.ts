@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it } from 'vitest'
 
 describe('no-network preload guard', () => {
   it('blocks outbound HTTP fetches during local test tiers', async () => {

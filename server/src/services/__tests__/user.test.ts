@@ -1,13 +1,12 @@
-import type { Database } from 'bun:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { cleanupTestDB, createMockDB, createMockEnv, execSql, queryAll } from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
 import { createBaseApp } from '../../core/base'
 import { UserService } from '../user'
 
 describe('UserService', () => {
   let db: any
-  let sqlite: Database
+  let sqlite: D1Database
   let env: Env
   let app: any
   let api: ReturnType<typeof createTestClient>
@@ -48,16 +47,19 @@ describe('UserService', () => {
     await seedTestData(sqlite)
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
-  async function seedTestData(sqlite: Database) {
-    sqlite.exec(`
+  async function seedTestData(sqlite: D1Database) {
+    await execSql(
+      sqlite,
+      `
             INSERT INTO users (id, username, avatar, permission, openid) VALUES 
                 (1, 'user1', 'avatar1.png', 0, 'gh_123'),
                 (2, 'admin', 'admin.png', 1, 'gh_456')
-        `)
+        `
+    )
   }
 
   describe('GET /user/github - Initiate GitHub OAuth', () => {
@@ -198,7 +200,7 @@ describe('UserService', () => {
         expect(response.status).toBe(302)
 
         // Verify user was created
-        const result = sqlite.prepare(`SELECT * FROM users WHERE openid = 'gh_new'`).all()
+        const result = await queryAll(sqlite, `SELECT * FROM users WHERE openid = 'gh_new'`)
         expect(result.length).toBe(1)
       } finally {
         global.fetch = originalFetch
@@ -292,7 +294,7 @@ describe('UserService', () => {
       expect(result.data?.success).toBe(true)
 
       // Verify update
-      const dbResult = sqlite.prepare(`SELECT username FROM users WHERE id = 1`).all() as any[]
+      const dbResult = await queryAll<{ username: string }>(sqlite, `SELECT username FROM users WHERE id = 1`)
       expect(dbResult[0]?.username).toBe('newname')
     })
 
@@ -306,7 +308,7 @@ describe('UserService', () => {
 
       expect(result.error).toBeUndefined()
 
-      const dbResult = sqlite.prepare(`SELECT avatar FROM users WHERE id = 1`).all() as any[]
+      const dbResult = await queryAll<{ avatar: string }>(sqlite, `SELECT avatar FROM users WHERE id = 1`)
       expect(dbResult[0]?.avatar).toBe('https://new-avatar.png')
     })
 

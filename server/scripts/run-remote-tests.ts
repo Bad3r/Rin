@@ -10,7 +10,7 @@ if (!process.env.RIN_REMOTE_BASE_URL) {
   process.exit(1)
 }
 
-const proc = Bun.spawn(['bun', 'test', 'tests/remote'], {
+const proc = Bun.spawn(['bun', 'run', 'vitest', 'run', '--config', './vitest.config.ts', 'tests/remote'], {
   stdout: 'inherit',
   stderr: 'inherit',
   env: {

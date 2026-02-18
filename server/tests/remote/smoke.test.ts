@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'bun:test'
+import { beforeAll, describe, expect, it } from 'vitest'
 
 const baseUrlEnv = process.env.RIN_REMOTE_BASE_URL
 let baseUrl: URL | null = null

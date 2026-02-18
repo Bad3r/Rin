@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it } from 'vitest'
 import worker from '../../src/_worker'
 import { createMockEnv } from '../fixtures'
 

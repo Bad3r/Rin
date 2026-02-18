@@ -1,12 +1,11 @@
-import type { Database } from 'bun:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { cleanupTestDB, createMockDB, createMockEnv, execSql } from '../../../tests/fixtures'
 import { createBaseApp } from '../../core/base'
 import { RSSService, rssCrontab } from '../rss'
 
 describe('RSSService', () => {
   let db: any
-  let sqlite: Database
+  let sqlite: D1Database
   let env: Env
   let app: any
 
@@ -28,23 +27,29 @@ describe('RSSService', () => {
     await seedTestData(db)
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
   async function seedTestData(_db: any) {
     // Insert test user
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO users (id, username, avatar, openid) VALUES (1, 'testuser', 'avatar.png', 'gh_test')
-        `)
+        `
+    )
 
     // Insert test feeds with content
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO feeds (id, title, content, summary, uid, draft, listed, created_at, updated_at) VALUES 
                 (1, 'Test Feed 1', '# Hello\n\nThis is content', 'Summary 1', 1, 0, 1, unixepoch(), unixepoch()),
                 (2, 'Test Feed 2', '![image](https://example.com/img.png)', 'Summary 2', 1, 0, 1, unixepoch(), unixepoch()),
                 (3, 'Draft Feed', 'Draft content', '', 1, 1, 1, unixepoch(), unixepoch())
-        `)
+        `
+    )
   }
 
   describe('GET /:name - RSS feed endpoints', () => {
@@ -148,10 +153,13 @@ describe('RSSService', () => {
     it('should limit to 20 items', async () => {
       // Add more feeds
       for (let i = 4; i <= 25; i++) {
-        sqlite.exec(`
+        await execSql(
+          sqlite,
+          `
                     INSERT INTO feeds (id, title, content, uid, draft, listed, created_at) 
                     VALUES (${i}, 'Feed ${i}', 'Content', 1, 0, 1, unixepoch())
-                `)
+                `
+        )
       }
 
       const request = new Request('http://localhost/rss.xml')
@@ -257,10 +265,13 @@ describe('RSSService', () => {
 
     it('should truncate content for description when no summary', async () => {
       // Create feed with long content but no summary
-      sqlite.exec(`
+      await execSql(
+        sqlite,
+        `
                 INSERT INTO feeds (id, title, content, summary, uid, draft, listed, created_at) 
                 VALUES (100, 'Long Feed', '${'a'.repeat(200)}', '', 1, 0, 1, unixepoch())
-            `)
+            `
+      )
 
       const request = new Request('http://localhost/rss.xml')
       const response = await app.handle(request, env)
@@ -272,7 +283,7 @@ describe('RSSService', () => {
 
 describe('rssCrontab', () => {
   let db: any
-  let sqlite: Database
+  let sqlite: D1Database
   let env: Env
 
   beforeEach(async () => {
@@ -282,16 +293,19 @@ describe('rssCrontab', () => {
     env = createMockEnv()
 
     // Seed test data
-    sqlite.exec(`INSERT INTO users (id, username, openid) VALUES (1, 'testuser', 'gh_test')`)
-    sqlite.exec(`
+    await execSql(sqlite, `INSERT INTO users (id, username, openid) VALUES (1, 'testuser', 'gh_test')`)
+    await execSql(
+      sqlite,
+      `
             INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES 
                 (1, 'Feed 1', 'Content 1', 1, 0, 1),
                 (2, 'Feed 2', 'Content 2', 1, 0, 1)
-        `)
+        `
+    )
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
   it('should generate and save RSS feeds to S3', async () => {
@@ -308,7 +322,7 @@ describe('rssCrontab', () => {
 
   it('should handle missing feeds gracefully', async () => {
     // Clear all feeds
-    sqlite.exec('DELETE FROM feeds')
+    await execSql(sqlite, 'DELETE FROM feeds')
 
     let thrown: unknown
 

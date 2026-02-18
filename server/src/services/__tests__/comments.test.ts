@@ -1,13 +1,12 @@
-import type { Database } from 'bun:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { cleanupTestDB, createMockDB, createMockEnv, execSql, queryAll } from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
 import { createBaseApp } from '../../core/base'
 import { CommentService } from '../comments'
 
 describe('CommentService', () => {
   let db: any
-  let sqlite: Database
+  let sqlite: D1Database
   let env: Env
   let app: any
   let api: ReturnType<typeof createTestClient>
@@ -44,33 +43,42 @@ describe('CommentService', () => {
     await seedTestData(sqlite)
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
-  async function seedTestData(sqlite: any) {
+  async function seedTestData(sqlite: D1Database) {
     // Insert test users
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO users (id, username, avatar, permission, openid) VALUES 
                 (1, 'user1', 'avatar1.png', 0, 'gh_1'),
                 (2, 'user2', 'avatar2.png', 0, 'gh_2'),
                 (3, 'admin', 'admin.png', 1, 'gh_admin')
-        `)
+        `
+    )
 
     // Insert test feeds
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO feeds (id, title, content, uid, draft, listed) VALUES 
                 (1, 'Feed 1', 'Content 1', 1, 0, 1),
                 (2, 'Feed 2', 'Content 2', 1, 0, 1)
-        `)
+        `
+    )
 
     // Insert test comments - use user_id not uid per fixtures schema
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO comments (id, feed_id, user_id, content, created_at) VALUES 
                 (1, 1, 2, 'Comment 1 on feed 1', unixepoch()),
                 (2, 1, 2, 'Comment 2 on feed 1', unixepoch()),
                 (3, 2, 1, 'Comment on feed 2', unixepoch())
-        `)
+        `
+    )
   }
 
   describe('GET /comment/:feed - List comments', () => {
@@ -78,7 +86,7 @@ describe('CommentService', () => {
       const result = await api.comment.list(1)
 
       expect(result.error).toBeUndefined()
-      expect(result.data).toBeArray()
+      expect(Array.isArray(result.data)).toBe(true)
       expect(result.data?.length).toBe(2)
       expect(result.data?.[0]).toHaveProperty('content')
       expect(result.data?.[0]).toHaveProperty('user')
@@ -87,7 +95,7 @@ describe('CommentService', () => {
 
     it('should return empty array when feed has no comments', async () => {
       // Create new feed without comments
-      sqlite.exec(`INSERT INTO feeds (id, title, content, uid) VALUES (3, 'No Comments', 'Content', 1)`)
+      await execSql(sqlite, `INSERT INTO feeds (id, title, content, uid) VALUES (3, 'No Comments', 'Content', 1)`)
 
       const result = await api.comment.list(3)
 
@@ -137,7 +145,7 @@ describe('CommentService', () => {
       expect(result.error).toBeUndefined()
 
       // Verify comment was created
-      const comments = sqlite.prepare(`SELECT * FROM comments WHERE feed_id = 1`).all()
+      const comments = await queryAll(sqlite, `SELECT * FROM comments WHERE feed_id = 1`)
       expect(comments.length).toBe(3)
     })
 
@@ -198,7 +206,7 @@ describe('CommentService', () => {
       expect(result.error).toBeUndefined()
 
       // Verify comment was deleted
-      const dbResult = sqlite.prepare(`SELECT * FROM comments WHERE id = 1`).all()
+      const dbResult = await queryAll(sqlite, `SELECT * FROM comments WHERE id = 1`)
       expect(dbResult.length).toBe(0)
     })
 

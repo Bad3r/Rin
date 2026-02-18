@@ -1,5 +1,4 @@
-import type { Database } from 'bun:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
 import { createBaseApp } from '../../core/base'
@@ -12,7 +11,7 @@ for (const impl of ROUTER_IMPLS) {
   describe(`FriendService route mount (${impl})`, () => {
     let app: ReturnType<typeof createBaseApp>
     let env: Env
-    let sqlite: Database
+    let sqlite: D1Database
 
     beforeEach(() => {
       const mockDB = createMockDB()
@@ -44,8 +43,8 @@ for (const impl of ROUTER_IMPLS) {
       FriendService(app)
     })
 
-    afterEach(() => {
-      cleanupTestDB(sqlite)
+    afterEach(async () => {
+      await cleanupTestDB(sqlite)
     })
 
     it('serves list endpoint on /friend', async () => {
