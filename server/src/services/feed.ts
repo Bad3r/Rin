@@ -249,15 +249,14 @@ export function FeedService(router: Router): void {
           })
           .returning({ insertedId: feeds.id })
 
-        await bindTagToPost(db, result[0].insertedId, normalizedTags(tags) ?? [])
-        await cache.deletePrefix('feeds_')
-
         if (result.length === 0) {
           set.status = 500
           return 'Failed to insert'
-        } else {
-          return result[0]
         }
+
+        await bindTagToPost(db, result[0].insertedId, normalizedTags(tags) ?? [])
+        await cache.deletePrefix('feeds_')
+        return result[0]
       },
       feedCreateSchema
     )
