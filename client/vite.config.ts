@@ -54,12 +54,6 @@ export default defineConfig(({ mode }) => {
       globals: true,
       environment: 'jsdom',
       setupFiles: './src/test/setup.ts',
-      css: false,
-      deps: {
-        web: {
-          transformCss: false,
-        },
-      },
       onConsoleLog(log, type) {
         if (type === 'stderr' && log.includes('Could not parse CSS stylesheet')) {
           return false

@@ -80,8 +80,5 @@ afterAll(() => {
     virtualConsole.emit = originalVirtualConsoleEmit
   }
 
-  console.error = originalConsoleError
-  console.log = originalConsoleLog
-  console.info = originalConsoleInfo
-  console.warn = originalConsoleWarn
+  vi.restoreAllMocks()
 })
