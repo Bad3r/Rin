@@ -2,7 +2,7 @@
   "compilerOptions": {
     // Enable latest features
     "lib": ["ESNext", "DOM"],
-    "types": ["./worker-configuration.d.ts", "@cloudflare/vitest-pool-workers", "bun"],
+    "types": ["./worker-configuration.d.ts", "@cloudflare/vitest-pool-workers"],
     "target": "ESNext",
     "module": "ESNext",
     "moduleDetection": "force",
@@ -23,5 +23,7 @@
     "noPropertyAccessFromIndexSignature": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true
-  }
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts", "worker-configuration.d.ts"],
+  "exclude": ["scripts/**/*.ts"]
 }
