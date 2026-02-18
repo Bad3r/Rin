@@ -211,6 +211,7 @@ describe('RSSService', () => {
         const response = await appWithS3.handle(request, envWithS3)
 
         expect(response.status).toBe(200)
+        expect(fetchSpy).toHaveBeenCalled()
       } finally {
         fetchSpy.mockRestore()
       }
@@ -234,6 +235,7 @@ describe('RSSService', () => {
 
         // Should still generate feed
         expect(response.status).toBe(200)
+        expect(fetchSpy).toHaveBeenCalled()
       } finally {
         fetchSpy.mockRestore()
       }

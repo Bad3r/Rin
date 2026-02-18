@@ -184,6 +184,7 @@ describe('UserService', () => {
         const response = await app.handle(request, env)
 
         expect(response.status).toBe(302)
+        expect(fetchSpy).toHaveBeenCalled()
         const location = response.headers.get('Location')
         expect(location).toContain('/callback')
         expect(location).toContain('token=mock_token_1')
@@ -216,6 +217,7 @@ describe('UserService', () => {
         const response = await app.handle(request, env)
 
         expect(response.status).toBe(302)
+        expect(fetchSpy).toHaveBeenCalled()
 
         // Verify user was created
         const result = await queryAll(sqlite, `SELECT * FROM users WHERE openid = 'gh_new'`)
