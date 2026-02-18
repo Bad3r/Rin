@@ -143,7 +143,9 @@ jobs:
               }
             } else if (artifactSource === 'latest' && artifactUrlInput && !versionInput) {
               artifactSource = 'url';
-              core.info('Using url mode for backward compatibility because artifact_url was provided.');
+              core.warning(
+                'artifact_source=latest was overridden to url because artifact_url was provided for backward compatibility.'
+              );
             }
 
             if (!['latest', 'version', 'url'].includes(artifactSource)) {
@@ -365,6 +367,7 @@ jobs:
           DISPATCH_ARTIFACT_SOURCE: ${{ steps.dispatch_artifact.outputs.artifact_source }}
           DISPATCH_RELEASE_TARGET: ${{ steps.dispatch_artifact.outputs.release_target_commitish }}
         run: |
+          set -euo pipefail
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             # Manual deployment
             if [ "${{ github.event.inputs.environment }}" == "production" ]; then
