@@ -1,6 +1,5 @@
-import type { Database } from 'bun:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { cleanupTestDB, createMockDB, createMockEnv, execSql } from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
 import { createBaseApp } from '../../core/base'
 import { FriendService } from '../friends'
@@ -12,9 +11,9 @@ for (const impl of ROUTER_IMPLS) {
   describe(`FriendService route mount (${impl})`, () => {
     let app: ReturnType<typeof createBaseApp>
     let env: Env
-    let sqlite: Database
+    let sqlite: D1Database
 
-    beforeEach(() => {
+    beforeEach(async () => {
       const mockDB = createMockDB()
       sqlite = mockDB.sqlite
 
@@ -43,19 +42,23 @@ for (const impl of ROUTER_IMPLS) {
           return match ? { id: Number.parseInt(match[1], 10) } : null
         },
       })
+      app.state('anyUser', async () => false)
 
       FriendService(app)
 
-      sqlite.exec(`
+      await execSql(
+        sqlite,
+        `
         INSERT INTO users (id, username, avatar, permission, openid)
         VALUES
           (1, 'admin', 'admin.png', 1, 'gh_admin'),
           (2, 'regular', 'regular.png', 0, 'gh_regular')
-      `)
+      `
+      )
     })
 
-    afterEach(() => {
-      cleanupTestDB(sqlite)
+    afterEach(async () => {
+      await cleanupTestDB(sqlite)
     })
 
     it('serves list endpoint on /friend', async () => {
@@ -68,10 +71,13 @@ for (const impl of ROUTER_IMPLS) {
     })
 
     it('allows admin-only accepted/sort_order updates without profile fields', async () => {
-      sqlite.exec(`
+      await execSql(
+        sqlite,
+        `
         INSERT INTO friends (id, name, desc, avatar, url, uid, accepted, sort_order)
         VALUES (1, 'Example', 'Example desc', 'avatar.png', 'https://example.com', 2, 0, 0)
-      `)
+      `
+      )
 
       const api = createTestClient(app, env)
       const result = await api.friend.update(
@@ -85,13 +91,13 @@ for (const impl of ROUTER_IMPLS) {
 
       expect(result.error).toBeUndefined()
 
-      const row = sqlite.query('SELECT name, desc, url, accepted, sort_order FROM friends WHERE id = 1').get() as {
+      const row = await sqlite.prepare('SELECT name, desc, url, accepted, sort_order FROM friends WHERE id = 1').first<{
         name: string
         desc: string
         url: string
         accepted: number
         sort_order: number
-      } | null
+      }>()
 
       expect(row).not.toBeNull()
       expect(row?.name).toBe('Example')
@@ -102,10 +108,13 @@ for (const impl of ROUTER_IMPLS) {
     })
 
     it('rejects incomplete core profile updates when only part of name/desc/url is provided', async () => {
-      sqlite.exec(`
+      await execSql(
+        sqlite,
+        `
         INSERT INTO friends (id, name, desc, avatar, url, uid, accepted, sort_order)
         VALUES (1, 'Example', 'Example desc', 'avatar.png', 'https://example.com', 2, 0, 0)
-      `)
+      `
+      )
 
       const api = createTestClient(app, env)
       const result = await api.friend.update(

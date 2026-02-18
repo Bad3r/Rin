@@ -1,24 +1,15 @@
-import type { Database } from 'bun:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import type { LoginRequest } from '@rin/api'
-import type { Router } from '../../core/router'
-import type { DB } from '../../server'
-import { cleanupTestDB, createMockDB, createMockEnv } from '../../../tests/fixtures'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { cleanupTestDB, createMockDB, createMockEnv, execSql, queryAll } from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
 import { createBaseApp } from '../../core/base'
 import { PasswordAuthService } from '../auth'
 
 describe('PasswordAuthService', () => {
-  let db: DB
-  let sqlite: Database
+  let db: any
+  let sqlite: D1Database
   let env: Env
-  let app: Router
+  let app: any
   let api: ReturnType<typeof createTestClient>
-
-  const mockSign = async (payload: Record<string, unknown>) => {
-    const id = typeof payload.id === 'number' ? payload.id : Number.parseInt(String(payload.id ?? ''), 10)
-    return `mock_token_${Number.isFinite(id) ? id : 0}`
-  }
 
   const messageOf = (value: unknown): string | undefined => {
     if (typeof value === 'string') {
@@ -27,17 +18,21 @@ describe('PasswordAuthService', () => {
     if (!value || typeof value !== 'object') {
       return undefined
     }
+    const message = (value as { message?: unknown }).message
+    if (typeof message === 'string') {
+      return message
+    }
     const error = (value as { error?: unknown }).error
     if (!error || typeof error !== 'object') {
       return undefined
     }
-    const message = (error as { message?: unknown }).message
-    return typeof message === 'string' ? message : undefined
+    const nestedMessage = (error as { message?: unknown }).message
+    return typeof nestedMessage === 'string' ? nestedMessage : undefined
   }
 
   beforeEach(async () => {
     const mockDB = createMockDB()
-    db = mockDB.db as unknown as DB
+    db = mockDB.db
     sqlite = mockDB.sqlite
     env = createMockEnv({
       ADMIN_USERNAME: 'admin',
@@ -48,13 +43,13 @@ describe('PasswordAuthService', () => {
     app = createBaseApp(env)
     app.state('db', db)
     app.state('jwt', {
-      sign: mockSign,
+      sign: async (payload: any) => `mock_token_${payload.id}`,
       verify: async (token: string) => {
         const match = token.match(/mock_token_(\d+)/)
         return match ? { id: parseInt(match[1], 10) } : null
       },
     })
-    app.state('anyUser', async (_db: DB) => false)
+    app.state('anyUser', async () => false)
 
     // Initialize service
     PasswordAuthService(app)
@@ -66,17 +61,20 @@ describe('PasswordAuthService', () => {
     await seedTestData(sqlite)
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
-  async function seedTestData(sqlite: Database) {
+  async function seedTestData(sqlite: D1Database) {
     // Insert a regular user with password
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO users (id, username, avatar, permission, openid, password) VALUES 
                 (1, 'user1', 'avatar1.png', 0, 'gh_123', NULL),
                 (2, 'regular', 'regular.png', 0, 'gh_regular', 'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3')
-        `)
+        `
+    )
   }
 
   describe('POST /auth/login - Login with password', () => {
@@ -95,7 +93,7 @@ describe('PasswordAuthService', () => {
 
     it('should create admin user on first login', async () => {
       // Clear existing users
-      sqlite.exec('DELETE FROM users')
+      await execSql(sqlite, 'DELETE FROM users')
 
       const result = await api.auth.login({
         username: 'admin',
@@ -106,9 +104,9 @@ describe('PasswordAuthService', () => {
       expect(result.data?.success).toBe(true)
 
       // Verify admin was created using raw SQLite
-      const dbResult = sqlite.prepare(`SELECT * FROM users WHERE openid = 'admin'`).all()
+      const dbResult = await queryAll(sqlite, `SELECT * FROM users WHERE openid = 'admin'`)
       expect(dbResult.length).toBe(1)
-      expect((dbResult[0] as { permission?: number } | undefined)?.permission).toBe(1)
+      expect((dbResult[0] as any)?.permission).toBe(1)
     })
 
     it('should reject invalid admin password', async () => {
@@ -147,7 +145,7 @@ describe('PasswordAuthService', () => {
     })
 
     it('should require username and password', async () => {
-      const result = await api.auth.login({} as unknown as LoginRequest)
+      const result = await api.auth.login({} as any)
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(400)
@@ -163,7 +161,7 @@ describe('PasswordAuthService', () => {
       const appNoCreds = createBaseApp(envNoCreds)
       appNoCreds.state('db', db)
       appNoCreds.state('jwt', {
-        sign: mockSign,
+        sign: async (payload: any) => `mock_token_${payload.id}`,
         verify: async (token: string) => {
           const match = token.match(/mock_token_(\d+)/)
           return match ? { id: parseInt(match[1], 10) } : null

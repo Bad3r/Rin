@@ -1,25 +1,21 @@
-import type { Database } from 'bun:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import type { CreateFeedRequest } from '@rin/api'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createBaseApp } from '../../src/core/base'
-import type { Router } from '../../src/core/router'
-import type { DB } from '../../src/server'
 import { CommentService } from '../../src/services/comments'
 import { FeedService } from '../../src/services/feed'
 import { TagService } from '../../src/services/tag'
-import { cleanupTestDB, createMockDB, createMockEnv } from '../fixtures'
+import { cleanupTestDB, createMockDB, createMockEnv, execSql } from '../fixtures'
 import { createTestClient } from '../test-api-client'
 
 describe('Integration Tests - API Flow', () => {
-  let db: DB
-  let sqlite: Database
+  let db: any
+  let sqlite: D1Database
   let env: Env
-  let app: Router
+  let app: any
   let api: ReturnType<typeof createTestClient>
 
   beforeEach(async () => {
     const mockDB = createMockDB()
-    db = mockDB.db as unknown as DB
+    db = mockDB.db
     sqlite = mockDB.sqlite
     env = createMockEnv()
 
@@ -29,20 +25,20 @@ describe('Integration Tests - API Flow', () => {
       get: async () => undefined,
       set: async () => {},
       deletePrefix: async () => {},
-      getOrSet: async (_key: string, fn: () => unknown) => fn(),
-      getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
+      getOrSet: async (_key: string, fn: Function) => fn(),
+      getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
     })
     app.state('serverConfig', {
       get: async () => undefined,
-      getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
+      getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
     })
     app.state('clientConfig', {
       get: async () => undefined,
-      getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
+      getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
     })
     // Add JWT for authentication
     app.state('jwt', {
-      sign: async (payload: Record<string, unknown>) => `mock_token_${String(payload.id ?? '')}`,
+      sign: async (payload: any) => `mock_token_${payload.id}`,
       verify: async (token: string) => {
         const match = token.match(/mock_token_(\d+)/)
         return match ? { id: parseInt(match[1], 10) } : null
@@ -58,33 +54,45 @@ describe('Integration Tests - API Flow', () => {
     api = createTestClient(app, env)
 
     // Seed test data locally for integration tests
-    await seedTestData()
+    await seedTestData(db)
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
-  async function seedTestData() {
-    sqlite.exec(`
+  async function seedTestData(_db: any) {
+    await execSql(
+      sqlite,
+      `
             INSERT INTO users (id, username, avatar, permission, openid) VALUES 
                 (1, 'author', 'author.png', 1, 'gh_author'),
                 (2, 'commenter', 'commenter.png', 0, 'gh_commenter')
-        `)
+        `
+    )
 
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO feeds (id, title, content, summary, uid, draft, listed) VALUES 
                 (1, 'First Post', 'Content of first post', 'Summary 1', 1, 0, 1)
-        `)
+        `
+    )
 
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO hashtags (id, name) VALUES 
                 (1, 'integration')
-        `)
+        `
+    )
 
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO feed_hashtags (feed_id, hashtag_id) VALUES (1, 1)
-        `)
+        `
+    )
   }
 
   function requireInsertedId(result: { data?: { insertedId?: number } }): number {
@@ -135,7 +143,7 @@ describe('Integration Tests - API Flow', () => {
       const commentsResult = await api.comment.list(feedId)
 
       expect(commentsResult.error).toBeUndefined()
-      expect(commentsResult.data).toBeArray()
+      expect(Array.isArray(commentsResult.data)).toBe(true)
       expect(commentsResult.data?.length).toBe(1)
       expect(commentsResult.data?.[0].content).toBe('Great post!')
     })
@@ -148,7 +156,7 @@ describe('Integration Tests - API Flow', () => {
 
       expect(result.error).toBeUndefined()
       expect(result.data?.name).toBe('integration')
-      expect(result.data?.feeds).toBeArray()
+      expect(Array.isArray(result.data?.feeds)).toBe(true)
       expect(result.data?.feeds.length).toBe(1)
       expect(result.data?.feeds[0].title).toBe('First Post')
     })
@@ -158,10 +166,13 @@ describe('Integration Tests - API Flow', () => {
     it('should paginate through feeds', async () => {
       // Add more feeds
       for (let i = 2; i <= 5; i++) {
-        sqlite.exec(`
+        await execSql(
+          sqlite,
+          `
                     INSERT INTO feeds (id, title, content, uid, draft, listed) 
                     VALUES (${i}, 'Feed ${i}', 'Content ${i}', 1, 0, 1)
-                `)
+                `
+        )
       }
 
       // Get first page using the type-safe API client
@@ -214,7 +225,7 @@ describe('Integration Tests - API Flow', () => {
     it('should handle validation errors', async () => {
       // Try to create feed without required fields
       const result = await api.feed.create(
-        {} as unknown as CreateFeedRequest, // Missing required fields intentionally
+        {} as any, // Missing required fields intentionally
         { isAdmin: true }
       )
 

@@ -57,7 +57,7 @@ export class TestAPIClient {
   constructor(
     private app: Router,
     private env: Env,
-    private baseUrl: string = 'http://localhost'
+    private baseUrl: string = 'https://example.test'
   ) {}
 
   private async request<T>(

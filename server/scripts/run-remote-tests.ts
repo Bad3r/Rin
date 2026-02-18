@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url'
+
 const enabled = (process.env.ENABLE_REMOTE_INTEGRATION_TESTS || '').toLowerCase()
 
 if (enabled !== 'true') {
@@ -10,7 +12,10 @@ if (!process.env.RIN_REMOTE_BASE_URL) {
   process.exit(1)
 }
 
-const proc = Bun.spawn(['bun', 'test', 'tests/remote'], {
+const serverRoot = fileURLToPath(new URL('..', import.meta.url))
+
+const proc = Bun.spawn(['bun', 'x', 'vitest', 'run', '--config', 'vitest.config.ts', 'tests/remote'], {
+  cwd: serverRoot,
   stdout: 'inherit',
   stderr: 'inherit',
   env: {

@@ -24,6 +24,9 @@ jobs:
         run: bun run test:ci
         working-directory: ./server
 
+      - name: Run scripts guard tests
+        run: bun run test:scripts:ci
+
       - name: Type check server
         run: bun run check
         working-directory: ./server

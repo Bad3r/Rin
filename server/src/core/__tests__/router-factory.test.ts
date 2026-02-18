@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Router } from '../router-contract'
 import { createRouterWithFactory, resolveRouterImpl } from '../router-factory'
 
