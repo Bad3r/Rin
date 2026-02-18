@@ -19,7 +19,6 @@ import { $ } from 'bun'
 
 process.env.WRANGLER_SEND_METRICS ??= 'false'
 process.env.TURBO_TELEMETRY_DISABLED ??= '1'
-process.env.DO_NOT_TRACK ??= '1'
 
 // Colors for terminal output
 const colors = {
