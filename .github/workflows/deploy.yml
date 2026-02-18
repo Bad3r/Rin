@@ -13,9 +13,22 @@ on:
     types: [labeled]
   workflow_dispatch:
     inputs:
+      artifact_source:
+        description: 'Artifact source for manual deploy'
+        required: false
+        default: 'latest'
+        type: choice
+        options:
+          - latest
+          - version
+          - url
+      version:
+        description: 'Release version when artifact_source=version (e.g., 1.0.0 or v1.0.0)'
+        required: false
+        type: string
       artifact_url:
-        description: 'Cloudflare build artifact URL (.tar.gz, e.g., build-v1.0.0-cloudflare.tar.gz)'
-        required: true
+        description: 'Cloudflare build artifact URL (.tar.gz/.zip). Used when artifact_source=url (legacy fallback).'
+        required: false
         type: string
       environment:
         description: 'Deployment environment'
@@ -101,24 +114,182 @@ jobs:
           run-id: ${{ steps.pr_build.outputs.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download artifacts from URL
+      - name: Resolve workflow_dispatch artifact source
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        id: dispatch_artifact
+        uses: actions/github-script@v7
+        env:
+          ARTIFACT_SOURCE: ${{ github.event.inputs.artifact_source }}
+          ARTIFACT_URL: ${{ github.event.inputs.artifact_url }}
+          VERSION_INPUT: ${{ github.event.inputs.version }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const artifactSourceInput = (process.env.ARTIFACT_SOURCE || '').trim().toLowerCase();
+            const artifactUrlInput = (process.env.ARTIFACT_URL || '').trim();
+            const versionInput = (process.env.VERSION_INPUT || '').trim();
+
+            let artifactSource = artifactSourceInput;
+            if (!artifactSource) {
+              if (artifactUrlInput) {
+                artifactSource = 'url';
+                core.info('artifact_source not provided; using url mode because artifact_url was set.');
+              } else if (versionInput) {
+                artifactSource = 'version';
+                core.info('artifact_source not provided; using version mode because version was set.');
+              } else {
+                artifactSource = 'latest';
+                core.info('artifact_source not provided; defaulting to latest mode.');
+              }
+            } else if (artifactSource === 'latest' && artifactUrlInput && !versionInput) {
+              artifactSource = 'url';
+              core.info('Using url mode for backward compatibility because artifact_url was provided.');
+            }
+
+            if (!['latest', 'version', 'url'].includes(artifactSource)) {
+              core.setFailed(
+                `Invalid artifact_source '${artifactSource}'. Expected one of: latest, version, url.`
+              );
+              return;
+            }
+
+            const buildAssetPattern = /^build-v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?-cloudflare\.tar\.gz$/;
+            let resolvedUrl = '';
+            let releaseTag = 'unknown';
+            let assetName = 'unknown';
+
+            if (artifactSource === 'url') {
+              if (!artifactUrlInput) {
+                core.setFailed('artifact_source=url requires artifact_url to be set.');
+                return;
+              }
+              try {
+                const parsed = new URL(artifactUrlInput);
+                resolvedUrl = parsed.toString();
+                assetName = decodeURIComponent(parsed.pathname.split('/').pop() || 'unknown');
+              } catch (error) {
+                core.setFailed(`Invalid artifact_url '${artifactUrlInput}': ${error.message}`);
+                return;
+              }
+            } else if (artifactSource === 'version') {
+              if (!versionInput) {
+                core.setFailed('artifact_source=version requires version input (e.g., 1.2.3 or v1.2.3).');
+                return;
+              }
+
+              const normalizedTag = versionInput.startsWith('v') ? versionInput : `v${versionInput}`;
+              const expectedAssetName = `build-${normalizedTag}-cloudflare.tar.gz`;
+
+              const { data: release } = await github.rest.repos.getReleaseByTag({
+                owner,
+                repo,
+                tag: normalizedTag,
+              });
+
+              if (release.prerelease || release.draft) {
+                core.setFailed(
+                  `Release ${release.tag_name} is not eligible (stable releases only; draft/prerelease denied).`
+                );
+                return;
+              }
+
+              const asset = release.assets.find((item) => item.name === expectedAssetName);
+              if (!asset) {
+                const available = release.assets.map((item) => item.name).join(', ') || '(none)';
+                core.setFailed(
+                  `No asset named '${expectedAssetName}' on release ${release.tag_name}. Available: ${available}`
+                );
+                return;
+              }
+
+              resolvedUrl = asset.browser_download_url;
+              releaseTag = release.tag_name;
+              assetName = asset.name;
+            } else {
+              const { data: release } = await github.rest.repos.getLatestRelease({ owner, repo });
+
+              if (release.prerelease || release.draft) {
+                core.setFailed(
+                  `Latest release ${release.tag_name} is not eligible (stable releases only; draft/prerelease denied).`
+                );
+                return;
+              }
+
+              const asset = release.assets.find((item) => buildAssetPattern.test(item.name));
+              if (!asset) {
+                const available = release.assets.map((item) => item.name).join(', ') || '(none)';
+                core.setFailed(
+                  `No Cloudflare build artifact matching '${buildAssetPattern}' on latest release ${release.tag_name}. Available: ${available}`
+                );
+                return;
+              }
+
+              resolvedUrl = asset.browser_download_url;
+              releaseTag = release.tag_name;
+              assetName = asset.name;
+            }
+
+            core.info(`Resolved artifact source: ${artifactSource}`);
+            core.info(`Resolved artifact URL: ${resolvedUrl}`);
+            core.info(`Resolved release tag: ${releaseTag}`);
+            core.info(`Resolved asset name: ${assetName}`);
+            core.setOutput('artifact_source', artifactSource);
+            core.setOutput('artifact_url', resolvedUrl);
+            core.setOutput('release_tag', releaseTag);
+            core.setOutput('asset_name', assetName);
+
+      - name: Download artifacts from resolved source
         if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
-          ARTIFACT_URL: ${{ github.event.inputs.artifact_url }}
+          RESOLVED_ARTIFACT_URL: ${{ steps.dispatch_artifact.outputs.artifact_url }}
         run: |
-          URL="$ARTIFACT_URL"
+          set -euo pipefail
+          URL="$RESOLVED_ARTIFACT_URL"
+          if [[ -z "$URL" ]]; then
+            echo "::error::Resolved artifact URL is empty."
+            exit 1
+          fi
+
           echo "Downloading from: $URL"
 
           mkdir -p ./artifacts
           if [[ "$URL" == *.zip ]]; then
-            curl -L "$URL" -o ./artifacts/build.zip
+            curl -fSL "$URL" -o ./artifacts/build.zip
             unzip -q ./artifacts/build.zip -d ./artifacts
             rm ./artifacts/build.zip
           else
-            curl -L "$URL" -o ./artifacts/build.tar.gz
+            curl -fSL "$URL" -o ./artifacts/build.tar.gz
             tar -xzf ./artifacts/build.tar.gz -C ./artifacts
             rm ./artifacts/build.tar.gz
           fi
+
+          if [[ ! -d ./artifacts/dist ]]; then
+            echo "::error::Downloaded artifact did not contain ./dist output."
+            ls -la ./artifacts || true
+            exit 1
+          fi
+
+      - name: Log resolved artifact provenance
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          ARTIFACT_SOURCE: ${{ steps.dispatch_artifact.outputs.artifact_source }}
+          ARTIFACT_URL: ${{ steps.dispatch_artifact.outputs.artifact_url }}
+          RELEASE_TAG: ${{ steps.dispatch_artifact.outputs.release_tag }}
+          ASSET_NAME: ${{ steps.dispatch_artifact.outputs.asset_name }}
+        run: |
+          set -euo pipefail
+          URL_HOST=$(echo "$ARTIFACT_URL" | sed -E 's#^https?://([^/]+)/?.*$#\1#')
+          URL_PATH=$(echo "$ARTIFACT_URL" | sed -E 's#^https?://[^/]+(/.*)$#\1#')
+          if [[ "$URL_PATH" == "$ARTIFACT_URL" ]]; then
+            URL_PATH="<non-http-url>"
+          fi
+
+          echo "Artifact provenance:"
+          echo "- source: ${ARTIFACT_SOURCE}"
+          echo "- release_tag: ${RELEASE_TAG}"
+          echo "- asset_name: ${ASSET_NAME}"
+          echo "- url_host: ${URL_HOST}"
+          echo "- url_path: ${URL_PATH}"
 
       - name: Set deployment type
         id: meta
