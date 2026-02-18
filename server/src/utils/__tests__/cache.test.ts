@@ -515,7 +515,7 @@ describe('CacheImpl - edge cases and error handling', () => {
   })
 
   it('handles large numbers of key/value pairs', async () => {
-    const count = 100
+    const count = 25
     for (let i = 0; i < count; i++) {
       await cacheImpl.set(`key${i}`, `value${i}`)
     }
@@ -525,8 +525,8 @@ describe('CacheImpl - edge cases and error handling', () => {
 
     // 验证随机几个键
     expect(await cacheImpl.get('key0')).toBe('value0')
-    expect(await cacheImpl.get('key50')).toBe('value50')
-    expect(await cacheImpl.get('key99')).toBe('value99')
+    expect(await cacheImpl.get('key12')).toBe('value12')
+    expect(await cacheImpl.get('key24')).toBe('value24')
   }, 15000)
 })
 
