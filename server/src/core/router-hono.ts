@@ -85,7 +85,7 @@ async function parseBody(request: {
     return body
   }
 
-  return { raw: await request.text() }
+  return {}
 }
 
 function validateSchema(schema: unknown, data: unknown): SchemaValidationResult {

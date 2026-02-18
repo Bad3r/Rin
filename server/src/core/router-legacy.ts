@@ -169,7 +169,7 @@ export class LegacyRouterAdapter extends Router {
       return body
     }
 
-    return { raw: await request.text() }
+    return {}
   }
 
   private validateSchema(schema: unknown, data: unknown): { valid: boolean; errors?: string[] } {

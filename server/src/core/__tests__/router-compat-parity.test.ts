@@ -39,6 +39,23 @@ for (const impl of ROUTER_IMPLS) {
       })
     })
 
+    it('keeps unsupported content types as empty object body', async () => {
+      app.post('/body', ctx => ctx.body)
+
+      const response = await app.handle(
+        new Request('http://localhost/body', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: 'plain-text payload',
+        }),
+        env
+      )
+
+      expect(response.status).toBe(200)
+      const payload = (await response.json()) as Record<string, unknown>
+      expect(payload).toEqual({})
+    })
+
     it('propagates state mutations made after group registration', async () => {
       const rawApp = createRouter(env)
       rawApp.group('/state', group => {
