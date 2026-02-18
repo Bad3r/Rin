@@ -1,4 +1,4 @@
-import { Helmet } from 'react-helmet'
+import { Helmet } from '../components/helmet'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../components/button'
 import { useSiteConfig } from '../hooks/useSiteConfig'

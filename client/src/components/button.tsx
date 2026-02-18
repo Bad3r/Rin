@@ -1,4 +1,4 @@
-import ReactLoading from 'react-loading'
+import ReactLoading from './react-loading'
 
 export function Button({
   title,
