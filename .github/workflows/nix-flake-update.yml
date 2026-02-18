@@ -6,7 +6,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+permissions:
+  contents: write   # needed by peter-evans/create-pull-request to push the branch
+  pull-requests: write
   pull-requests: write
 
 concurrency:
