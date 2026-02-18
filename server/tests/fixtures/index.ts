@@ -45,12 +45,77 @@ export async function cleanupTestDB(_db: D1Database): Promise<void> {
   // Storage cleanup is handled by Workers Vitest isolated storage.
 }
 
-export async function execSql(db: D1Database, sql: string): Promise<void> {
-  const statements = sql
-    .split(';')
-    .map(statement => statement.trim())
-    .filter(statement => statement.length > 0)
+function splitSqlStatements(sql: string): string[] {
+  const statements: string[] = []
+  let current = ''
+  let inSingleQuote = false
+  let inDoubleQuote = false
 
+  for (let i = 0; i < sql.length; i++) {
+    const char = sql[i]
+    const next = sql[i + 1]
+
+    if (inSingleQuote) {
+      current += char
+      if (char === "'") {
+        // SQLite escapes single quotes by doubling them.
+        if (next === "'") {
+          current += next
+          i++
+        } else {
+          inSingleQuote = false
+        }
+      }
+      continue
+    }
+
+    if (inDoubleQuote) {
+      current += char
+      if (char === '"') {
+        if (next === '"') {
+          current += next
+          i++
+        } else {
+          inDoubleQuote = false
+        }
+      }
+      continue
+    }
+
+    if (char === "'") {
+      inSingleQuote = true
+      current += char
+      continue
+    }
+
+    if (char === '"') {
+      inDoubleQuote = true
+      current += char
+      continue
+    }
+
+    if (char === ';') {
+      const statement = current.trim()
+      if (statement.length > 0) {
+        statements.push(statement)
+      }
+      current = ''
+      continue
+    }
+
+    current += char
+  }
+
+  const tail = current.trim()
+  if (tail.length > 0) {
+    statements.push(tail)
+  }
+
+  return statements
+}
+
+export async function execSql(db: D1Database, sql: string): Promise<void> {
+  const statements = splitSqlStatements(sql)
   for (const statement of statements) {
     await db.prepare(statement).run()
   }
