@@ -23,7 +23,7 @@ export function MarkdownEditor({
 }: MarkdownEditorProps) {
   const { t } = useTranslation()
   const colorMode = useColorMode()
-  const editorRef = useRef<editor.IStandaloneCodeEditor>()
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const isComposingRef = useRef(false)
   const [preview, setPreview] = useState<'edit' | 'preview' | 'comparison'>('edit')
   const [uploading, setUploading] = useState(false)
