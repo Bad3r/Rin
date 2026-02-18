@@ -56,10 +56,66 @@ function setTitleFromChildren(children: ReactNode): void {
   }
 }
 
+function escapeAttributeValue(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+}
+
+function getDedupeSelectors(type: string, props: Record<string, unknown>): string[] {
+  if (type === 'meta') {
+    const name = typeof props.name === 'string' ? props.name : null
+    const property = typeof props.property === 'string' ? props.property : null
+    const httpEquiv = typeof props.httpEquiv === 'string' ? props.httpEquiv : null
+    const itemProp = typeof props.itemProp === 'string' ? props.itemProp : null
+    const charSet = typeof props.charSet === 'string' ? props.charSet : null
+
+    if (name) {
+      return [`meta[name="${escapeAttributeValue(name)}"][data-rin-helmet]`]
+    }
+    if (property) {
+      return [`meta[property="${escapeAttributeValue(property)}"][data-rin-helmet]`]
+    }
+    if (httpEquiv) {
+      return [`meta[http-equiv="${escapeAttributeValue(httpEquiv)}"][data-rin-helmet]`]
+    }
+    if (itemProp) {
+      return [`meta[itemprop="${escapeAttributeValue(itemProp)}"][data-rin-helmet]`]
+    }
+    if (charSet) {
+      return ['meta[charset][data-rin-helmet]']
+    }
+    return []
+  }
+
+  if (type === 'link') {
+    const rel = typeof props.rel === 'string' ? props.rel : null
+    const href = typeof props.href === 'string' ? props.href : null
+
+    if (rel && href) {
+      return [`link[rel="${escapeAttributeValue(rel)}"][href="${escapeAttributeValue(href)}"][data-rin-helmet]`]
+    }
+    if (rel) {
+      return [`link[rel="${escapeAttributeValue(rel)}"][data-rin-helmet]`]
+    }
+    return []
+  }
+
+  return []
+}
+
+function removeExistingHeadElements(type: string, props: Record<string, unknown>): void {
+  for (const selector of getDedupeSelectors(type, props)) {
+    for (const element of document.querySelectorAll<HTMLElement>(selector)) {
+      element.remove()
+    }
+  }
+}
+
 function createHeadElement(type: string, props: Record<string, unknown>): HTMLElement | null {
   if (type !== 'meta' && type !== 'link') {
     return null
   }
+
+  removeExistingHeadElements(type, props)
 
   const element = document.createElement(type)
   setAttributes(element, props)
