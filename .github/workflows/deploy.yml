@@ -13,9 +13,22 @@ on:
     types: [labeled]
   workflow_dispatch:
     inputs:
+      artifact_source:
+        description: 'Artifact source for manual deploy'
+        required: false
+        default: 'latest'
+        type: choice
+        options:
+          - latest
+          - version
+          - url
+      version:
+        description: 'Release version when artifact_source=version (e.g., 1.0.0 or v1.0.0)'
+        required: false
+        type: string
       artifact_url:
-        description: 'Cloudflare build artifact URL (.tar.gz, e.g., build-v1.0.0-cloudflare.tar.gz)'
-        required: true
+        description: 'GitHub release download URL (.tar.gz/.zip) for this repository. Used when artifact_source=url.'
+        required: false
         type: string
       environment:
         description: 'Deployment environment'
@@ -54,7 +67,7 @@ jobs:
     steps:
       - name: Download build artifacts from workflow
         if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: build-${{ github.event.workflow_run.id }}
           path: ./artifacts
@@ -64,71 +77,346 @@ jobs:
       - name: Resolve PR build run
         if: ${{ github.event_name == 'pull_request' }}
         id: pr_build
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { owner, repo } = context.repo;
             const pr = context.payload.pull_request;
             const headSha = pr.head.sha;
             const branch = pr.head.ref;
+            const workflowId = 'build.yml';
+            const maxAttempts = 24;
+            const pollMs = 5000;
 
-            const { data } = await github.rest.actions.listWorkflowRunsForRepo({
-              owner,
-              repo,
-              event: 'pull_request',
-              branch,
-              per_page: 100,
-            });
+            for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+              const { data } = await github.rest.actions.listWorkflowRuns({
+                owner,
+                repo,
+                workflow_id: workflowId,
+                event: 'pull_request',
+                branch,
+                per_page: 20,
+              });
 
-            const buildRun = data.workflow_runs.find(
-              run => run.name === 'Build' && run.head_sha === headSha && run.conclusion === 'success'
-            );
+              const matchingRuns = data.workflow_runs.filter(run => run.head_sha === headSha);
+              const latestRun = matchingRuns[0];
+              const successfulRun = matchingRuns.find(
+                run => run.status === 'completed' && run.conclusion === 'success'
+              );
 
-            if (!buildRun) {
-              core.setFailed(`No successful Build run found for PR head SHA ${headSha}.`);
-              return;
+              if (successfulRun) {
+                core.info(`Using Build run ${successfulRun.id} for PR #${pr.number}.`);
+                core.setOutput('run_id', String(successfulRun.id));
+                return;
+              }
+
+              if (
+                latestRun &&
+                latestRun.status === 'completed' &&
+                latestRun.conclusion &&
+                latestRun.conclusion !== 'success'
+              ) {
+                core.setFailed(
+                  `Build run ${latestRun.id} for PR head SHA ${headSha} finished with conclusion '${latestRun.conclusion}'.`
+                );
+                return;
+              }
+
+              if (attempt === maxAttempts) {
+                core.setFailed(
+                  `Timed out waiting for a successful Build run for PR head SHA ${headSha} after ${(maxAttempts * pollMs) / 1000}s.`
+                );
+                return;
+              }
+
+              core.info(
+                `Build run for PR head SHA ${headSha} not ready yet (attempt ${attempt}/${maxAttempts}). Waiting ${pollMs / 1000}s...`
+              );
+              await new Promise(resolve => setTimeout(resolve, pollMs));
             }
-
-            core.info(`Using Build run ${buildRun.id} for PR #${pr.number}.`);
-            core.setOutput('run_id', String(buildRun.id));
 
       - name: Download build artifacts from PR build
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: build-${{ steps.pr_build.outputs.run_id }}
           path: ./artifacts
           run-id: ${{ steps.pr_build.outputs.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download artifacts from URL
+      - name: Resolve workflow_dispatch artifact source
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        id: dispatch_artifact
+        uses: actions/github-script@v8
+        env:
+          ARTIFACT_SOURCE: ${{ github.event.inputs.artifact_source }}
+          ARTIFACT_URL: ${{ github.event.inputs.artifact_url }}
+          VERSION_INPUT: ${{ github.event.inputs.version }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const artifactSourceInput = (process.env.ARTIFACT_SOURCE || '').trim().toLowerCase();
+            const artifactUrlInput = (process.env.ARTIFACT_URL || '').trim();
+            const versionInput = (process.env.VERSION_INPUT || '').trim();
+
+            let artifactSource = artifactSourceInput;
+            if (!artifactSource) {
+              if (artifactUrlInput) {
+                artifactSource = 'url';
+                core.info('artifact_source not provided; using url mode because artifact_url was set.');
+              } else if (versionInput) {
+                artifactSource = 'version';
+                core.info('artifact_source not provided; using version mode because version was set.');
+              } else {
+                artifactSource = 'latest';
+                core.info('artifact_source not provided; defaulting to latest mode.');
+              }
+            } else if (artifactSource === 'latest' && artifactUrlInput && !versionInput) {
+              artifactSource = 'url';
+              core.warning(
+                'artifact_source=latest was overridden to url because artifact_url was provided for backward compatibility.'
+              );
+            }
+
+            if (!['latest', 'version', 'url'].includes(artifactSource)) {
+              core.setFailed(
+                `Invalid artifact_source '${artifactSource}'. Expected one of: latest, version, url.`
+              );
+              return;
+            }
+
+            const buildAssetPattern = /^build-v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?-cloudflare\.tar\.gz$/;
+            const repoReleaseDownloadPrefix = `/${owner}/${repo}/releases/download/`;
+            let resolvedUrl = '';
+            let releaseTag = 'unknown';
+            let releaseTargetCommitish = 'unknown';
+            let assetName = 'unknown';
+            let downloadAuthMode = 'none';
+
+            if (artifactSource === 'url') {
+              if (!artifactUrlInput) {
+                core.setFailed('artifact_source=url requires artifact_url to be set.');
+                return;
+              }
+
+              let parsed;
+              try {
+                parsed = new URL(artifactUrlInput);
+              } catch (error) {
+                core.setFailed(`Invalid artifact_url '${artifactUrlInput}': ${error.message}`);
+                return;
+              }
+
+              if (parsed.protocol !== 'https:') {
+                core.setFailed(`artifact_url must use https. Received protocol '${parsed.protocol}'.`);
+                return;
+              }
+
+              if (parsed.hostname !== 'github.com') {
+                core.setFailed(
+                  `artifact_url host '${parsed.hostname}' is not allowed. Use github.com release download URLs for this repository.`
+                );
+                return;
+              }
+
+              if (!parsed.pathname.startsWith(repoReleaseDownloadPrefix)) {
+                core.setFailed(
+                  `artifact_url path '${parsed.pathname}' is not a release asset for ${owner}/${repo}. Expected prefix '${repoReleaseDownloadPrefix}'.`
+                );
+                return;
+              }
+
+              resolvedUrl = parsed.toString();
+              assetName = decodeURIComponent(parsed.pathname.split('/').pop() || 'unknown');
+              if (!(assetName.endsWith('.tar.gz') || assetName.endsWith('.zip'))) {
+                core.setFailed(
+                  `artifact_url must reference a .tar.gz or .zip artifact. Received asset '${assetName}'.`
+                );
+                return;
+              }
+            } else if (artifactSource === 'version') {
+              if (!versionInput) {
+                core.setFailed('artifact_source=version requires version input (e.g., 1.2.3 or v1.2.3).');
+                return;
+              }
+
+              const normalizedTag = versionInput.startsWith('v') ? versionInput : `v${versionInput}`;
+              const expectedAssetName = `build-${normalizedTag}-cloudflare.tar.gz`;
+
+              const { data: release } = await github.rest.repos.getReleaseByTag({
+                owner,
+                repo,
+                tag: normalizedTag,
+              });
+
+              if (release.prerelease || release.draft) {
+                core.setFailed(
+                  `Release ${release.tag_name} is not eligible (stable releases only; draft/prerelease denied).`
+                );
+                return;
+              }
+
+              const asset = release.assets.find((item) => item.name === expectedAssetName);
+              if (!asset) {
+                const available = release.assets.map((item) => item.name).join(', ') || '(none)';
+                core.setFailed(
+                  `No asset named '${expectedAssetName}' on release ${release.tag_name}. Available: ${available}`
+                );
+                return;
+              }
+
+              resolvedUrl = asset.url;
+              releaseTag = release.tag_name;
+              releaseTargetCommitish = release.target_commitish || 'unknown';
+              assetName = asset.name;
+              downloadAuthMode = 'github_api_asset';
+            } else {
+              const { data: release } = await github.rest.repos.getLatestRelease({ owner, repo });
+
+              if (release.prerelease || release.draft) {
+                core.setFailed(
+                  `Latest release ${release.tag_name} is not eligible (stable releases only; draft/prerelease denied).`
+                );
+                return;
+              }
+
+              const asset = release.assets.find((item) => buildAssetPattern.test(item.name));
+              if (!asset) {
+                const available = release.assets.map((item) => item.name).join(', ') || '(none)';
+                core.setFailed(
+                  `No Cloudflare build artifact matching '${buildAssetPattern}' on latest release ${release.tag_name}. Available: ${available}`
+                );
+                return;
+              }
+
+              resolvedUrl = asset.url;
+              releaseTag = release.tag_name;
+              releaseTargetCommitish = release.target_commitish || 'unknown';
+              assetName = asset.name;
+              downloadAuthMode = 'github_api_asset';
+            }
+
+            core.info(`Resolved artifact source: ${artifactSource}`);
+            core.info(`Resolved artifact URL: ${resolvedUrl}`);
+            core.info(`Resolved release tag: ${releaseTag}`);
+            core.info(`Resolved release target commitish: ${releaseTargetCommitish}`);
+            core.info(`Resolved asset name: ${assetName}`);
+            core.info(`Resolved download auth mode: ${downloadAuthMode}`);
+            core.setOutput('artifact_source', artifactSource);
+            core.setOutput('artifact_url', resolvedUrl);
+            core.setOutput('release_tag', releaseTag);
+            core.setOutput('release_target_commitish', releaseTargetCommitish);
+            core.setOutput('asset_name', assetName);
+            core.setOutput('download_auth_mode', downloadAuthMode);
+
+      - name: Download artifacts from resolved source
         if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
-          ARTIFACT_URL: ${{ github.event.inputs.artifact_url }}
+          RESOLVED_ARTIFACT_URL: ${{ steps.dispatch_artifact.outputs.artifact_url }}
+          RESOLVED_ASSET_NAME: ${{ steps.dispatch_artifact.outputs.asset_name }}
+          DOWNLOAD_AUTH_MODE: ${{ steps.dispatch_artifact.outputs.download_auth_mode }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          URL="$ARTIFACT_URL"
+          set -euo pipefail
+          URL="$RESOLVED_ARTIFACT_URL"
+          if [[ -z "$URL" ]]; then
+            echo "::error::Resolved artifact URL is empty."
+            exit 1
+          fi
+
+          ASSET_NAME="$RESOLVED_ASSET_NAME"
+          if [[ -z "$ASSET_NAME" || "$ASSET_NAME" == "unknown" ]]; then
+            ASSET_NAME="$(basename "${URL%%\?*}")"
+          fi
+
           echo "Downloading from: $URL"
+          echo "Resolved asset name: $ASSET_NAME"
 
           mkdir -p ./artifacts
-          if [[ "$URL" == *.zip ]]; then
-            curl -L "$URL" -o ./artifacts/build.zip
+          if [[ "$ASSET_NAME" == *.zip ]]; then
+            OUT_PATH="./artifacts/build.zip"
+          elif [[ "$ASSET_NAME" == *.tar.gz || "$ASSET_NAME" == *.tgz ]]; then
+            OUT_PATH="./artifacts/build.tar.gz"
+          else
+            echo "::error::Unsupported artifact format for '$ASSET_NAME'. Expected .zip or .tar.gz."
+            exit 1
+          fi
+
+          if [[ "$DOWNLOAD_AUTH_MODE" == "github_api_asset" ]]; then
+            curl -fSL \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              -H "Accept: application/octet-stream" \
+              "$URL" -o "$OUT_PATH"
+          else
+            curl -fSL "$URL" -o "$OUT_PATH"
+          fi
+
+          if [[ "$OUT_PATH" == *.zip ]]; then
             unzip -q ./artifacts/build.zip -d ./artifacts
             rm ./artifacts/build.zip
           else
-            curl -L "$URL" -o ./artifacts/build.tar.gz
             tar -xzf ./artifacts/build.tar.gz -C ./artifacts
             rm ./artifacts/build.tar.gz
           fi
 
+          if [[ ! -d ./artifacts/dist ]]; then
+            echo "::error::Downloaded artifact did not contain ./dist output."
+            ls -la ./artifacts || true
+            exit 1
+          fi
+
+      - name: Log resolved artifact provenance
+        if: ${{ success() && github.event_name == 'workflow_dispatch' }}
+        env:
+          ARTIFACT_SOURCE: ${{ steps.dispatch_artifact.outputs.artifact_source }}
+          ARTIFACT_URL: ${{ steps.dispatch_artifact.outputs.artifact_url }}
+          RELEASE_TAG: ${{ steps.dispatch_artifact.outputs.release_tag }}
+          RELEASE_TARGET_COMMITISH: ${{ steps.dispatch_artifact.outputs.release_target_commitish }}
+          ASSET_NAME: ${{ steps.dispatch_artifact.outputs.asset_name }}
+          DOWNLOAD_AUTH_MODE: ${{ steps.dispatch_artifact.outputs.download_auth_mode }}
+        run: |
+          set -euo pipefail
+          URL_HOST=$(echo "$ARTIFACT_URL" | sed -E 's#^https?://([^/]+)/?.*$#\1#')
+          URL_PATH=$(echo "$ARTIFACT_URL" | sed -E 's#^https?://[^/]+(/.*)$#\1#')
+          if [[ "$URL_PATH" == "$ARTIFACT_URL" ]]; then
+            URL_PATH="<non-http-url>"
+          fi
+
+          echo "Artifact provenance:"
+          echo "- source: ${ARTIFACT_SOURCE}"
+          echo "- release_tag: ${RELEASE_TAG}"
+          echo "- release_target_commitish: ${RELEASE_TARGET_COMMITISH}"
+          echo "- asset_name: ${ASSET_NAME}"
+          echo "- download_auth_mode: ${DOWNLOAD_AUTH_MODE}"
+          echo "- url_host: ${URL_HOST}"
+          echo "- url_path: ${URL_PATH}"
+
       - name: Set deployment type
         id: meta
+        env:
+          DISPATCH_ARTIFACT_SOURCE: ${{ steps.dispatch_artifact.outputs.artifact_source }}
+          DISPATCH_RELEASE_TARGET: ${{ steps.dispatch_artifact.outputs.release_target_commitish }}
         run: |
+          set -euo pipefail
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             # Manual deployment
             if [ "${{ github.event.inputs.environment }}" == "production" ]; then
+              if [[ "${DISPATCH_ARTIFACT_SOURCE:-latest}" == "url" ]]; then
+                echo "::error::Production manual deploys do not allow artifact_source=url. Use artifact_source=latest or artifact_source=version."
+                exit 1
+              fi
+
               REF=$(cat ./artifacts/build-meta/ref 2>/dev/null || echo "unknown")
+              if [[ "$REF" == "unknown" && ( "${DISPATCH_ARTIFACT_SOURCE:-}" == "latest" || "${DISPATCH_ARTIFACT_SOURCE:-}" == "version" ) ]]; then
+                if [[ "${DISPATCH_RELEASE_TARGET:-}" == "main" ]]; then
+                  REF="refs/heads/main"
+                elif [[ "${DISPATCH_RELEASE_TARGET:-}" == "dev" ]]; then
+                  REF="refs/heads/dev"
+                fi
+              fi
+
               if [[ "$REF" != "refs/heads/main" && "$REF" != "refs/heads/dev" ]]; then
-                echo "::error::Production deploys require artifacts from the main or dev branch. Found ref: ${REF}"
+                echo "::error::Production deploys require artifacts from the main or dev branch. Found ref: ${REF}. For release artifacts without build-meta, ensure the release target branch is main/dev."
                 exit 1
               fi
               echo "is_production=true" >> $GITHUB_OUTPUT
@@ -154,7 +442,7 @@ jobs:
 
       - name: Evaluate deployment gate
         id: gate
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           IS_PRODUCTION: ${{ steps.meta.outputs.is_production }}
           PR_NUMBER: ${{ steps.meta.outputs.pr_number }}
@@ -203,7 +491,7 @@ jobs:
             }
 
       - name: Upload artifacts for deploy job
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: deploy-artifacts-${{ github.run_id }}
           path: ./artifacts
@@ -220,21 +508,21 @@ jobs:
       url: ${{ steps.deploy.outputs.url }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: deploy-artifacts-${{ github.run_id }}
           path: ./artifacts
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
 
       - name: Set up Bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.6
 
@@ -319,7 +607,7 @@ jobs:
 
       - name: Comment on PR
         if: needs.prepare.outputs.pr_number != '0'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const url = '${{ steps.deploy.outputs.url }}';
@@ -357,10 +645,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
