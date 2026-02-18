@@ -51,6 +51,12 @@ export function Markdown({ content }: { content: string }) {
   const colorMode = useColorMode()
   const [index, setIndex] = React.useState(-1)
   const slides = useRef<SlideImage[] | undefined>(undefined)
+  const slidesContent = useRef(content)
+
+  if (slidesContent.current !== content) {
+    slidesContent.current = content
+    slides.current = undefined
+  }
 
   const show = useCallback((src: string | undefined) => {
     let slidesLocal = slides.current
