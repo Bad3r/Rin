@@ -63,6 +63,7 @@ export default defineConfig(({ mode }) => {
         enableBundleAnalysis: Boolean(codecovToken),
         bundleName: 'rin-client',
         uploadToken: codecovToken,
+        telemetry: false,
       }),
     ],
     // Vitest configuration
