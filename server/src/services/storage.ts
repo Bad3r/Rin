@@ -60,7 +60,7 @@ export function StorageService(router: Router): void {
         }
 
         const suffix = keyValue.includes('.') ? keyValue.split('.').pop() : ''
-        const hashArray = await crypto.subtle.digest({ name: 'SHA-1' }, await fileValue.arrayBuffer())
+        const hashArray = await crypto.subtle.digest({ name: 'SHA-256' }, await fileValue.arrayBuffer())
         const hash = buf2hex(hashArray)
         const hashkey = path_join(folder, `${hash}.${suffix}`)
 
