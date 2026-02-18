@@ -20,9 +20,9 @@ export function createMockEnv(overrides: MockEnvOverrides = {}): Env {
     S3_FOLDER: 'images/',
     S3_CACHE_FOLDER: 'cache/',
     S3_REGION: 'auto',
-    S3_ENDPOINT: 'https://test.r2.cloudflarestorage.com',
+    S3_ENDPOINT: 'https://s3.invalid',
     // Defaults intentionally use placeholder values so local tests don't rely on remote S3.
-    S3_ACCESS_HOST: 'https://your-image-domain.com',
+    S3_ACCESS_HOST: 'https://assets.invalid',
     S3_BUCKET: 'your-bucket-name',
     S3_FORCE_PATH_STYLE: 'false',
     WEBHOOK_URL: '',
