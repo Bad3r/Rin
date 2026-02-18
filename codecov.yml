@@ -23,7 +23,7 @@ coverage:
         threshold: 1%
 
 comment:
-  layout: "diff, flags, files"
+  layout: "diff, flags, components, files"
   require_changes: true
 
 flags:
@@ -33,3 +33,26 @@ flags:
   server:
     paths:
       - server/src/
+
+component_management:
+  default_rules:
+    statuses:
+      - type: project
+        target: auto
+        threshold: 1%
+      - type: patch
+        target: auto
+        threshold: 1%
+  individual_components:
+    - component_id: client_app
+      name: client-app
+      paths:
+        - client/src/**
+    - component_id: server_api
+      name: server-api
+      paths:
+        - server/src/**
+    - component_id: shared_api
+      name: shared-api
+      paths:
+        - packages/api/**

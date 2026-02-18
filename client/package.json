@@ -4,9 +4,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "bunx --bun vite",
+    "dev": "bunx --bun vite --open /stats.html",
     "build": "tsc && vite build",
     "build:analyze": "tsc && vite build --mode analyze",
+    "build:analyze:open": "VISUALIZER_OPEN=true bun run build:analyze",
     "check": "tsc",
     "lint": "eslint . --max-warnings 0",
     "preview": "vite preview",
