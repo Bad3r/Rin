@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Helmet } from 'react-helmet'
+import { Helmet } from '../components/helmet'
 import { useTranslation } from 'react-i18next'
 import { FeedCard } from '../components/feed_card'
 import { Waiting } from '../components/loading'
