@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
- * 统一开发服务器
- * 同时启动前端和后端，并处理数据库迁移
+ * Unified development server.
+ * Starts frontend + backend and runs local database migrations.
  */
 
 import { spawn } from 'node:child_process'
@@ -10,6 +10,8 @@ import * as net from 'node:net'
 import * as path from 'node:path'
 
 const ROOT_DIR = process.cwd()
+const WRANGLER_SEND_METRICS = process.env.WRANGLER_SEND_METRICS ?? 'false'
+process.env.WRANGLER_SEND_METRICS = WRANGLER_SEND_METRICS
 
 function parseEnv(content: string): Record<string, string> {
   const env: Record<string, string> = {}
@@ -17,7 +19,7 @@ function parseEnv(content: string): Record<string, string> {
 
   for (const line of lines) {
     const trimmed = line.trim()
-    // 跳过注释和空行
+    // Skip comments and empty lines.
     if (!trimmed || trimmed.startsWith('#')) continue
 
     const equalIndex = trimmed.indexOf('=')
@@ -31,7 +33,7 @@ function parseEnv(content: string): Record<string, string> {
   return env
 }
 
-// 颜色输出
+// ANSI color helpers.
 const colors = {
   reset: '\x1b[0m',
   bright: '\x1b[1m',
@@ -49,7 +51,7 @@ function log(label: string, message: string, color: string = colors.reset) {
   console.log(`${colors.dim}[${timestamp}]${colors.reset} ${color}[${label}]${colors.reset} ${message}`)
 }
 
-// 检查端口是否被占用
+// Check whether a TCP port is available.
 function checkPort(port: number): Promise<boolean> {
   return new Promise(resolve => {
     const server = net.createServer()
@@ -68,11 +70,11 @@ function checkPort(port: number): Promise<boolean> {
   })
 }
 
-// 检查配置文件
+// Ensure required configuration files are generated.
 if (!fs.existsSync(path.join(ROOT_DIR, '.env.local'))) {
-  log('Setup', '首次运行，正在初始化配置...', colors.yellow)
+  log('Setup', 'First run detected; initializing development configuration...', colors.yellow)
 
-  // 运行配置生成脚本
+  // Run setup script.
   const setupProcess = spawn('bun', ['scripts/setup-dev.ts'], {
     stdio: 'inherit',
     cwd: ROOT_DIR,
@@ -85,14 +87,14 @@ if (!fs.existsSync(path.join(ROOT_DIR, '.env.local'))) {
     startDev()
   })
 } else {
-  // 检查是否需要重新生成配置
+  // Regenerate config when .env.local is newer than wrangler.toml.
   const envStat = fs.statSync(path.join(ROOT_DIR, '.env.local'))
   const wranglerStat = fs.existsSync(path.join(ROOT_DIR, 'wrangler.toml'))
     ? fs.statSync(path.join(ROOT_DIR, 'wrangler.toml'))
     : { mtime: new Date(0) }
 
   if (envStat.mtime > wranglerStat.mtime) {
-    log('Setup', '检测到配置更新，正在重新生成...', colors.yellow)
+    log('Setup', 'Configuration changes detected; regenerating files...', colors.yellow)
     const setupProcess = spawn('bun', ['scripts/setup-dev.ts'], {
       stdio: 'inherit',
       cwd: ROOT_DIR,
@@ -111,7 +113,7 @@ if (!fs.existsSync(path.join(ROOT_DIR, '.env.local'))) {
 
 const ENV_FILE = path.join(ROOT_DIR, '.env.local')
 if (!fs.existsSync(ENV_FILE)) {
-  log('Error', '.env.local 文件不存在，无法启动开发服务器', colors.red)
+  log('Error', '.env.local is missing; cannot start the development server', colors.red)
   process.exit(1)
 }
 const envContent = fs.readFileSync(ENV_FILE, 'utf-8')
@@ -120,26 +122,26 @@ const FRONTEND_PORT = env.FRONTEND_PORT ? parseInt(env.FRONTEND_PORT, 10) : 5173
 const BACKEND_PORT = env.BACKEND_PORT ? parseInt(env.BACKEND_PORT, 10) : 11498
 
 async function startDev() {
-  log('Dev', '启动开发服务器...', colors.green)
+  log('Dev', 'Starting development server...', colors.green)
 
-  // 检查端口占用
+  // Validate required ports are free.
   const frontendAvailable = await checkPort(FRONTEND_PORT)
   const backendAvailable = await checkPort(BACKEND_PORT)
 
   if (!frontendAvailable) {
-    log('Error', `端口 ${FRONTEND_PORT} 已被占用`, colors.red)
-    log('Help', '请检查是否有其他进程占用了该端口，或修改 .env.local 中的 FRONTEND_PORT', colors.yellow)
+    log('Error', `Port ${FRONTEND_PORT} is already in use`, colors.red)
+    log('Help', 'Stop the process using this port or change FRONTEND_PORT in .env.local', colors.yellow)
     process.exit(1)
   }
 
   if (!backendAvailable) {
-    log('Error', `端口 ${BACKEND_PORT} 已被占用`, colors.red)
-    log('Help', '请检查是否有其他 wrangler dev 进程在运行', colors.yellow)
+    log('Error', `Port ${BACKEND_PORT} is already in use`, colors.red)
+    log('Help', 'Stop the running wrangler dev process using this port', colors.yellow)
     process.exit(1)
   }
 
-  // 先运行数据库迁移
-  log('DB', '检查数据库迁移...', colors.cyan)
+  // Run database migrations before starting servers.
+  log('DB', 'Checking database migrations...', colors.cyan)
   const migrateProcess = spawn('bun', ['scripts/db-migrate-local.ts'], {
     stdio: 'inherit',
     cwd: ROOT_DIR,
@@ -147,34 +149,34 @@ async function startDev() {
 
   migrateProcess.on('exit', code => {
     if (code !== 0) {
-      log('DB', '数据库迁移失败', colors.red)
+      log('DB', 'Database migrations failed', colors.red)
       process.exit(code || 1)
     }
 
-    log('DB', '数据库迁移完成', colors.green)
+    log('DB', 'Database migrations completed', colors.green)
     startServers()
   })
 }
 
 function startServers() {
-  log('Dev', '正在启动前端和后端服务...', colors.green)
+  log('Dev', 'Starting frontend and backend services...', colors.green)
 
   let backendReady = false
   let frontendReady = false
 
-  // 启动后端
+  // Start backend.
   const backend = spawn('bun', ['wrangler', 'dev', '--port', String(BACKEND_PORT)], {
     cwd: ROOT_DIR,
-    env: { ...process.env },
+    env: { ...process.env, WRANGLER_SEND_METRICS },
   })
 
-  // 启动前端
+  // Start frontend.
   const frontend = spawn('bun', ['--filter', './client', 'dev', '--port', String(FRONTEND_PORT)], {
     cwd: ROOT_DIR,
     env: { ...process.env },
   })
 
-  // 输出处理
+  // Stream subprocess output.
   backend.stdout.on('data', data => {
     const lines = data
       .toString()
@@ -235,22 +237,22 @@ function startServers() {
     })
   })
 
-  // 进程退出处理
+  // Handle subprocess exits.
   backend.on('exit', code => {
-    log('Backend', `进程退出，代码: ${code}`, colors.red)
+    log('Backend', `Process exited with code: ${code}`, colors.red)
     frontend.kill()
     process.exit(code || 0)
   })
 
   frontend.on('exit', code => {
-    log('Frontend', `进程退出，代码: ${code}`, colors.red)
+    log('Frontend', `Process exited with code: ${code}`, colors.red)
     backend.kill()
     process.exit(code || 0)
   })
 
-  // 优雅退出
+  // Graceful shutdown.
   process.on('SIGINT', () => {
-    log('Dev', '正在关闭开发服务器...', colors.yellow)
+    log('Dev', 'Shutting down development server...', colors.yellow)
     backend.kill('SIGINT')
     frontend.kill('SIGINT')
   })
@@ -260,24 +262,24 @@ function startServers() {
     frontend.kill('SIGTERM')
   })
 
-  // 检查是否都准备好了
+  // Show ready banner once both services are ready.
   function checkAllReady() {
     if (backendReady && frontendReady) {
       showReadyMessage()
     }
   }
 
-  // 显示访问信息
+  // Print access information.
   function showReadyMessage() {
     console.log(`\n${'='.repeat(60)}`)
-    console.log(`${colors.bright}🚀 开发服务器已启动！${colors.reset}`)
+    console.log(`${colors.bright}🚀 Development server is ready!${colors.reset}`)
     console.log('='.repeat(60))
-    console.log(`${colors.cyan}📱 前端地址:${colors.reset} http://localhost:${FRONTEND_PORT}`)
-    console.log(`${colors.blue}🔌 后端地址:${colors.reset} http://localhost:${BACKEND_PORT}`)
+    console.log(`${colors.cyan}📱 Frontend:${colors.reset} http://localhost:${FRONTEND_PORT}`)
+    console.log(`${colors.blue}🔌 Backend:${colors.reset} http://localhost:${BACKEND_PORT}`)
     console.log(`${'='.repeat(60)}\n`)
   }
 
-  // 超时显示（如果检测失败）
+  // Fallback banner if readiness pattern detection misses.
   setTimeout(() => {
     if (!backendReady || !frontendReady) {
       showReadyMessage()
