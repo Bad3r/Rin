@@ -13,6 +13,7 @@ export default defineWorkersConfig({
     },
     poolOptions: {
       workers: {
+        isolatedStorage: true,
         main: './src/_worker.ts',
         miniflare: {
           outboundService: createOutboundServiceGuard(),
