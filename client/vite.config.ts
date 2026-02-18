@@ -6,8 +6,10 @@ import { defineConfig, loadEnv } from 'vite'
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const isDev = mode === 'development'
-  const env = loadEnv(mode, process.cwd(), '')
-  const codecovToken = env.CODECOV_TOKEN || process.env.CODECOV_TOKEN
+  // Intentionally load only CODECOV_* keys for build-time plugin upload auth.
+  // This token is consumed by Vite in Node at build time, not exposed at runtime.
+  const codecovEnv = loadEnv(mode, process.cwd(), 'CODECOV_')
+  const codecovToken = codecovEnv.CODECOV_TOKEN || process.env.CODECOV_TOKEN
 
   return {
     // Note: Client configuration is fetched from server at runtime

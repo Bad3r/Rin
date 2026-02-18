@@ -92,9 +92,11 @@ jobs:
         run: bun run test:coverage:ci
 
       - name: Upload coverage to Codecov
+        if: ${{ !cancelled() }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
           files: ./server/coverage/lcov.info,./client/coverage/lcov.info
           flags: unittests
           name: codecov-umbrella
@@ -104,4 +106,5 @@ jobs:
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
           files: ./server/coverage/junit.xml,./client/coverage/junit.xml
