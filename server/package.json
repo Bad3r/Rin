@@ -36,7 +36,7 @@
     "@rin/api": "workspace:*",
     "arctic": "^3.7.0",
     "aws4fetch": "^1.0.20",
-    "drizzle-orm": "^0.30.10",
+    "drizzle-orm": "^0.45.1",
     "fast-xml-parser": "^5.3.6",
     "feed": "^5.2.0",
     "hono": "^4.10.2",
