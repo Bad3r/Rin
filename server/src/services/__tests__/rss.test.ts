@@ -3,6 +3,8 @@ import { cleanupTestDB, createMockDB, createMockEnv, execSql } from '../../../te
 import { createBaseApp } from '../../core/base'
 import { RSSService, rssCrontab } from '../rss'
 
+const TEST_ORIGIN = 'https://example.test'
+
 describe('RSSService', () => {
   let db: any
   let sqlite: D1Database
@@ -54,7 +56,7 @@ describe('RSSService', () => {
 
   describe('GET /:name - RSS feed endpoints', () => {
     it('should serve rss.xml', async () => {
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -69,7 +71,7 @@ describe('RSSService', () => {
     })
 
     it('should serve atom.xml', async () => {
-      const request = new Request('http://localhost/atom.xml')
+      const request = new Request(`${TEST_ORIGIN}/atom.xml`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -82,7 +84,7 @@ describe('RSSService', () => {
     })
 
     it('should serve rss.json', async () => {
-      const request = new Request('http://localhost/rss.json')
+      const request = new Request(`${TEST_ORIGIN}/rss.json`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -94,7 +96,7 @@ describe('RSSService', () => {
     })
 
     it('should serve feed.json (alias)', async () => {
-      const request = new Request('http://localhost/feed.json')
+      const request = new Request(`${TEST_ORIGIN}/feed.json`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -102,7 +104,7 @@ describe('RSSService', () => {
     })
 
     it('should redirect feed.xml to rss.xml', async () => {
-      const request = new Request('http://localhost/feed.xml')
+      const request = new Request(`${TEST_ORIGIN}/feed.xml`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)
@@ -111,7 +113,7 @@ describe('RSSService', () => {
     })
 
     it('should return 404 for unknown feed names', async () => {
-      const request = new Request('http://localhost/unknown.xml')
+      const request = new Request(`${TEST_ORIGIN}/unknown.xml`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(404)
@@ -120,7 +122,7 @@ describe('RSSService', () => {
     })
 
     it('should convert markdown to HTML in content', async () => {
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await app.handle(request, env)
 
       const text = await response.text()
@@ -130,7 +132,7 @@ describe('RSSService', () => {
     })
 
     it('should include feed metadata', async () => {
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await app.handle(request, env)
 
       const text = await response.text()
@@ -140,7 +142,7 @@ describe('RSSService', () => {
     })
 
     it('should include author information', async () => {
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await app.handle(request, env)
 
       const text = await response.text()
@@ -162,7 +164,7 @@ describe('RSSService', () => {
         )
       }
 
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await app.handle(request, env)
 
       const text = await response.text()
@@ -184,7 +186,7 @@ describe('RSSService', () => {
       appNoS3.state('env', envNoS3)
       RSSService(appNoS3)
 
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await appNoS3.handle(request, envNoS3)
 
       expect(response.status).toBe(200)
@@ -207,7 +209,7 @@ describe('RSSService', () => {
       global.fetch = async () => new Response('Not Found', { status: 404 })
 
       try {
-        const request = new Request('http://localhost/rss.xml')
+        const request = new Request(`${TEST_ORIGIN}/rss.xml`)
         const response = await appWithS3.handle(request, envWithS3)
 
         expect(response.status).toBe(200)
@@ -233,7 +235,7 @@ describe('RSSService', () => {
       }
 
       try {
-        const request = new Request('http://localhost/rss.xml')
+        const request = new Request(`${TEST_ORIGIN}/rss.xml`)
         const response = await appWithS3.handle(request, envWithS3)
 
         // Should still generate feed
@@ -247,7 +249,7 @@ describe('RSSService', () => {
   describe('Feed content processing', () => {
     it('should extract images from content', async () => {
       // Feed 2 has an image in content
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await app.handle(request, env)
 
       const text = await response.text()
@@ -255,7 +257,7 @@ describe('RSSService', () => {
     })
 
     it('should use summary as description when available', async () => {
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await app.handle(request, env)
 
       const text = await response.text()
@@ -273,7 +275,7 @@ describe('RSSService', () => {
             `
       )
 
-      const request = new Request('http://localhost/rss.xml')
+      const request = new Request(`${TEST_ORIGIN}/rss.xml`)
       const response = await app.handle(request, env)
 
       expect(response.status).toBe(200)

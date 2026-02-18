@@ -4,6 +4,9 @@ import { createTestClient } from '../../../tests/test-api-client'
 import { createBaseApp } from '../../core/base'
 import { UserService } from '../user'
 
+const TEST_ORIGIN = 'https://example.test'
+const TEST_CLIENT_ORIGIN = 'https://client.example.test'
+
 describe('UserService', () => {
   let db: any
   let sqlite: D1Database
@@ -35,7 +38,7 @@ describe('UserService', () => {
     db = mockDB.db
     sqlite = mockDB.sqlite
     env = createMockEnv({
-      RIN_ALLOWED_REDIRECT_ORIGINS: 'http://localhost:5173',
+      RIN_ALLOWED_REDIRECT_ORIGINS: TEST_CLIENT_ORIGIN,
     })
 
     // Setup app with mock db and auth utilities
@@ -84,8 +87,8 @@ describe('UserService', () => {
   describe('GET /user/github - Initiate GitHub OAuth', () => {
     it('should redirect to GitHub OAuth', async () => {
       // OAuth endpoints need custom headers, using direct request for this case
-      const request = new Request('http://localhost/user/github', {
-        headers: { Referer: 'http://localhost:5173/' },
+      const request = new Request(`${TEST_ORIGIN}/user/github`, {
+        headers: { Referer: `${TEST_CLIENT_ORIGIN}/` },
       })
 
       const response = await app.handle(request, env)
@@ -98,7 +101,7 @@ describe('UserService', () => {
 
     it('should require referer header', async () => {
       // OAuth endpoints need custom headers, using direct request for this case
-      const request = new Request('http://localhost/user/github')
+      const request = new Request(`${TEST_ORIGIN}/user/github`)
 
       const response = await app.handle(request, env)
 
@@ -117,8 +120,8 @@ describe('UserService', () => {
       appNoOAuth.state('oauth2', null) // No oauth2 state
       UserService(appNoOAuth)
 
-      const request = new Request('http://localhost/user/github', {
-        headers: { Referer: 'http://localhost:5173/' },
+      const request = new Request(`${TEST_ORIGIN}/user/github`, {
+        headers: { Referer: `${TEST_CLIENT_ORIGIN}/` },
       })
 
       const response = await appNoOAuth.handle(request, envNoOAuth)
@@ -130,8 +133,8 @@ describe('UserService', () => {
 
     it('should set redirect_to cookie', async () => {
       // OAuth endpoints need custom headers, using direct request for this case
-      const request = new Request('http://localhost/user/github', {
-        headers: { Referer: 'http://localhost:5173/feed/123' },
+      const request = new Request(`${TEST_ORIGIN}/user/github`, {
+        headers: { Referer: `${TEST_CLIENT_ORIGIN}/feed/123` },
       })
 
       const response = await app.handle(request, env)
@@ -144,7 +147,7 @@ describe('UserService', () => {
     })
 
     it('should reject referer origin outside allowlist', async () => {
-      const request = new Request('http://localhost/user/github', {
+      const request = new Request(`${TEST_ORIGIN}/user/github`, {
         headers: { Referer: 'https://attacker.example/feed/123' },
       })
 
@@ -174,9 +177,9 @@ describe('UserService', () => {
 
       try {
         // OAuth callbacks need custom Cookie header, using direct request
-        const request = new Request('http://localhost/user/github/callback?code=valid_code&state=mock_state', {
+        const request = new Request(`${TEST_ORIGIN}/user/github/callback?code=valid_code&state=mock_state`, {
           headers: {
-            Cookie: 'state=mock_state; redirect_to=http://localhost:5173/callback',
+            Cookie: `state=mock_state; redirect_to=${TEST_CLIENT_ORIGIN}/callback`,
           },
         })
 
@@ -208,9 +211,9 @@ describe('UserService', () => {
 
       try {
         // OAuth callbacks need custom Cookie header, using direct request
-        const request = new Request('http://localhost/user/github/callback?code=valid_code&state=mock_state', {
+        const request = new Request(`${TEST_ORIGIN}/user/github/callback?code=valid_code&state=mock_state`, {
           headers: {
-            Cookie: 'state=mock_state; redirect_to=http://localhost:5173/callback',
+            Cookie: `state=mock_state; redirect_to=${TEST_CLIENT_ORIGIN}/callback`,
           },
         })
 
@@ -228,9 +231,9 @@ describe('UserService', () => {
 
     it('should reject invalid state', async () => {
       // OAuth callbacks need custom Cookie header, using direct request
-      const request = new Request('http://localhost/user/github/callback?code=valid_code&state=wrong_state', {
+      const request = new Request(`${TEST_ORIGIN}/user/github/callback?code=valid_code&state=wrong_state`, {
         headers: {
-          Cookie: 'state=mock_state; redirect_to=http://localhost:5173/callback',
+          Cookie: `state=mock_state; redirect_to=${TEST_CLIENT_ORIGIN}/callback`,
         },
       })
 
@@ -243,9 +246,9 @@ describe('UserService', () => {
 
     it('should reject failed authorization', async () => {
       // OAuth callbacks need custom Cookie header, using direct request
-      const request = new Request('http://localhost/user/github/callback?code=invalid_code&state=mock_state', {
+      const request = new Request(`${TEST_ORIGIN}/user/github/callback?code=invalid_code&state=mock_state`, {
         headers: {
-          Cookie: 'state=mock_state; redirect_to=http://localhost:5173/callback',
+          Cookie: `state=mock_state; redirect_to=${TEST_CLIENT_ORIGIN}/callback`,
         },
       })
 
@@ -357,7 +360,7 @@ describe('UserService', () => {
     })
 
     it('should clear both auth cookies in response headers', async () => {
-      const response = await app.handle(new Request('http://localhost/user/logout', { method: 'POST' }), env)
+      const response = await app.handle(new Request(`${TEST_ORIGIN}/user/logout`, { method: 'POST' }), env)
 
       expect(response.status).toBe(200)
       const setCookie = response.headers.get('Set-Cookie')
