@@ -160,7 +160,7 @@ async function generateFeed(env: Env, db: DB, frontendUrl: string) {
     description: env.RSS_DESCRIPTION || 'Feed from Rin',
     id: frontendUrl,
     link: frontendUrl,
-    copyright: 'All rights reserved 2024',
+    copyright: `All rights reserved ${new Date().getFullYear()}`,
     updated: new Date(),
     generator: 'Feed from Rin',
     feedLinks: {

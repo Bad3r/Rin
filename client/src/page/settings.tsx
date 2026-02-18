@@ -1,7 +1,7 @@
 import * as Switch from '@radix-ui/react-switch'
 import { type ChangeEvent, useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import ReactLoading from 'react-loading'
+import ReactLoading from '../components/react-loading'
 import Modal from 'react-modal'
 import { Button } from '../components/button.tsx'
 import { useAlert, useConfirm } from '../components/dialog.tsx'

@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState } from 'react'
-import { Helmet } from 'react-helmet'
+import { Helmet } from './components/helmet'
 import { useTranslation } from 'react-i18next'
 import { type DefaultParams, type PathPattern, Route, Switch } from 'wouter'
 import Footer from './components/footer'
