@@ -1,4 +1,5 @@
 import { readdir } from 'node:fs/promises'
+import { isIP } from 'node:net'
 import { $ } from 'bun'
 import stripIndent from 'strip-indent'
 import { fixTopField, getMigrationVersion, isInfoExist, updateMigrationVersion } from './db-fix-top-field'
@@ -97,6 +98,10 @@ function logShellProcessError(error: unknown): void {
   }
 }
 
+function toTomlString(value: string): string {
+  return JSON.stringify(value)
+}
+
 // Debug: Log environment variables
 console.log('Environment variables:')
 console.log(`  NAME: ${NAME}`)
@@ -184,37 +189,37 @@ async function deploy(): Promise<string> {
     'wrangler.toml',
     stripIndent(`
 #:schema node_modules/wrangler/config-schema.json
-name = "${WORKER_NAME}"
-main = "${serverMain}"
-compatibility_date = "2026-01-20"
+name = ${toTomlString(WORKER_NAME)}
+main = ${toTomlString(serverMain)}
+compatibility_date = ${toTomlString('2026-01-20')}
 
 [assets]
-directory = "./dist/client"
-binding = "ASSETS"
+directory = ${toTomlString('./dist/client')}
+binding = ${toTomlString('ASSETS')}
 
 [triggers]
-crons = ["*/20 * * * *"]
+crons = [${toTomlString('*/20 * * * *')}]
 
 [vars]
-S3_FOLDER = "${S3_FOLDER}"
-S3_CACHE_FOLDER="${S3_CACHE_FOLDER}"
-S3_REGION = "${S3_REGION}"
-S3_ENDPOINT = "${finalS3Endpoint}"
-S3_ACCESS_HOST = "${finalS3AccessHost}"
-S3_BUCKET = "${finalS3Bucket}"
-S3_FORCE_PATH_STYLE = "${S3_FORCE_PATH_STYLE}"
-WEBHOOK_URL = "${WEBHOOK_URL}"
-RSS_TITLE = "${RSS_TITLE}"
-RSS_DESCRIPTION = "${RSS_DESCRIPTION}"
-CACHE_STORAGE_MODE = "${CACHE_STORAGE_MODE}"
-NAME = "${NAME}"
-DESCRIPTION = "${DESCRIPTION}"
-AVATAR = "${AVATAR}"
-PAGE_SIZE = "${PAGE_SIZE}"
-RSS_ENABLE = "${RSS_ENABLE}"
+S3_FOLDER = ${toTomlString(S3_FOLDER)}
+S3_CACHE_FOLDER=${toTomlString(S3_CACHE_FOLDER)}
+S3_REGION = ${toTomlString(S3_REGION)}
+S3_ENDPOINT = ${toTomlString(finalS3Endpoint)}
+S3_ACCESS_HOST = ${toTomlString(finalS3AccessHost)}
+S3_BUCKET = ${toTomlString(finalS3Bucket)}
+S3_FORCE_PATH_STYLE = ${toTomlString(S3_FORCE_PATH_STYLE)}
+WEBHOOK_URL = ${toTomlString(WEBHOOK_URL)}
+RSS_TITLE = ${toTomlString(RSS_TITLE)}
+RSS_DESCRIPTION = ${toTomlString(RSS_DESCRIPTION)}
+CACHE_STORAGE_MODE = ${toTomlString(CACHE_STORAGE_MODE)}
+NAME = ${toTomlString(NAME)}
+DESCRIPTION = ${toTomlString(DESCRIPTION)}
+AVATAR = ${toTomlString(AVATAR)}
+PAGE_SIZE = ${toTomlString(PAGE_SIZE)}
+RSS_ENABLE = ${toTomlString(RSS_ENABLE)}
 
 [placement]
-mode = "smart"
+mode = ${toTomlString('smart')}
 `)
   )
 
@@ -250,9 +255,9 @@ mode = "smart"
     console.log(`Found: ${existing.name}:${existing.uuid}`)
     const configText = stripIndent(`
     [[d1_databases]]
-    binding = "DB"
-    database_name = "${existing.name}"
-    database_id = "${existing.uuid}"`)
+    binding = ${toTomlString('DB')}
+    database_name = ${toTomlString(existing.name)}
+    database_id = ${toTomlString(existing.uuid)}`)
     await $`echo ${configText} >> wrangler.toml`.quiet()
     console.log(`Appended to wrangler.toml`)
   }
@@ -262,7 +267,7 @@ mode = "smart"
   console.log(`Adding AI binding`)
   const aiConfigText = stripIndent(`
     [ai]
-    binding = "AI"`)
+    binding = ${toTomlString('AI')}`)
   await $`echo ${aiConfigText} >> wrangler.toml`.quiet()
   console.log(`AI binding appended to wrangler.toml`)
 
@@ -313,7 +318,15 @@ mode = "smart"
   async function putSecret(name: string, value?: string) {
     if (value) {
       console.log(`Put ${name}`)
-      await $`echo "${value}" | bun wrangler secret put ${name}`
+      const process = Bun.spawn(['bunx', 'wrangler', 'secret', 'put', name], {
+        stdin: value,
+        stdout: 'inherit',
+        stderr: 'inherit',
+      })
+      const exitCode = await process.exited
+      if (exitCode !== 0) {
+        throw new Error(`Failed to put secret ${name} (exit code ${exitCode})`)
+      }
     } else {
       console.log(`Skip ${name}, value is not defined.`)
     }
@@ -398,7 +411,7 @@ function parseWranglerIPs(stdout: string): string[] {
     return stdout
       .split('\n')
       .map(line => line.trim())
-      .filter(line => line && !/^\d+$/.test(line) && line !== 'ip')
+      .filter(line => isIP(line) !== 0)
   }
   return []
 }
