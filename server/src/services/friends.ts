@@ -129,6 +129,8 @@ export function FriendService(router: Router): void {
         const desc = toNonEmptyString(payload.desc)
         const avatar = toNonEmptyString(payload.avatar)
         const url = toNonEmptyString(payload.url)
+        const hasCoreProfileField =
+          payload.name !== undefined || payload.desc !== undefined || payload.url !== undefined
 
         const enable = await clientConfig.getOrDefault('friend_apply_enable', true)
         if (!enable && !admin) {
@@ -152,7 +154,7 @@ export function FriendService(router: Router): void {
           return 'Permission denied'
         }
 
-        if (!name || !desc || !url) {
+        if (hasCoreProfileField && (!name || !desc || !url)) {
           set.status = 400
           return 'Invalid input'
         }
