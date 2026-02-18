@@ -19,7 +19,10 @@ export function TagService(router: Router): void {
       })
 
       return tag_list.map(tag => ({
-        ...tag,
+        id: tag.id,
+        name: tag.name,
+        createdAt: tag.createdAt,
+        updatedAt: tag.updatedAt,
         count: tag.feeds.length,
       }))
     })
