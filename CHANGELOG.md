@@ -12,19 +12,39 @@ which automatically generates release notes from commit messages.
 ## [Unreleased]
 
 ### Added
+- Established a fork-owned Cloudflare deployment foundation with tracked root `wrangler.toml`, Cloudflare preflight/provisioning scripts, and deployment doc updates ([#15](https://github.com/Bad3r/Rin/pull/15)).
+- Split tests into explicit `unit`/`integration`/`remote` tiers with local network guards and opt-in remote smoke wiring in CI/deploy paths ([#13](https://github.com/Bad3r/Rin/pull/13)).
+- Migrated server tests to Vitest on Cloudflare Workers via `@cloudflare/vitest-pool-workers`, including Miniflare+D1 test wiring ([#31](https://github.com/Bad3r/Rin/pull/31)).
+- Added manual deploy artifact source modes (`latest`, `version`, `url`) with release asset auto-resolution for workflow dispatches ([#18](https://github.com/Bad3r/Rin/pull/18)).
+- Added Dependabot grouping plus scheduled/manual Nix flake lock update automation ([#19](https://github.com/Bad3r/Rin/pull/19)).
+- Added Claude-based issue/PR triage and review workflows ([73b533b](https://github.com/Bad3r/Rin/commit/73b533b)).
+- Added DevSkim security scanning workflow ([21a7ff4](https://github.com/Bad3r/Rin/commit/21a7ff4)).
 
 ### Changed
-- Server routing now supports a dual-adapter architecture (`legacy` and `hono`) behind `ROUTER_IMPL`, with parity coverage to enable staged rollout and rollback.
-- Added router compatibility, OAuth redirect/cookie regression, and worker API prefix routing tests for the Hono migration.
+- Server routing now supports a dual-adapter architecture (`legacy` and `hono`) behind `ROUTER_IMPL`, with parity coverage and migration regression tests for OAuth/friend routes and worker `/api/*` prefix handling ([#9](https://github.com/Bad3r/Rin/pull/9)).
+- Router factory default switched to `hono`; invalid `ROUTER_IMPL` values now warn and safely fall back to `hono` ([#16](https://github.com/Bad3r/Rin/pull/16)).
+- Tightened shared/client/server type boundaries and stabilized worker coverage cold starts for test reliability ([#32](https://github.com/Bad3r/Rin/pull/32)).
+- Completed flake-first Nix/dev bootstrap and quality-gate rollout (`treefmt`, linting, pre-commit compatibility, repo formatting sync) ([#3](https://github.com/Bad3r/Rin/pull/3), [#6](https://github.com/Bad3r/Rin/pull/6), [#8](https://github.com/Bad3r/Rin/pull/8), [#11](https://github.com/Bad3r/Rin/pull/11)).
+- Modernized core dependencies/tooling with Bun major updates, GitHub Actions refreshes, and Drizzle ORM/Kit upgrades ([#21](https://github.com/Bad3r/Rin/pull/21), [#26](https://github.com/Bad3r/Rin/pull/26), [#33](https://github.com/Bad3r/Rin/pull/33)).
+- Updated project licensing to AGPL-3.0-or-later ([#4](https://github.com/Bad3r/Rin/pull/4)).
+- Refreshed Nix/devenv lock inputs ([5991df2](https://github.com/Bad3r/Rin/commit/5991df2)).
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
-- Normalized friend service route mounting to `/friend` so worker `/api/*` prefix stripping resolves to the correct service paths.
+- Hardened search privacy and correctness by separating public/authenticated search cache keys, fixing search pagination propagation, and ensuring idempotent about-page bootstrap/seed behavior ([#37](https://github.com/Bad3r/Rin/pull/37)).
+- Aligned server cache invalidation behavior and documented/covered partial-index assumptions for feed queries ([#37](https://github.com/Bad3r/Rin/pull/37)).
+- Fixed moments editor corruption paths and restored alias-based `/about` authoring flow, including missing-about create CTA behavior for authenticated admins ([#36](https://github.com/Bad3r/Rin/pull/36)).
+- Reduced pre-login auth bootstrap noise and fixed adjacent previous/next feed mapping regressions in client flows ([#36](https://github.com/Bad3r/Rin/pull/36)).
+- Improved local migration catch-up detection for Wrangler duplicate-column output and muted known dev-only DevSkim noise from local banner logging ([#35](https://github.com/Bad3r/Rin/pull/35)).
+- Normalized friend service route mounting to `/friend` so worker `/api/*` prefix stripping resolves to correct service paths ([#9](https://github.com/Bad3r/Rin/pull/9)).
+- Corrected client/docs metadata links and UI accessibility/hook-compliance regressions after rebase sync ([#10](https://github.com/Bad3r/Rin/pull/10)).
 
 ### Security
+- Added explicit least-privilege `GITHUB_TOKEN` workflow permissions and hardened Codecov upload handling to address workflow security findings ([#34](https://github.com/Bad3r/Rin/pull/34)).
+- Hardened auth-token handling with secure-cookie usage, strict bearer-token precedence, and safer bootstrap logout behavior ([#36](https://github.com/Bad3r/Rin/pull/36)).
 
 ## [v0.2.0] - 2024-06-07
 
