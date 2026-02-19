@@ -136,6 +136,16 @@ export function WritingPage({ id }: { id?: number }) {
   const [createdAt, setCreatedAt] = useState<Date | undefined>(new Date())
   const [publishing, setPublishing] = useState(false)
   const { showAlert, AlertUI } = useAlert()
+
+  useEffect(() => {
+    if (id !== undefined || alias !== '' || typeof window === 'undefined') {
+      return
+    }
+    const aliasFromQuery = new URLSearchParams(window.location.search).get('alias')?.trim()
+    if (aliasFromQuery) {
+      setAlias(aliasFromQuery)
+    }
+  }, [alias, id, setAlias])
   function publishButton() {
     if (publishing) return
     const tagsplit =

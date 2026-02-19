@@ -166,6 +166,9 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
         {error && (
           <div className='flex flex-col wauto rounded-2xl bg-w m-2 p-6 items-center justify-center space-y-2'>
             <h1 className='text-xl font-bold t-primary'>{error}</h1>
+            {id === 'about' && profile?.permission && (
+              <Button title={t('create.title')} onClick={() => setLocation('/writing?alias=about')} />
+            )}
             <Button title={t('index.back')} onClick={() => (window.location.href = '/')} />
           </div>
         )}

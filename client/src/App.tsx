@@ -9,7 +9,6 @@ import { Tips, TipsPage } from './components/tips.tsx'
 import useTableOfContents from './hooks/useTableOfContents.tsx'
 import { client } from './main'
 import { CallbackPage } from './page/callback'
-import { AboutPage } from './page/about'
 import { ErrorPage } from './page/error.tsx'
 import { FeedPage, TOCHeader } from './page/feed'
 import { FeedsPage } from './page/feeds'
@@ -103,10 +102,6 @@ function App() {
 
           <RouteMe path='/friends'>
             <FriendsPage />
-          </RouteMe>
-
-          <RouteMe path='/about'>
-            <AboutPage />
           </RouteMe>
 
           <RouteMe path='/hashtags'>
