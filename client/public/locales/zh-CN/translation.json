@@ -1,6 +1,7 @@
 {
   "about": {
-    "notfound": "将文章别名设置为 about 可以创建关于页面",
+    "description": "这是一个轻量级个人博客系统。",
+    "notfound": "关于页面暂不可用。",
     "title": "关于"
   },
   "ai_summary": {

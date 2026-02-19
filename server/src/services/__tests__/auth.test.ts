@@ -91,6 +91,25 @@ describe('PasswordAuthService', () => {
       expect(result.data?.user.permission).toBe(true)
     })
 
+    it('should set both auth cookies in login response headers', async () => {
+      const response = await app.handle(
+        new Request('https://example.test/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: 'admin',
+            password: 'admin123',
+          }),
+        }),
+        env
+      )
+
+      expect(response.status).toBe(200)
+      const setCookie = response.headers.get('Set-Cookie')
+      expect(setCookie).toContain('token=')
+      expect(setCookie).toContain('auth_token=')
+    })
+
     it('should create admin user on first login', async () => {
       // Clear existing users
       await execSql(sqlite, 'DELETE FROM users')
