@@ -1,37 +1,25 @@
-import { asDate, type IsoDateTimeString } from '@rin/api'
+import { type AdjacentFeed, type AdjacentFeedResponse, asDate } from '@rin/api'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'wouter'
 import { client } from '../main.tsx'
 import { timeago } from '../utils/timeago.ts'
 
-export type AdjacentFeed = {
-  id: number
-  title: string | null
-  summary?: string
-  hashtags?: {
-    id: number
-    name: string
-  }[]
-  createdAt: Date | IsoDateTimeString
-  updatedAt: Date | IsoDateTimeString
-}
-export type AdjacentFeeds = {
-  nextFeed: AdjacentFeed | null
-  previousFeed: AdjacentFeed | null
-}
-
 export function AdjacentSection({ id, setError }: { id: string; setError: (error: string) => void }) {
-  const [adjacentFeeds, setAdjacentFeeds] = useState<AdjacentFeeds>()
+  const [adjacentFeeds, setAdjacentFeeds] = useState<AdjacentFeedResponse>()
 
   useEffect(() => {
     client.feed.adjacent(id).then(({ data, error }) => {
       if (error) {
         setError(error.value)
       } else if (data) {
+        const normalized = data as AdjacentFeedResponse & {
+          next?: AdjacentFeed | null
+          prev?: AdjacentFeed | null
+        }
         setAdjacentFeeds({
-          nextFeed: data.next,
-          previousFeed: data.prev,
+          nextFeed: normalized.nextFeed ?? normalized.next ?? null,
+          previousFeed: normalized.previousFeed ?? normalized.prev ?? null,
         })
       }
     })
