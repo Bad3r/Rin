@@ -183,6 +183,7 @@ export function UserService(router: Router): void {
           value: authToken,
           expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
           path: '/',
+          secure: true,
           sameSite: 'lax',
         })
       } else {
@@ -211,6 +212,7 @@ export function UserService(router: Router): void {
             value: authToken,
             expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
             path: '/',
+            secure: true,
             sameSite: 'lax',
           })
         }
@@ -273,6 +275,7 @@ export function UserService(router: Router): void {
         value: '',
         expires: new Date(0),
         path: '/',
+        secure: true,
         sameSite: 'lax',
       })
       return { success: true }

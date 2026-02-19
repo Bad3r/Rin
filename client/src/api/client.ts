@@ -3,6 +3,7 @@
 
 // Import shared types
 import type {
+  AdjacentFeedResponse,
   AIConfig,
   ApiResponse,
   AuthStatus,
@@ -17,11 +18,11 @@ import type {
   FeedListResponse,
   Friend,
   FriendListResponse,
+  JsonPrimitive,
+  JsonValue,
   LoginRequest,
   LoginResponse,
   Moment,
-  JsonPrimitive,
-  JsonValue,
   RequestOptions,
   Tag,
   TagDetail,
@@ -37,6 +38,7 @@ import { getAuthToken } from '../utils/auth'
 
 // Re-export for external use
 export type {
+  AdjacentFeedResponse,
   AIConfig,
   ApiResponse,
   AuthStatus,
@@ -51,11 +53,11 @@ export type {
   FeedListResponse,
   Friend,
   FriendListResponse,
+  JsonPrimitive,
+  JsonValue,
   LoginRequest,
   LoginResponse,
   Moment,
-  JsonPrimitive,
-  JsonValue,
   RequestOptions,
   Tag,
   TagDetail,
@@ -237,8 +239,8 @@ class FeedAPI {
   }
 
   // GET /api/feed/adjacent/:id
-  async adjacent(id: number | string): Promise<ApiResponse<{ prev: Feed | null; next: Feed | null }>> {
-    return this.http.get<{ prev: Feed | null; next: Feed | null }>(`/api/feed/adjacent/${id}`)
+  async adjacent(id: number | string): Promise<ApiResponse<AdjacentFeedResponse>> {
+    return this.http.get<AdjacentFeedResponse>(`/api/feed/adjacent/${id}`)
   }
 
   // POST /api/feed/top/:id

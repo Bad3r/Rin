@@ -3,15 +3,15 @@ import _ from 'lodash'
 import { Calendar } from 'primereact/calendar'
 import 'primereact/resources/primereact.css'
 import 'primereact/resources/themes/lara-light-indigo/theme.css'
+import { asDate, type Feed, toIsoDateTimeString } from '@rin/api'
 import mermaid from 'mermaid'
-import { useCallback, useEffect, useState } from 'react'
-import { asDate, toIsoDateTimeString, type Feed } from '@rin/api'
-import { Helmet } from '../components/helmet'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import Loading from '../components/react-loading'
 import { type ShowAlertType, useAlert } from '../components/dialog'
+import { Helmet } from '../components/helmet'
 import { Checkbox, Input } from '../components/input'
 import { MarkdownEditor } from '../components/markdown_editor'
+import Loading from '../components/react-loading'
 import { useSiteConfig } from '../hooks/useSiteConfig'
 import { client } from '../main'
 import { Cache } from '../utils/cache'
@@ -136,6 +136,45 @@ export function WritingPage({ id }: { id?: number }) {
   const [createdAt, setCreatedAt] = useState<Date | undefined>(new Date())
   const [publishing, setPublishing] = useState(false)
   const { showAlert, AlertUI } = useAlert()
+  const formStateRef = useRef({ title: '', summary: '', tags: '', alias: '', content: '' })
+  const settersRef = useRef({
+    setTitle,
+    setSummary,
+    setTags,
+    setAlias,
+    setContent,
+    setListed,
+    setDraft,
+    setCreatedAt,
+  })
+
+  useEffect(() => {
+    if (id !== undefined || alias !== '' || typeof window === 'undefined') {
+      return
+    }
+    const aliasFromQuery = new URLSearchParams(window.location.search).get('alias')?.trim()
+    if (aliasFromQuery) {
+      setAlias(aliasFromQuery)
+    }
+  }, [alias, id, setAlias])
+
+  useEffect(() => {
+    formStateRef.current = { title, summary, tags, alias, content }
+  }, [alias, content, summary, tags, title])
+
+  useEffect(() => {
+    settersRef.current = {
+      setTitle,
+      setSummary,
+      setTags,
+      setAlias,
+      setContent,
+      setListed,
+      setDraft,
+      setCreatedAt,
+    }
+  }, [setAlias, setContent, setSummary, setTags, setTitle])
+
   function publishButton() {
     if (publishing) return
     const tagsplit =
@@ -188,23 +227,34 @@ export function WritingPage({ id }: { id?: number }) {
   }
 
   useEffect(() => {
-    if (id) {
-      client.feed.get(id).then(({ data }) => {
-        if (data) {
-          const feedData = data as EditableFeed
-          if (title === '' && feedData.title) setTitle(feedData.title)
-          if (tags === '' && feedData.hashtags)
-            setTags(feedData.hashtags.map(({ name }: { name: string }) => `#${name}`).join(' '))
-          if (alias === '' && feedData.alias) setAlias(feedData.alias)
-          if (content === '') setContent(feedData.content)
-          if (summary === '') setSummary(feedData.summary || '')
-          setListed(feedData.listed === 1)
-          setDraft(feedData.draft === 1)
-          setCreatedAt(asDate(feedData.createdAt, 'feed.createdAt'))
-        }
-      })
+    if (!id) return
+    let cancelled = false
+
+    const loadFeed = async () => {
+      const { data } = await client.feed.get(id)
+      if (!data || cancelled) return
+
+      const feedData = data as EditableFeed
+      const current = formStateRef.current
+      const setters = settersRef.current
+      if (current.title === '' && feedData.title) setters.setTitle(feedData.title)
+      if (current.tags === '' && feedData.hashtags) {
+        setters.setTags(feedData.hashtags.map(({ name }: { name: string }) => `#${name}`).join(' '))
+      }
+      if (current.alias === '' && feedData.alias) setters.setAlias(feedData.alias)
+      if (current.content === '') setters.setContent(feedData.content)
+      if (current.summary === '') setters.setSummary(feedData.summary || '')
+      setters.setListed(feedData.listed === 1)
+      setters.setDraft(feedData.draft === 1)
+      setters.setCreatedAt(asDate(feedData.createdAt, 'feed.createdAt'))
     }
-  }, [alias, content, id, setAlias, setContent, setSummary, setTags, setTitle, summary, tags, title])
+
+    void loadFeed()
+
+    return () => {
+      cancelled = true
+    }
+  }, [id])
   const debouncedUpdate = useCallback(
     _.debounce(() => {
       mermaid.initialize({
