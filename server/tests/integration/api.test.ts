@@ -24,6 +24,7 @@ describe('Integration Tests - API Flow', () => {
     app.state('cache', {
       get: async () => undefined,
       set: async () => {},
+      delete: async () => {},
       deletePrefix: async () => {},
       getOrSet: async (_key: string, fn: Function) => fn(),
       getOrDefault: async (_key: string, defaultValue: any) => defaultValue,

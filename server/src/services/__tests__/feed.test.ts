@@ -378,6 +378,75 @@ describe('FeedService', () => {
       expect(page2.data?.data).toHaveLength(1)
       expect(page2.data?.hasNext).toBe(false)
     })
+
+    it('should clamp non-positive search limit values', async () => {
+      const keyword = 'search-limit-clamp'
+      await api.feed.create(
+        {
+          title: `${keyword}-a`,
+          content: `content ${keyword} a`,
+          listed: true,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+      await api.feed.create(
+        {
+          title: `${keyword}-b`,
+          content: `content ${keyword} b`,
+          listed: true,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+
+      const page1 = await api.search.search(keyword, { page: 1, limit: -1 })
+      expect(page1.error).toBeUndefined()
+      expect(page1.data?.data).toHaveLength(1)
+      expect(page1.data?.hasNext).toBe(true)
+
+      const page2 = await api.search.search(keyword, { page: 2, limit: -1 })
+      expect(page2.error).toBeUndefined()
+      expect(page2.data?.data).toHaveLength(1)
+      expect(page2.data?.hasNext).toBe(false)
+    })
+
+    it('should invalidate search cache when creating a new feed', async () => {
+      const keyword = 'search-cache-create-invalidation'
+
+      await api.feed.create(
+        {
+          title: `${keyword}-first`,
+          content: `content ${keyword} first`,
+          listed: true,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+
+      const firstSearch = await api.search.search(keyword)
+      expect(firstSearch.error).toBeUndefined()
+      expect(firstSearch.data?.size).toBe(1)
+
+      await api.feed.create(
+        {
+          title: `${keyword}-second`,
+          content: `content ${keyword} second`,
+          listed: true,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+
+      const secondSearch = await api.search.search(keyword)
+      expect(secondSearch.error).toBeUndefined()
+      expect(secondSearch.data?.size).toBe(2)
+      expect(secondSearch.data?.data).toHaveLength(2)
+    })
   })
 
   describe('POST /feed - Create feed', () => {

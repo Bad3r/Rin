@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createClient } from '../client'
 
-const api = createClient('http://localhost')
+const api = createClient('https://example.test')
 
 // Mock fetch globally
 const mockFetch = vi.fn()
@@ -62,7 +62,7 @@ describe('API Client', () => {
       const result = await api.feed.get(1)
 
       expect(result.data).toEqual(mockResponse)
-      expect(mockFetch).toHaveBeenCalledWith('http://localhost/api/feed/1', expect.any(Object))
+      expect(mockFetch).toHaveBeenCalledWith('https://example.test/api/feed/1', expect.any(Object))
     })
 
     it('should create feed', async () => {
@@ -85,7 +85,7 @@ describe('API Client', () => {
 
       expect(result.data).toEqual(mockResponse)
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost/api/feed',
+        'https://example.test/api/feed',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify(feedData),
@@ -115,7 +115,7 @@ describe('API Client', () => {
       const result = await api.feed.adjacent(2)
 
       expect(result.data).toEqual(mockResponse)
-      expect(mockFetch).toHaveBeenCalledWith('http://localhost/api/feed/adjacent/2', expect.any(Object))
+      expect(mockFetch).toHaveBeenCalledWith('https://example.test/api/feed/adjacent/2', expect.any(Object))
     })
   })
 
@@ -149,7 +149,7 @@ describe('API Client', () => {
       const result = await api.tag.get('tag1')
 
       expect(result.data).toEqual(mockResponse)
-      expect(mockFetch).toHaveBeenCalledWith('http://localhost/api/tag/tag1', expect.any(Object))
+      expect(mockFetch).toHaveBeenCalledWith('https://example.test/api/tag/tag1', expect.any(Object))
     })
   })
 
@@ -169,7 +169,7 @@ describe('API Client', () => {
       const result = await api.comment.list(1)
 
       expect(result.data).toEqual(mockResponse)
-      expect(mockFetch).toHaveBeenCalledWith('http://localhost/api/comment/1', expect.any(Object))
+      expect(mockFetch).toHaveBeenCalledWith('https://example.test/api/comment/1', expect.any(Object))
     })
 
     it('should create comment', async () => {
@@ -186,7 +186,7 @@ describe('API Client', () => {
 
       expect(result.data).toEqual(mockResponse)
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost/api/comment/1',
+        'https://example.test/api/comment/1',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify(commentData),
@@ -213,7 +213,7 @@ describe('API Client', () => {
 
       expect(result.data).toEqual(mockResponse)
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost/api/search/test%20keyword?page=2&limit=1',
+        'https://example.test/api/search/test%20keyword?page=2&limit=1',
         expect.any(Object)
       )
     })
@@ -234,7 +234,7 @@ describe('API Client', () => {
       const result = await api.search.search('test')
 
       expect(result.data).toEqual(mockResponse)
-      expect(mockFetch).toHaveBeenCalledWith('http://localhost/api/search/test', expect.any(Object))
+      expect(mockFetch).toHaveBeenCalledWith('https://example.test/api/search/test', expect.any(Object))
     })
   })
 
@@ -272,7 +272,7 @@ describe('API Client', () => {
 
       expect(result.data).toEqual(mockResponse)
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost/api/user/profile',
+        'https://example.test/api/user/profile',
         expect.objectContaining({
           method: 'PUT',
           body: JSON.stringify(profileData),
@@ -300,7 +300,7 @@ describe('API Client', () => {
 
       expect(result.data).toEqual(mockResponse)
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost/api/auth/login',
+        'https://example.test/api/auth/login',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify(loginData),

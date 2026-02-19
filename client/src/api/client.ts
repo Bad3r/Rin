@@ -205,8 +205,8 @@ class FeedAPI {
     type?: 'draft' | 'unlisted' | 'normal'
   }): Promise<ApiResponse<FeedListResponse>> {
     const searchParams = new URLSearchParams()
-    if (params?.page) searchParams.set('page', params.page.toString())
-    if (params?.limit) searchParams.set('limit', params.limit.toString())
+    if (params?.page !== undefined) searchParams.set('page', params.page.toString())
+    if (params?.limit !== undefined) searchParams.set('limit', params.limit.toString())
     if (params?.type) searchParams.set('type', params.type)
 
     const query = searchParams.toString()
@@ -351,8 +351,8 @@ class MomentsAPI {
   // GET /api/moments
   async list(params?: { page?: number; limit?: number }): Promise<ApiResponse<{ data: Moment[]; hasNext: boolean }>> {
     const searchParams = new URLSearchParams()
-    if (params?.page) searchParams.set('page', params.page.toString())
-    if (params?.limit) searchParams.set('limit', params.limit.toString())
+    if (params?.page !== undefined) searchParams.set('page', params.page.toString())
+    if (params?.limit !== undefined) searchParams.set('limit', params.limit.toString())
 
     const query = searchParams.toString()
     return this.http.get<{ data: Moment[]; hasNext: boolean }>(`/api/moments${query ? `?${query}` : ''}`)

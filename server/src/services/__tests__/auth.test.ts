@@ -10,6 +10,7 @@ describe('PasswordAuthService', () => {
   let env: Env
   let app: any
   let api: ReturnType<typeof createTestClient>
+  let cacheStore: Map<string, unknown>
 
   const messageOf = (value: unknown): string | undefined => {
     if (typeof value === 'string') {
@@ -49,6 +50,7 @@ describe('PasswordAuthService', () => {
     const mockDB = createMockDB()
     db = mockDB.db
     sqlite = mockDB.sqlite
+    cacheStore = new Map<string, unknown>()
     env = createMockEnv({
       ADMIN_USERNAME: 'admin',
       ADMIN_PASSWORD: 'admin123',
@@ -57,6 +59,36 @@ describe('PasswordAuthService', () => {
     // Setup app with mock db
     app = createBaseApp(env)
     app.state('db', db)
+    app.state('cache', {
+      get: async (key: string) => cacheStore.get(key),
+      set: async (key: string, value: unknown) => {
+        cacheStore.set(key, value)
+      },
+      delete: async (key: string) => {
+        cacheStore.delete(key)
+      },
+      deletePrefix: async (prefix: string) => {
+        for (const key of cacheStore.keys()) {
+          if (key.startsWith(prefix)) {
+            cacheStore.delete(key)
+          }
+        }
+      },
+      getOrSet: async (key: string, fn: Function) => {
+        if (cacheStore.has(key)) {
+          return cacheStore.get(key)
+        }
+        const value = await fn()
+        cacheStore.set(key, value)
+        return value
+      },
+      getOrDefault: async (key: string, defaultValue: unknown) => {
+        if (cacheStore.has(key)) {
+          return cacheStore.get(key)
+        }
+        return defaultValue
+      },
+    })
     app.state('jwt', {
       sign: async (payload: any) => `mock_token_${payload.id}`,
       verify: async (token: string) => {
@@ -169,6 +201,26 @@ describe('PasswordAuthService', () => {
 
       const aboutFeeds = await queryAll(sqlite, `SELECT * FROM feeds WHERE alias = 'about'`)
       expect(aboutFeeds.length).toBe(1)
+    })
+
+    it('should clear feed and search caches after seeding About page', async () => {
+      await execSql(sqlite, 'DELETE FROM users')
+      await execSql(sqlite, 'DELETE FROM feeds')
+      cacheStore.set('feeds_normal_0_20', { stale: true })
+      cacheStore.set('search_v2_list_public_about', { stale: true })
+      cacheStore.set('search_v2_page_public_about_0_20', { stale: true })
+      cacheStore.set('feed_about', { stale: true })
+
+      const result = await api.auth.login({
+        username: 'admin',
+        password: 'admin123',
+      })
+
+      expect(result.error).toBeUndefined()
+      expect(cacheStore.has('feeds_normal_0_20')).toBe(false)
+      expect(cacheStore.has('search_v2_list_public_about')).toBe(false)
+      expect(cacheStore.has('search_v2_page_public_about_0_20')).toBe(false)
+      expect(cacheStore.has('feed_about')).toBe(false)
     })
 
     it('should reject invalid admin password', async () => {
