@@ -181,8 +181,8 @@ export class TestAPIClient {
       options?: TestAPIOptions
     ): Promise<ApiResponse<FeedListResponse>> => {
       const searchParams = new URLSearchParams()
-      if (params?.page) searchParams.set('page', params.page.toString())
-      if (params?.limit) searchParams.set('limit', params.limit.toString())
+      if (params?.page !== undefined) searchParams.set('page', params.page.toString())
+      if (params?.limit !== undefined) searchParams.set('limit', params.limit.toString())
       if (params?.type) searchParams.set('type', params.type)
 
       const query = searchParams.toString()
@@ -306,8 +306,8 @@ export class TestAPIClient {
       options?: TestAPIOptions
     ): Promise<ApiResponse<{ data: Moment[]; hasNext: boolean }>> => {
       const searchParams = new URLSearchParams()
-      if (params?.page) searchParams.set('page', params.page.toString())
-      if (params?.limit) searchParams.set('limit', params.limit.toString())
+      if (params?.page !== undefined) searchParams.set('page', params.page.toString())
+      if (params?.limit !== undefined) searchParams.set('limit', params.limit.toString())
 
       const query = searchParams.toString()
       return this.get<{ data: Moment[]; hasNext: boolean }>(`/moments${query ? `?${query}` : ''}`, options)
@@ -402,8 +402,8 @@ export class TestAPIClient {
       options?: TestAPIOptions
     ): Promise<ApiResponse<FeedListResponse>> => {
       const searchParams = new URLSearchParams()
-      if (params?.page) searchParams.set('page', params.page.toString())
-      if (params?.limit) searchParams.set('limit', params.limit.toString())
+      if (params?.page !== undefined) searchParams.set('page', params.page.toString())
+      if (params?.limit !== undefined) searchParams.set('limit', params.limit.toString())
       const query = searchParams.toString()
 
       return this.get<FeedListResponse>(`/search/${encodeURIComponent(keyword)}${query ? `?${query}` : ''}`, options)
