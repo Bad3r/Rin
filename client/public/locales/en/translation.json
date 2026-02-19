@@ -1,6 +1,7 @@
 {
   "about": {
-    "notfound": "Set the article alias to `about` to create an about page",
+    "description": "This is a lightweight personal blogging system.",
+    "notfound": "About page is unavailable.",
     "title": "About"
   },
   "ai_summary": {

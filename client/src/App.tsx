@@ -9,6 +9,7 @@ import { Tips, TipsPage } from './components/tips.tsx'
 import useTableOfContents from './hooks/useTableOfContents.tsx'
 import { client } from './main'
 import { CallbackPage } from './page/callback'
+import { AboutPage } from './page/about'
 import { ErrorPage } from './page/error.tsx'
 import { FeedPage, TOCHeader } from './page/feed'
 import { FeedsPage } from './page/feeds'
@@ -25,6 +26,7 @@ import { WritingPage } from './page/writing'
 import { ClientConfigContext, ConfigWrapper, defaultClientConfig } from './state/config.tsx'
 import { type Profile, ProfileContext } from './state/profile'
 import { tryInt } from './utils/int'
+import { getAuthCookieToken, getAuthToken, removeAuthToken } from './utils/auth'
 
 function App() {
   const ref = useRef(false)
@@ -44,19 +46,27 @@ function App() {
     applyScaling()
     // --- 自动缩放逻辑结束 ---
     if (ref.current) return
-    client.user.profile().then(({ data, error }) => {
-      if (data) {
-        setProfile({
-          id: data.id,
-          avatar: data.avatar || '',
-          permission: data.permission,
-          name: data.username,
-        })
-      } else if (error) {
-        // User not authenticated
-        setProfile(null)
-      }
-    })
+    const token = getAuthToken()
+    const cookieToken = getAuthCookieToken()
+    if (!token && !cookieToken) {
+      setProfile(null)
+    } else {
+      client.user.profile().then(({ data, error }) => {
+        if (data) {
+          setProfile({
+            id: data.id,
+            avatar: data.avatar || '',
+            permission: data.permission,
+            name: data.username,
+          })
+        } else if (error) {
+          if (error.status === 401 || error.status === 403) {
+            removeAuthToken()
+          }
+          setProfile(null)
+        }
+      })
+    }
     const config = sessionStorage.getItem('config')
     if (config) {
       const configObj = JSON.parse(config)
@@ -93,6 +103,10 @@ function App() {
 
           <RouteMe path='/friends'>
             <FriendsPage />
+          </RouteMe>
+
+          <RouteMe path='/about'>
+            <AboutPage />
           </RouteMe>
 
           <RouteMe path='/hashtags'>

@@ -24,7 +24,6 @@ export function MarkdownEditor({
   const { t } = useTranslation()
   const colorMode = useColorMode()
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
-  const isComposingRef = useRef(false)
   const [preview, setPreview] = useState<'edit' | 'preview' | 'comparison'>('edit')
   const [uploading, setUploading] = useState(false)
 
@@ -121,47 +120,17 @@ export function MarkdownEditor({
     )
   }
 
-  /* ---------------- Monaco Mount & IME Optimization ---------------- */
+  /* ---------------- Monaco Mount ---------------- */
 
   const handleEditorMount = (editor: editor.IStandaloneCodeEditor) => {
     editorRef.current = editor
-
-    editor.onDidCompositionStart(() => {
-      isComposingRef.current = true
-    })
-
-    editor.onDidCompositionEnd(() => {
-      isComposingRef.current = false
-      setContent(editor.getValue())
-    })
-
-    editor.onDidChangeModelContent(() => {
-      if (!isComposingRef.current) {
-        setContent(editor.getValue())
-      }
-    })
-
-    editor.onDidBlurEditorText(() => {
-      setContent(editor.getValue())
-    })
   }
 
-  /* ---------------- synchronization ---------------- */
-
   useEffect(() => {
-    const editor = editorRef.current
-    if (!editor) return
-
-    const model = editor.getModel()
-    if (!model) return
-
-    const editorValue = model.getValue()
-
-    // Avoid infinite loops & prevent overwriting content being edited
-    if (editorValue !== content) {
-      editor.setValue(content)
+    return () => {
+      editorRef.current = null
     }
-  }, [content])
+  }, [])
 
   /* ---------------- UI ---------------- */
 
@@ -237,10 +206,11 @@ export function MarkdownEditor({
             onPaste={handlePaste}
           >
             <Editor
+              value={content}
+              onChange={value => setContent(value ?? '')}
               onMount={handleEditorMount}
               height={height}
               defaultLanguage='markdown'
-              defaultValue={content}
               theme={colorMode === 'dark' ? 'vs-dark' : 'light'}
               options={{
                 wordWrap: 'on',

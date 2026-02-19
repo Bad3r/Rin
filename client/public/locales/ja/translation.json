@@ -1,6 +1,7 @@
 {
   "about": {
-    "notfound": "About ページを作成するには、記事のエイリアスを about に設定します",
+    "description": "これは軽量な個人ブログシステムです。",
+    "notfound": "About ページは現在利用できません。",
     "title": "概要"
   },
   "ai_summary": {

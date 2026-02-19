@@ -4,20 +4,22 @@ import type { Context, CookieValue } from './types'
 export async function deriveAuth(context: Context): Promise<void> {
   const { cookie, jwt, store, request } = context
 
-  // Try to get token from Authorization header first, then fallback to cookie
-  let token: string | undefined
+  // Prefer Authorization header, but fall back to cookie token when header token is missing/invalid.
+  let headerToken: string | undefined
   const authHeader = request.headers.get('authorization')
   if (authHeader?.startsWith('Bearer ')) {
-    token = authHeader.substring(7)
-  } else {
-    token = cookie.token?.value
+    headerToken = authHeader.substring(7)
   }
+  const cookieToken = cookie.token?.value
 
-  if (!token || !jwt) {
+  if ((!headerToken && !cookieToken) || !jwt) {
     return
   }
 
-  const profile = await jwt.verify(token)
+  let profile = headerToken ? await jwt.verify(headerToken) : null
+  if (!profile && cookieToken && cookieToken !== headerToken) {
+    profile = await jwt.verify(cookieToken)
+  }
   if (!profile) {
     return
   }

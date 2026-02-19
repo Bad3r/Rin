@@ -96,6 +96,12 @@ export function PasswordAuthService(router: Router): void {
           secure: true,
           sameSite: 'lax',
         })
+        cookie.auth_token.set({
+          value: token,
+          expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+          path: '/',
+          sameSite: 'lax',
+        })
 
         return {
           success: true,
@@ -132,6 +138,12 @@ export function PasswordAuthService(router: Router): void {
         path: '/',
         httpOnly: true,
         secure: true,
+        sameSite: 'lax',
+      })
+      cookie.auth_token.set({
+        value: token,
+        expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+        path: '/',
         sameSite: 'lax',
       })
 

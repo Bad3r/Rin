@@ -9,16 +9,23 @@ type UserRow = {
 }
 
 function createContext(options: {
-  profile: Record<string, unknown> | null
+  verify: (token: string) => Promise<Record<string, unknown> | null>
   findFirst: () => Promise<UserRow | undefined>
+  authHeaderToken?: string
+  cookieToken?: string
 }): Context {
+  const headers = new Headers()
+  if (options.authHeaderToken) {
+    headers.set('Authorization', `Bearer ${options.authHeaderToken}`)
+  }
+
   const request = new Request('https://example.test/test', {
-    headers: { Authorization: 'Bearer test-token' },
+    headers,
   })
 
   const jwt: JWTUtils = {
     sign: async (_payload: Record<string, unknown>) => 'signed-token',
-    verify: async (_token: string) => options.profile,
+    verify: async (token: string) => options.verify(token),
   }
 
   return {
@@ -47,7 +54,21 @@ function createContext(options: {
       status: 200,
       headers: new Headers(),
     },
-    cookie: {},
+    cookie: options.cookieToken
+      ? {
+          token: {
+            value: options.cookieToken,
+            set: (_options: {
+              value: string
+              expires?: Date
+              path?: string
+              httpOnly?: boolean
+              secure?: boolean
+              sameSite?: 'strict' | 'lax' | 'none'
+            }) => {},
+          },
+        }
+      : {},
     jwt,
     admin: false,
     env: {} as Env,
@@ -58,7 +79,8 @@ describe('deriveAuth', () => {
   it('ignores non-numeric profile IDs without querying users', async () => {
     let queried = false
     const context = createContext({
-      profile: { id: 'not-a-number' },
+      authHeaderToken: 'test-token',
+      verify: async (_token: string) => ({ id: 'not-a-number' }),
       findFirst: async () => {
         queried = true
         return { id: 7, username: 'tester', permission: 1 }
@@ -76,7 +98,8 @@ describe('deriveAuth', () => {
   it('accepts numeric profile IDs and populates auth fields', async () => {
     let queried = false
     const context = createContext({
-      profile: { id: '7' },
+      authHeaderToken: 'test-token',
+      verify: async (_token: string) => ({ id: '7' }),
       findFirst: async () => {
         queried = true
         return { id: 7, username: 'tester', permission: 1 }
@@ -89,5 +112,52 @@ describe('deriveAuth', () => {
     expect(context.uid).toBe(7)
     expect(context.username).toBe('tester')
     expect(context.admin).toBe(true)
+  })
+
+  it('uses token cookie when Authorization header is missing', async () => {
+    let queried = false
+    const verifiedTokens: string[] = []
+    const context = createContext({
+      cookieToken: 'cookie-token',
+      verify: async (token: string) => {
+        verifiedTokens.push(token)
+        if (token === 'cookie-token') {
+          return { id: '7' }
+        }
+        return null
+      },
+      findFirst: async () => {
+        queried = true
+        return { id: 7, username: 'tester', permission: 1 }
+      },
+    })
+
+    await deriveAuth(context)
+
+    expect(verifiedTokens).toEqual(['cookie-token'])
+    expect(queried).toBe(true)
+    expect(context.uid).toBe(7)
+  })
+
+  it('falls back to token cookie when Authorization token is invalid', async () => {
+    const verifiedTokens: string[] = []
+    const context = createContext({
+      authHeaderToken: 'stale-token',
+      cookieToken: 'cookie-token',
+      verify: async (token: string) => {
+        verifiedTokens.push(token)
+        if (token === 'cookie-token') {
+          return { id: '7' }
+        }
+        return null
+      },
+      findFirst: async () => ({ id: 7, username: 'tester', permission: 1 }),
+    })
+
+    await deriveAuth(context)
+
+    expect(verifiedTokens).toEqual(['stale-token', 'cookie-token'])
+    expect(context.uid).toBe(7)
+    expect(context.username).toBe('tester')
   })
 })
