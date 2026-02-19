@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import type { Router } from '../core/router'
 import type { Context } from '../core/types'
-import { users } from '../db/schema'
+import { feeds, users } from '../db/schema'
 import { BadRequestError, ForbiddenError, InternalServerError } from '../errors'
 
 // Hash password using SHA-256
@@ -18,7 +18,7 @@ export function PasswordAuthService(router: Router): void {
     // Login with username and password
     group.post('/login', async (ctx: Context) => {
       const { jwt, store, body, cookie } = ctx
-      const { db, env } = store
+      const { db, env, cache } = store
       if (!jwt) {
         throw new InternalServerError('JWT is not configured')
       }
@@ -82,6 +82,26 @@ export function PasswordAuthService(router: Router): void {
 
         if (!user) {
           throw new InternalServerError('Failed to get admin user')
+        }
+
+        const placeholderContent = 'Welcome to Rin. Update this page from the Writing panel.'
+        const aboutSeedResult = await env.DB.prepare(
+          `INSERT OR IGNORE INTO feeds (alias, title, summary, content, listed, draft, uid, top, created_at, updated_at)
+           SELECT ?, ?, ?, ?, 1, 0, ?, 0, unixepoch(), unixepoch()
+           WHERE NOT EXISTS (SELECT 1 FROM feeds WHERE alias = ?)`
+        )
+          .bind('about', 'About', placeholderContent, placeholderContent, user.id, 'about')
+          .run()
+
+        if (!aboutSeedResult.success) {
+          throw new InternalServerError('Failed to ensure About page')
+        }
+
+        if ((aboutSeedResult.meta?.changes ?? 0) > 0) {
+          // Remove direct about cache entry first, then persist removals via prefix deletes.
+          await cache.delete('feed_about', false)
+          await cache.deletePrefix('feeds_')
+          await cache.deletePrefix('search_')
         }
 
         // Generate JWT token

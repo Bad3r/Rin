@@ -18,6 +18,7 @@ describe('FeedService', () => {
     db = mockDB.db
     sqlite = mockDB.sqlite
     env = createMockEnv()
+    const cacheStore = new Map<string, unknown>()
 
     // Setup app with mock db
     app = createBaseApp(env)
@@ -27,12 +28,34 @@ describe('FeedService', () => {
       verify: async (token: string) => (token.startsWith('mock_token_') ? { id: 1 } : null),
     })
     app.state('cache', {
-      get: async () => undefined,
-      set: async () => {},
-      delete: async () => {},
-      deletePrefix: async () => {},
-      getOrSet: async (_key: string, fn: Function) => fn(),
-      getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
+      get: async (key: string) => cacheStore.get(key),
+      set: async (key: string, value: unknown) => {
+        cacheStore.set(key, value)
+      },
+      delete: async (key: string) => {
+        cacheStore.delete(key)
+      },
+      deletePrefix: async (prefix: string) => {
+        for (const key of cacheStore.keys()) {
+          if (key.startsWith(prefix)) {
+            cacheStore.delete(key)
+          }
+        }
+      },
+      getOrSet: async (key: string, fn: Function) => {
+        if (cacheStore.has(key)) {
+          return cacheStore.get(key)
+        }
+        const value = await fn()
+        cacheStore.set(key, value)
+        return value
+      },
+      getOrDefault: async (key: string, defaultValue: unknown) => {
+        if (cacheStore.has(key)) {
+          return cacheStore.get(key)
+        }
+        return defaultValue
+      },
     })
     app.state('clientConfig', {
       getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
@@ -166,6 +189,263 @@ describe('FeedService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(404)
+    })
+  })
+
+  describe('GET /search/:keyword - Search feeds', () => {
+    it('should exclude draft and unlisted feeds for non-admin users', async () => {
+      const keyword = 'search-public-filter'
+      await api.feed.create(
+        {
+          title: `${keyword}-public`,
+          content: `content ${keyword} public`,
+          listed: true,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+      await api.feed.create(
+        {
+          title: `${keyword}-draft`,
+          content: `content ${keyword} draft`,
+          listed: true,
+          draft: true,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+      await api.feed.create(
+        {
+          title: `${keyword}-unlisted`,
+          content: `content ${keyword} unlisted`,
+          listed: false,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+
+      const result = await api.search.search(keyword)
+
+      expect(result.error).toBeUndefined()
+      expect(result.data?.size).toBe(1)
+      expect(result.data?.data).toHaveLength(1)
+      expect(result.data?.data[0]?.title).toBe(`${keyword}-public`)
+    })
+
+    it('should include draft and unlisted feeds for admin users', async () => {
+      const keyword = 'search-admin-all'
+      await api.feed.create(
+        {
+          title: `${keyword}-public`,
+          content: `content ${keyword} public`,
+          listed: true,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+      await api.feed.create(
+        {
+          title: `${keyword}-draft`,
+          content: `content ${keyword} draft`,
+          listed: true,
+          draft: true,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+      await api.feed.create(
+        {
+          title: `${keyword}-unlisted`,
+          content: `content ${keyword} unlisted`,
+          listed: false,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+
+      const result = await api.search.search(keyword, undefined, { token: 'mock_token_1' })
+
+      expect(result.error).toBeUndefined()
+      expect(result.data?.size).toBe(3)
+      expect(result.data?.data).toHaveLength(3)
+    })
+
+    it('should not leak admin search cache entries to non-admin users', async () => {
+      const keyword = 'search-cache-admin-first'
+      await api.feed.create(
+        {
+          title: `${keyword}-public`,
+          content: `content ${keyword} public`,
+          listed: true,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+      await api.feed.create(
+        {
+          title: `${keyword}-draft`,
+          content: `content ${keyword} draft`,
+          listed: true,
+          draft: true,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+
+      const adminResult = await api.search.search(keyword, undefined, { token: 'mock_token_1' })
+      expect(adminResult.error).toBeUndefined()
+      expect(adminResult.data?.size).toBe(2)
+
+      const publicResult = await api.search.search(keyword)
+
+      expect(publicResult.error).toBeUndefined()
+      expect(publicResult.data?.size).toBe(1)
+      expect(publicResult.data?.data).toHaveLength(1)
+      expect(publicResult.data?.data[0]?.title).toBe(`${keyword}-public`)
+    })
+
+    it('should keep admin results complete after a public search caches first', async () => {
+      const keyword = 'search-cache-public-first'
+      await api.feed.create(
+        {
+          title: `${keyword}-public`,
+          content: `content ${keyword} public`,
+          listed: true,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+      await api.feed.create(
+        {
+          title: `${keyword}-draft`,
+          content: `content ${keyword} draft`,
+          listed: true,
+          draft: true,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+
+      const publicResult = await api.search.search(keyword)
+      expect(publicResult.error).toBeUndefined()
+      expect(publicResult.data?.size).toBe(1)
+
+      const adminResult = await api.search.search(keyword, undefined, { token: 'mock_token_1' })
+
+      expect(adminResult.error).toBeUndefined()
+      expect(adminResult.data?.size).toBe(2)
+      expect(adminResult.data?.data).toHaveLength(2)
+    })
+
+    it('should honor page and limit query parameters', async () => {
+      const keyword = 'search-pagination'
+      await api.feed.create(
+        {
+          title: `${keyword}-a`,
+          content: `content ${keyword} a`,
+          listed: true,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+      await api.feed.create(
+        {
+          title: `${keyword}-b`,
+          content: `content ${keyword} b`,
+          listed: true,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+
+      const page1 = await api.search.search(keyword, { page: 1, limit: 1 })
+      expect(page1.error).toBeUndefined()
+      expect(page1.data?.size).toBe(2)
+      expect(page1.data?.data).toHaveLength(1)
+      expect(page1.data?.hasNext).toBe(true)
+
+      const page2 = await api.search.search(keyword, { page: 2, limit: 1 })
+      expect(page2.error).toBeUndefined()
+      expect(page2.data?.size).toBe(2)
+      expect(page2.data?.data).toHaveLength(1)
+      expect(page2.data?.hasNext).toBe(false)
+    })
+
+    it('should clamp non-positive search limit values', async () => {
+      const keyword = 'search-limit-clamp'
+      await api.feed.create(
+        {
+          title: `${keyword}-a`,
+          content: `content ${keyword} a`,
+          listed: true,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+      await api.feed.create(
+        {
+          title: `${keyword}-b`,
+          content: `content ${keyword} b`,
+          listed: true,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+
+      const page1 = await api.search.search(keyword, { page: 1, limit: -1 })
+      expect(page1.error).toBeUndefined()
+      expect(page1.data?.data).toHaveLength(1)
+      expect(page1.data?.hasNext).toBe(true)
+
+      const page2 = await api.search.search(keyword, { page: 2, limit: -1 })
+      expect(page2.error).toBeUndefined()
+      expect(page2.data?.data).toHaveLength(1)
+      expect(page2.data?.hasNext).toBe(false)
+    })
+
+    it('should invalidate search cache when creating a new feed', async () => {
+      const keyword = 'search-cache-create-invalidation'
+
+      await api.feed.create(
+        {
+          title: `${keyword}-first`,
+          content: `content ${keyword} first`,
+          listed: true,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+
+      const firstSearch = await api.search.search(keyword)
+      expect(firstSearch.error).toBeUndefined()
+      expect(firstSearch.data?.size).toBe(1)
+
+      await api.feed.create(
+        {
+          title: `${keyword}-second`,
+          content: `content ${keyword} second`,
+          listed: true,
+          draft: false,
+          tags: [],
+        },
+        { token: 'mock_token_1' }
+      )
+
+      const secondSearch = await api.search.search(keyword)
+      expect(secondSearch.error).toBeUndefined()
+      expect(secondSearch.data?.size).toBe(2)
+      expect(secondSearch.data?.data).toHaveLength(2)
     })
   })
 
