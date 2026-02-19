@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Context, JWTUtils } from '../types'
 import { deriveAuth } from '../setup'
+import type { Context, JWTUtils } from '../types'
 
 type UserRow = {
   id: number
@@ -139,16 +139,13 @@ describe('deriveAuth', () => {
     expect(context.uid).toBe(7)
   })
 
-  it('falls back to token cookie when Authorization token is invalid', async () => {
+  it('does not fall back to token cookie when Authorization token is invalid', async () => {
     const verifiedTokens: string[] = []
     const context = createContext({
       authHeaderToken: 'stale-token',
       cookieToken: 'cookie-token',
       verify: async (token: string) => {
         verifiedTokens.push(token)
-        if (token === 'cookie-token') {
-          return { id: '7' }
-        }
         return null
       },
       findFirst: async () => ({ id: 7, username: 'tester', permission: 1 }),
@@ -156,8 +153,8 @@ describe('deriveAuth', () => {
 
     await deriveAuth(context)
 
-    expect(verifiedTokens).toEqual(['stale-token', 'cookie-token'])
-    expect(context.uid).toBe(7)
-    expect(context.username).toBe('tester')
+    expect(verifiedTokens).toEqual(['stale-token'])
+    expect(context.uid).toBeUndefined()
+    expect(context.username).toBeUndefined()
   })
 })

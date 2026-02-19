@@ -3,18 +3,26 @@ const AUTH_COOKIE_KEY = 'auth_token'
 
 // In-memory fallback for environments without localStorage (e.g., tests)
 let memoryToken: string | null = null
+let localStorageAvailable: boolean | null = null
 
 function isLocalStorageAvailable(): boolean {
+  if (localStorageAvailable !== null) {
+    return localStorageAvailable
+  }
+
   try {
     if (typeof localStorage === 'undefined') {
-      return false
+      localStorageAvailable = false
+      return localStorageAvailable
     }
     // Test localStorage
     localStorage.setItem('__test__', 'test')
     localStorage.removeItem('__test__')
-    return true
+    localStorageAvailable = true
+    return localStorageAvailable
   } catch {
-    return false
+    localStorageAvailable = false
+    return localStorageAvailable
   }
 }
 

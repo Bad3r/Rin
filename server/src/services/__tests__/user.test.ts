@@ -33,6 +33,21 @@ describe('UserService', () => {
     return typeof nestedMessage === 'string' ? nestedMessage : undefined
   }
 
+  const getSetCookieHeaders = (response: Response): string[] => {
+    const headersWithSetCookie = response.headers as Headers & { getSetCookie?: () => string[] }
+    const setCookies = headersWithSetCookie.getSetCookie?.()
+    if (setCookies && setCookies.length > 0) {
+      return setCookies
+    }
+
+    const combined = response.headers.get('Set-Cookie')
+    if (!combined) {
+      return []
+    }
+
+    return combined.split(/,(?=[^;,]+=)/g).map(value => value.trim())
+  }
+
   beforeEach(async () => {
     const mockDB = createMockDB()
     db = mockDB.db
@@ -361,10 +376,11 @@ describe('UserService', () => {
       const response = await app.handle(new Request(`${TEST_ORIGIN}/user/logout`, { method: 'POST' }), env)
 
       expect(response.status).toBe(200)
-      const setCookie = response.headers.get('Set-Cookie')
-      expect(setCookie).toContain('token=')
-      expect(setCookie).toContain('auth_token=')
-      expect(setCookie).toContain('Expires=')
+      const setCookies = getSetCookieHeaders(response)
+      expect(setCookies.some(cookie => cookie.startsWith('token=') && cookie.includes('Expires='))).toBe(true)
+      expect(setCookies.some(cookie => cookie.startsWith('token=') && cookie.includes('Secure'))).toBe(true)
+      expect(setCookies.some(cookie => cookie.startsWith('auth_token=') && cookie.includes('Expires='))).toBe(true)
+      expect(setCookies.some(cookie => cookie.startsWith('auth_token=') && cookie.includes('Secure'))).toBe(true)
     })
   })
 })

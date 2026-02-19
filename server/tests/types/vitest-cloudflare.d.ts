@@ -11,5 +11,3 @@ declare module 'vitest' {
     remoteTimeoutMs: number
   }
 }
-
-export {}

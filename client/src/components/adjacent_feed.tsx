@@ -13,13 +13,9 @@ export function AdjacentSection({ id, setError }: { id: string; setError: (error
       if (error) {
         setError(error.value)
       } else if (data) {
-        const normalized = data as AdjacentFeedResponse & {
-          next?: AdjacentFeed | null
-          prev?: AdjacentFeed | null
-        }
         setAdjacentFeeds({
-          nextFeed: normalized.nextFeed ?? normalized.next ?? null,
-          previousFeed: normalized.previousFeed ?? normalized.prev ?? null,
+          nextFeed: data.nextFeed,
+          previousFeed: data.previousFeed,
         })
       }
     })
