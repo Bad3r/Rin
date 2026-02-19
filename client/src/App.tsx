@@ -1,9 +1,9 @@
 import { useContext, useEffect, useRef, useState } from 'react'
-import { Helmet } from './components/helmet'
 import { useTranslation } from 'react-i18next'
 import { type DefaultParams, type PathPattern, Route, Switch } from 'wouter'
 import Footer from './components/footer'
 import { Header } from './components/header'
+import { Helmet } from './components/helmet'
 import { Padding } from './components/padding'
 import { Tips, TipsPage } from './components/tips.tsx'
 import useTableOfContents from './hooks/useTableOfContents.tsx'
@@ -24,8 +24,8 @@ import { TimelinePage } from './page/timeline'
 import { WritingPage } from './page/writing'
 import { ClientConfigContext, ConfigWrapper, defaultClientConfig } from './state/config.tsx'
 import { type Profile, ProfileContext } from './state/profile'
-import { tryInt } from './utils/int'
 import { getAuthCookieToken, getAuthToken, removeAuthToken } from './utils/auth'
+import { tryInt } from './utils/int'
 
 function App() {
   const ref = useRef(false)
@@ -60,7 +60,14 @@ function App() {
           })
         } else if (error) {
           if (error.status === 401 || error.status === 403) {
-            removeAuthToken()
+            void client.user
+              .logout()
+              .catch(() => {
+                // Best effort: always clear client auth state even if logout request fails.
+              })
+              .finally(() => {
+                removeAuthToken()
+              })
           }
           setProfile(null)
         }
