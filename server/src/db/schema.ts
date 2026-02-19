@@ -6,6 +6,8 @@ const updated_at = integer('updated_at', { mode: 'timestamp' }).default(sql`(uni
 
 export const feeds = sqliteTable('feeds', {
   id: integer('id').primaryKey(),
+  // NOTE: "about" alias uniqueness is enforced by a partial unique index in server/sql/0011.sql.
+  // Drizzle table definitions cannot express this partial index; keep migration and schema in sync.
   alias: text('alias'),
   title: text('title'),
   summary: text('summary').default('').notNull(),

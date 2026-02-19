@@ -98,9 +98,10 @@ export function PasswordAuthService(router: Router): void {
         }
 
         if ((aboutSeedResult.meta?.changes ?? 0) > 0) {
+          // Remove direct about cache entry first, then persist removals via prefix deletes.
+          await cache.delete('feed_about', false)
           await cache.deletePrefix('feeds_')
           await cache.deletePrefix('search_')
-          await cache.delete('feed_about')
         }
 
         // Generate JWT token

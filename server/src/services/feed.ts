@@ -820,7 +820,8 @@ export function FeedService(router: Router): void {
         success++
       }
 
-      cache.deletePrefix('feeds_')
+      await cache.deletePrefix('feeds_')
+      await cache.deletePrefix('search_')
       return { success, skipped, skippedList }
     },
     wpImportSchema
