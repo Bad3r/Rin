@@ -130,6 +130,7 @@ describe('PasswordAuthService', () => {
     it('should create admin user on first login', async () => {
       // Clear existing users
       await execSql(sqlite, 'DELETE FROM users')
+      await execSql(sqlite, 'DELETE FROM feeds')
 
       const result = await api.auth.login({
         username: 'admin',
@@ -143,6 +144,31 @@ describe('PasswordAuthService', () => {
       const dbResult = await queryAll(sqlite, `SELECT * FROM users WHERE openid = 'admin'`)
       expect(dbResult.length).toBe(1)
       expect((dbResult[0] as any)?.permission).toBe(1)
+
+      // Verify default About page was seeded
+      const aboutFeeds = await queryAll(sqlite, `SELECT * FROM feeds WHERE alias = 'about'`)
+      expect(aboutFeeds.length).toBe(1)
+      expect((aboutFeeds[0] as any)?.draft).toBe(0)
+      expect((aboutFeeds[0] as any)?.listed).toBe(1)
+    })
+
+    it('should not duplicate About page on repeated admin login', async () => {
+      await execSql(sqlite, 'DELETE FROM feeds')
+
+      const firstLogin = await api.auth.login({
+        username: 'admin',
+        password: 'admin123',
+      })
+      expect(firstLogin.error).toBeUndefined()
+
+      const secondLogin = await api.auth.login({
+        username: 'admin',
+        password: 'admin123',
+      })
+      expect(secondLogin.error).toBeUndefined()
+
+      const aboutFeeds = await queryAll(sqlite, `SELECT * FROM feeds WHERE alias = 'about'`)
+      expect(aboutFeeds.length).toBe(1)
     })
 
     it('should reject invalid admin password', async () => {

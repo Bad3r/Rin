@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import type { Router } from '../core/router'
 import type { Context } from '../core/types'
-import { users } from '../db/schema'
+import { feeds, users } from '../db/schema'
 import { BadRequestError, ForbiddenError, InternalServerError } from '../errors'
 
 // Hash password using SHA-256
@@ -82,6 +82,23 @@ export function PasswordAuthService(router: Router): void {
 
         if (!user) {
           throw new InternalServerError('Failed to get admin user')
+        }
+
+        const aboutPage = await db.query.feeds.findFirst({
+          where: eq(feeds.alias, 'about'),
+          columns: { id: true },
+        })
+        if (!aboutPage) {
+          const placeholderContent = 'Welcome to Rin. Update this page from the Writing panel.'
+          await db.insert(feeds).values({
+            alias: 'about',
+            title: 'About',
+            summary: placeholderContent,
+            content: placeholderContent,
+            listed: 1,
+            draft: 0,
+            uid: user.id,
+          })
         }
 
         // Generate JWT token
