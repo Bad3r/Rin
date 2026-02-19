@@ -137,6 +137,7 @@ export function WritingPage({ id }: { id?: number }) {
   const [publishing, setPublishing] = useState(false)
   const { showAlert, AlertUI } = useAlert()
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: hydrate once per id; including form-state deps causes refetch loops while editing.
   useEffect(() => {
     if (id !== undefined || alias !== '' || typeof window === 'undefined') {
       return
@@ -198,23 +199,29 @@ export function WritingPage({ id }: { id?: number }) {
   }
 
   useEffect(() => {
-    if (id) {
-      client.feed.get(id).then(({ data }) => {
-        if (data) {
-          const feedData = data as EditableFeed
-          if (title === '' && feedData.title) setTitle(feedData.title)
-          if (tags === '' && feedData.hashtags)
-            setTags(feedData.hashtags.map(({ name }: { name: string }) => `#${name}`).join(' '))
-          if (alias === '' && feedData.alias) setAlias(feedData.alias)
-          if (content === '') setContent(feedData.content)
-          if (summary === '') setSummary(feedData.summary || '')
-          setListed(feedData.listed === 1)
-          setDraft(feedData.draft === 1)
-          setCreatedAt(asDate(feedData.createdAt, 'feed.createdAt'))
-        }
-      })
+    if (!id) return
+    let cancelled = false
+
+    client.feed.get(id).then(({ data }) => {
+      if (!data || cancelled) return
+
+      const feedData = data as EditableFeed
+      if (title === '' && feedData.title) setTitle(feedData.title)
+      if (tags === '' && feedData.hashtags) {
+        setTags(feedData.hashtags.map(({ name }: { name: string }) => `#${name}`).join(' '))
+      }
+      if (alias === '' && feedData.alias) setAlias(feedData.alias)
+      if (content === '') setContent(feedData.content)
+      if (summary === '') setSummary(feedData.summary || '')
+      setListed(feedData.listed === 1)
+      setDraft(feedData.draft === 1)
+      setCreatedAt(asDate(feedData.createdAt, 'feed.createdAt'))
+    })
+
+    return () => {
+      cancelled = true
     }
-  }, [alias, content, id, setAlias, setContent, setSummary, setTags, setTitle, summary, tags, title])
+  }, [id])
   const debouncedUpdate = useCallback(
     _.debounce(() => {
       mermaid.initialize({
