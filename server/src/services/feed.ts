@@ -626,15 +626,24 @@ export function FeedService(router: Router): void {
       const limitValue = queryValue(limit)
 
       keyword = decodeURI(keyword)
+      const normalizedKeyword = keyword.trim()
       const page_num = (pageValue ? (parseInt(pageValue, 10) > 0 ? parseInt(pageValue, 10) : 1) : 1) - 1
       const limit_num = limitValue ? (parseInt(limitValue, 10) > 50 ? 50 : parseInt(limitValue, 10)) : 20
 
-      if (keyword === undefined || keyword.trim().length === 0) {
+      if (normalizedKeyword.length === 0) {
         return { size: 0, data: [], hasNext: false }
       }
 
-      const cacheKey = `search_${keyword}`
-      const searchKeyword = `%${keyword}%`
+      const scope = admin ? 'admin' : 'public'
+      const keywordToken = encodeURIComponent(normalizedKeyword)
+      const listCacheKey = `search_v2_list_${scope}_${keywordToken}`
+      const pageCacheKey = `search_v2_page_${scope}_${keywordToken}_${page_num}_${limit_num}`
+      const cachedPage = await cache.get(pageCacheKey)
+      if (cachedPage) {
+        return cachedPage
+      }
+
+      const searchKeyword = `%${normalizedKeyword}%`
       const whereClause = or(
         like(feeds.title, searchKeyword),
         like(feeds.content, searchKeyword),
@@ -643,9 +652,9 @@ export function FeedService(router: Router): void {
       )
 
       const feed_list = (
-        await cache.getOrSet(cacheKey, () =>
+        await cache.getOrSet(listCacheKey, () =>
           db.query.feeds.findMany({
-            where: admin ? whereClause : and(whereClause, eq(feeds.draft, 0)),
+            where: admin ? whereClause : and(whereClause, eq(feeds.draft, 0), eq(feeds.listed, 1)),
             columns: admin ? undefined : { draft: false, listed: false },
             with: {
               hashtags: {
@@ -665,17 +674,21 @@ export function FeedService(router: Router): void {
         }
       })
 
+      let pageResult: { size: number; data: typeof feed_list; hasNext: boolean }
       if (feed_list.length <= page_num * limit_num) {
-        return { size: feed_list.length, data: [], hasNext: false }
+        pageResult = { size: feed_list.length, data: [], hasNext: false }
       } else if (feed_list.length <= page_num * limit_num + limit_num) {
-        return { size: feed_list.length, data: feed_list.slice(page_num * limit_num), hasNext: false }
+        pageResult = { size: feed_list.length, data: feed_list.slice(page_num * limit_num), hasNext: false }
       } else {
-        return {
+        pageResult = {
           size: feed_list.length,
           data: feed_list.slice(page_num * limit_num, page_num * limit_num + limit_num),
           hasNext: true,
         }
       }
+
+      await cache.set(pageCacheKey, pageResult)
+      return pageResult
     },
     searchSchema
   )

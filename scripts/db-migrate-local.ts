@@ -7,6 +7,38 @@ import { isKnownTopColumnCatchUpCase } from './migration-utils'
 const DB_NAME = 'rin'
 const SQL_DIR = path.join(__dirname, '..', 'server', 'sql')
 
+const ABOUT_SEED_SQL = `INSERT INTO feeds (alias, title, summary, content, listed, draft, uid, top, created_at, updated_at)
+SELECT
+  'about',
+  'About',
+  'Welcome to Rin. Update this page from the Writing panel.',
+  'Welcome to Rin. Update this page from the Writing panel.',
+  1,
+  0,
+  users.id,
+  0,
+  unixepoch(),
+  unixepoch()
+FROM users
+WHERE users.permission = 1
+  AND NOT EXISTS (SELECT 1 FROM feeds WHERE alias = 'about')
+LIMIT 1;`
+
+async function ensureAboutSeed(typ: string, dbName: string): Promise<void> {
+  const { exitCode, stdout, stderr } = await $`bunx wrangler d1 execute ${dbName} --${typ} --command ${ABOUT_SEED_SQL}`
+    .quiet()
+    .nothrow()
+
+  if (exitCode !== 0) {
+    const output = `${stdout.toString()}\n${stderr.toString()}`.trim()
+    console.error('Failed to seed default About page')
+    if (output) {
+      console.error(output)
+    }
+    process.exit(1)
+  }
+}
+
 // Change to the server/sql directory
 process.chdir(SQL_DIR)
 const typ = 'local'
@@ -62,6 +94,7 @@ if (sqlFiles.length === 0) {
 }
 
 await fixTopField(typ, DB_NAME, isInfoExistResult)
+await ensureAboutSeed(typ, DB_NAME)
 
 // Back to the root directory (optional, as the script ends)
 process.chdir(__dirname)

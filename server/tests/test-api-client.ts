@@ -396,8 +396,17 @@ export class TestAPIClient {
 
   // Search API
   search = {
-    search: async (keyword: string, options?: TestAPIOptions): Promise<ApiResponse<FeedListResponse>> => {
-      return this.get<FeedListResponse>(`/search/${encodeURIComponent(keyword)}`, options)
+    search: async (
+      keyword: string,
+      params?: { page?: number; limit?: number },
+      options?: TestAPIOptions
+    ): Promise<ApiResponse<FeedListResponse>> => {
+      const searchParams = new URLSearchParams()
+      if (params?.page) searchParams.set('page', params.page.toString())
+      if (params?.limit) searchParams.set('limit', params.limit.toString())
+      const query = searchParams.toString()
+
+      return this.get<FeedListResponse>(`/search/${encodeURIComponent(keyword)}${query ? `?${query}` : ''}`, options)
     },
   }
 

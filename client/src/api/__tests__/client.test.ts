@@ -195,6 +195,49 @@ describe('API Client', () => {
     })
   })
 
+  describe('Search API', () => {
+    it('should send page and limit query parameters', async () => {
+      const mockResponse = {
+        size: 2,
+        data: [{ id: 1, title: 'Result 1', content: 'Result Content 1' }],
+        hasNext: true,
+      }
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: new Map([['content-type', 'application/json']]),
+        json: async () => mockResponse,
+      })
+
+      const result = await api.search.search('test keyword', { page: 2, limit: 1 })
+
+      expect(result.data).toEqual(mockResponse)
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost/api/search/test%20keyword?page=2&limit=1',
+        expect.any(Object)
+      )
+    })
+
+    it('should call search endpoint without query when pagination options are omitted', async () => {
+      const mockResponse = {
+        size: 1,
+        data: [{ id: 1, title: 'Only Result', content: 'Result Content' }],
+        hasNext: false,
+      }
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: new Map([['content-type', 'application/json']]),
+        json: async () => mockResponse,
+      })
+
+      const result = await api.search.search('test')
+
+      expect(result.data).toEqual(mockResponse)
+      expect(mockFetch).toHaveBeenCalledWith('http://localhost/api/search/test', expect.any(Object))
+    })
+  })
+
   describe('User API', () => {
     it('should fetch user profile', async () => {
       const mockResponse = {
