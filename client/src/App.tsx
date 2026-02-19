@@ -1,9 +1,9 @@
 import { useContext, useEffect, useRef, useState } from 'react'
-import { Helmet } from './components/helmet'
 import { useTranslation } from 'react-i18next'
 import { type DefaultParams, type PathPattern, Route, Switch } from 'wouter'
 import Footer from './components/footer'
 import { Header } from './components/header'
+import { Helmet } from './components/helmet'
 import { Padding } from './components/padding'
 import { Tips, TipsPage } from './components/tips.tsx'
 import useTableOfContents from './hooks/useTableOfContents.tsx'
@@ -24,6 +24,7 @@ import { TimelinePage } from './page/timeline'
 import { WritingPage } from './page/writing'
 import { ClientConfigContext, ConfigWrapper, defaultClientConfig } from './state/config.tsx'
 import { type Profile, ProfileContext } from './state/profile'
+import { getAuthCookieToken, getAuthToken, removeAuthToken } from './utils/auth'
 import { tryInt } from './utils/int'
 
 function App() {
@@ -44,19 +45,34 @@ function App() {
     applyScaling()
     // --- 自动缩放逻辑结束 ---
     if (ref.current) return
-    client.user.profile().then(({ data, error }) => {
-      if (data) {
-        setProfile({
-          id: data.id,
-          avatar: data.avatar || '',
-          permission: data.permission,
-          name: data.username,
-        })
-      } else if (error) {
-        // User not authenticated
-        setProfile(null)
-      }
-    })
+    const token = getAuthToken()
+    const cookieToken = getAuthCookieToken()
+    if (!token && !cookieToken) {
+      setProfile(null)
+    } else {
+      client.user.profile().then(({ data, error }) => {
+        if (data) {
+          setProfile({
+            id: data.id,
+            avatar: data.avatar || '',
+            permission: data.permission,
+            name: data.username,
+          })
+        } else if (error) {
+          if (error.status === 401 || error.status === 403) {
+            void client.user
+              .logout()
+              .catch(() => {
+                // Best effort: always clear client auth state even if logout request fails.
+              })
+              .finally(() => {
+                removeAuthToken()
+              })
+          }
+          setProfile(null)
+        }
+      })
+    }
     const config = sessionStorage.getItem('config')
     if (config) {
       const configObj = JSON.parse(config)

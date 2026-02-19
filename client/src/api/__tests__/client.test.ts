@@ -92,6 +92,31 @@ describe('API Client', () => {
         })
       )
     })
+
+    it('should fetch adjacent feeds', async () => {
+      const mockResponse = {
+        previousFeed: {
+          id: 1,
+          title: 'Feed 1',
+          summary: 'Summary 1',
+          hashtags: [],
+          createdAt: '2025-01-01T00:00:00.000Z',
+          updatedAt: '2025-01-01T00:00:00.000Z',
+        },
+        nextFeed: null,
+      }
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: new Map([['content-type', 'application/json']]),
+        json: async () => mockResponse,
+      })
+
+      const result = await api.feed.adjacent(2)
+
+      expect(result.data).toEqual(mockResponse)
+      expect(mockFetch).toHaveBeenCalledWith('http://localhost/api/feed/adjacent/2', expect.any(Object))
+    })
   })
 
   describe('Tag API', () => {

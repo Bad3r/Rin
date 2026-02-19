@@ -18,9 +18,11 @@ export function MomentsPage() {
   const [moments, setMoments] = useState<Moment[]>([])
   const [length, setLength] = useState(0)
   const [content, setContent] = useState('')
+  const contentRef = useRef('')
   const [loading, setLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingMoment, setEditingMoment] = useState<Moment | null>(null)
+  const [editorSessionKey, setEditorSessionKey] = useState(0)
   const query = new URLSearchParams(useSearch())
   const ref = useRef(false)
   const { t } = useTranslation()
@@ -32,6 +34,11 @@ export function MomentsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [hasNextPage, setHasNextPage] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+
+  function handleContentChange(nextContent: string) {
+    contentRef.current = nextContent
+    setContent(nextContent)
+  }
 
   const limit = tryInt(10, query.get('limit'), siteConfig.pageSize)
 
@@ -83,18 +90,20 @@ export function MomentsPage() {
   }
 
   function handleSubmit() {
-    if (!content.trim()) return
+    const currentContent = contentRef.current
+    if (!currentContent.trim()) return
 
     setLoading(true)
 
     if (editingMoment) {
       client.moments
-        .update(editingMoment.id, { content })
+        .update(editingMoment.id, { content: currentContent })
         .then(({ error }) => {
           if (error) {
             showAlert(t('update.failed$message', { message: error.value }))
           } else {
             setContent('')
+            contentRef.current = ''
             setEditingMoment(null)
             setIsModalOpen(false)
             fetchMoments(1, false)
@@ -106,12 +115,13 @@ export function MomentsPage() {
         })
     } else {
       client.moments
-        .create({ content })
+        .create({ content: currentContent })
         .then(({ error }) => {
           if (error) {
             showAlert(t('publish.failed$message', { message: error.value }))
           } else {
             setContent('')
+            contentRef.current = ''
             setIsModalOpen(false)
             fetchMoments(1, false)
             showAlert(t('publish.success'))
@@ -126,6 +136,8 @@ export function MomentsPage() {
   function handleEdit(moment: Moment) {
     setEditingMoment(moment)
     setContent(moment.content)
+    contentRef.current = moment.content
+    setEditorSessionKey(prev => prev + 1)
     setIsModalOpen(true)
   }
 
@@ -145,6 +157,8 @@ export function MomentsPage() {
   function openCreateModal() {
     setEditingMoment(null)
     setContent('')
+    contentRef.current = ''
+    setEditorSessionKey(prev => prev + 1)
     setIsModalOpen(true)
   }
 
@@ -250,7 +264,7 @@ export function MomentsPage() {
           </h2>
 
           <div className='bg-w rounded-2xl t-primary'>
-            <MarkdownEditor content={content} setContent={setContent} height='300px' />
+            <MarkdownEditor key={editorSessionKey} content={content} setContent={handleContentChange} height='300px' />
           </div>
 
           <div className='flex justify-end mt-4 space-x-2'>
