@@ -1,7 +1,5 @@
 import type { Handler, Middleware } from './types'
 
-export type RouterImpl = 'legacy' | 'hono'
-
 export interface RouterLike {
   use(middleware: Middleware): this
 
