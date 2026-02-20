@@ -19,7 +19,7 @@
     "test:remote": "bun run scripts/run-remote-tests.ts",
     "test:ci": "bun run test:unit && bun run test:integration",
     "test:coverage": "bun run test:coverage:ci",
-    "test:coverage:ci": "vitest run --config ./vitest.config.ts --coverage src tests/security tests/unit tests/integration --passWithNoTests --reporter=default --reporter=junit --outputFile.junit=coverage/junit.xml",
+    "test:coverage:ci": "vitest run --config ./vitest.config.ts --coverage src tests/security tests/unit tests/integration --passWithNoTests --reporter=default --reporter=junit --outputFile.junit=coverage/junit.xml && bun ../scripts/check-server-router-coverage.ts",
     "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.scripts.json"
   },
   "devDependencies": {
