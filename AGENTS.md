@@ -35,6 +35,21 @@ bun run test:server       # Run server tests only
  bun run test:coverage     # Run tests with coverage report
 ```
 
+## New Worktree Bootstrap (Required)
+
+When creating a new worktree, always bootstrap local machine files from the main checkout at `~/git/Rin` before committing or pushing.
+
+Required steps:
+
+```bash
+# From the new worktree root
+mkdir -p .devenv
+cp -f ~/git/Rin/.devenv/pre-commit-config.yaml .devenv/pre-commit-config.yaml
+cp -f ~/git/Rin/.env.local .env.local
+```
+
+Do not skip this. Missing `.devenv/pre-commit-config.yaml` will break `prek` hooks, and missing `.env.local` breaks local development/bootstrap flows.
+
 ## Rin CLI
 
 The project uses a unified CLI tool located at `cli/bin/rin.ts`. All development, deployment, and database commands are available through this CLI.
