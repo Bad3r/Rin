@@ -14,7 +14,7 @@
       "name": "client",
       "version": "1.0.0",
       "dependencies": {
-        "@astroimg/timeago": "^1.1.6",
+        "@astroimg/timeago": "^1.1.11",
         "@monaco-editor/react": "4.7.0",
         "@prosemirror-adapter/react": "^0.2.6",
         "@radix-ui/react-switch": "^1.1.0",
@@ -145,7 +145,7 @@
 
     "@asamuzakjp/dom-selector": ["@asamuzakjp/dom-selector@2.0.2", "https://registry.npmmirror.com/@asamuzakjp/dom-selector/-/dom-selector-2.0.2.tgz", { "dependencies": { "bidi-js": "^1.0.3", "css-tree": "^2.3.1", "is-potential-custom-element-name": "^1.0.1" } }, "sha512-x1KXOatwofR6ZAYzXRBL5wrdV0vwNxlTCK9NCuLqAzQYARqGcvFwiJA6A1ERuh+dgeA4Dxm3JBYictIes+SqUQ=="],
 
-    "@astroimg/timeago": ["@astroimg/timeago@1.1.9", "https://registry.npmmirror.com/@astroimg/timeago/-/timeago-1.1.9.tgz", {}, "sha512-H9koaJvnwVzwjCyFA6hHCDcdWpeBVuq3PbXVWdswaNpotKb682WgISJZqrz7nVPMF6mfjLmbg1kRwWG2EE9xmA=="],
+    "@astroimg/timeago": ["@astroimg/timeago@1.1.11", "", {}, "sha512-Jt0srFmdVaX1Go7HYXCemlmrz3DFhP8HKiXe7dOTqsD3RSJ/M2b2pH5An6bIdaME5Sn/XsvUfd2VvW/sdFrRVQ=="],
 
     "@babel/code-frame": ["@babel/code-frame@7.24.7", "https://registry.npmmirror.com/@babel/code-frame/-/code-frame-7.24.7.tgz", { "dependencies": { "@babel/highlight": "^7.24.7", "picocolors": "^1.0.0" } }, "sha512-BcYH1CVJBO9tvyIZ2jVeXgSIMvGZ2FDRvDdOIVQyuklNKSsx+eppDEBq/g47Ayw+RqNFE+URvOShmf+f/qwAlA=="],
 
