@@ -18,7 +18,7 @@
     "test:coverage:ci": "vitest run --coverage --coverage.reporter=text --coverage.reporter=lcov --coverage.reportsDirectory=coverage --reporter=default --reporter=junit --outputFile.junit=coverage/junit.xml"
   },
   "dependencies": {
-    "@astroimg/timeago": "^1.1.6",
+    "@astroimg/timeago": "^1.1.11",
     "@monaco-editor/react": "4.7.0",
     "@prosemirror-adapter/react": "^0.2.6",
     "@radix-ui/react-switch": "^1.1.0",
