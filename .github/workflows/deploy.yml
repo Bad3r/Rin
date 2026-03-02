@@ -71,7 +71,7 @@ jobs:
     steps:
       - name: Download build artifacts from workflow
         if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: build-${{ github.event.workflow_run.id }}
           path: ./artifacts
@@ -141,7 +141,7 @@ jobs:
 
       - name: Download build artifacts from PR build
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: build-${{ steps.pr_build.outputs.run_id }}
           path: ./artifacts
@@ -495,7 +495,7 @@ jobs:
             }
 
       - name: Upload artifacts for deploy job
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: deploy-artifacts-${{ github.run_id }}
           path: ./artifacts
@@ -515,7 +515,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: deploy-artifacts-${{ github.run_id }}
           path: ./artifacts
