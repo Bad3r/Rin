@@ -9,7 +9,7 @@
 ![GitHub branch check runs](https://img.shields.io/github/check-runs/Bad3r/Rin/main?style=for-the-badge)
 ![GitHub top language](https://img.shields.io/github/languages/top/Bad3r/Rin?style=for-the-badge)
 ![GitHub License](https://img.shields.io/github/license/Bad3r/Rin?style=for-the-badge)
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Bad3r/Rin/deploy.yaml?style=for-the-badge)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Bad3r/Rin/deploy.yml?style=for-the-badge)
 
 ## 项目简介
 
