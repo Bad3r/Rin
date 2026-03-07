@@ -33,7 +33,7 @@ class LazyInitContainer {
 
 export function createBaseApp(env: Env): Router {
   const container = new LazyInitContainer()
-  const app = createRouter(env)
+  const app = createRouter()
 
   // Add middlewares
   app.use(corsMiddleware())

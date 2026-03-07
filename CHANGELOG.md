@@ -21,8 +21,8 @@ which automatically generates release notes from commit messages.
 - Added DevSkim security scanning workflow ([21a7ff4](https://github.com/Bad3r/Rin/commit/21a7ff4)).
 
 ### Changed
-- Server routing now supports a dual-adapter architecture (`legacy` and `hono`) behind `ROUTER_IMPL`, with parity coverage and migration regression tests for OAuth/friend routes and worker `/api/*` prefix handling ([#9](https://github.com/Bad3r/Rin/pull/9)).
-- Router factory default switched to `hono`; invalid `ROUTER_IMPL` values now warn and safely fall back to `hono` ([#16](https://github.com/Bad3r/Rin/pull/16)).
+- Server routing is now Hono-only with retained behavior-contract coverage for router semantics, OAuth regressions, friend route mounting, and worker `/api/*` prefix handling.
+- Coverage CI now enforces minimum router/core thresholds (`src/core/base.ts`, `src/core/router-factory.ts`, `src/core/router-hono.ts`) to guard post-cutover regressions.
 - Tightened shared/client/server type boundaries and stabilized worker coverage cold starts for test reliability ([#32](https://github.com/Bad3r/Rin/pull/32)).
 - Completed flake-first Nix/dev bootstrap and quality-gate rollout (`treefmt`, linting, pre-commit compatibility, repo formatting sync) ([#3](https://github.com/Bad3r/Rin/pull/3), [#6](https://github.com/Bad3r/Rin/pull/6), [#8](https://github.com/Bad3r/Rin/pull/8), [#11](https://github.com/Bad3r/Rin/pull/11)).
 - Modernized core dependencies/tooling with Bun major updates, GitHub Actions refreshes, and Drizzle ORM/Kit upgrades ([#21](https://github.com/Bad3r/Rin/pull/21), [#26](https://github.com/Bad3r/Rin/pull/26), [#33](https://github.com/Bad3r/Rin/pull/33)).
@@ -32,6 +32,7 @@ which automatically generates release notes from commit messages.
 ### Deprecated
 
 ### Removed
+- Removed the legacy router adapter and `ROUTER_IMPL` environment toggle from runtime/test configuration.
 
 ### Fixed
 - Hardened search privacy and correctness by separating public/authenticated search cache keys, fixing search pagination propagation, and ensuring idempotent about-page bootstrap/seed behavior ([#37](https://github.com/Bad3r/Rin/pull/37)).
