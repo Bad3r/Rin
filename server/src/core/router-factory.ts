@@ -9,6 +9,6 @@ const defaultDeps: RouterFactoryDeps = {
   createHono: createHonoRouter,
 }
 
-export function createRouterWithFactory(_env?: Env, deps: RouterFactoryDeps = defaultDeps): Router {
+export function createRouterWithFactory(deps: RouterFactoryDeps = defaultDeps): Router {
   return deps.createHono()
 }

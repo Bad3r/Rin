@@ -52,7 +52,7 @@ describe('Router compatibility contract (hono)', () => {
   })
 
   it('propagates state mutations made after group registration', async () => {
-    const rawApp = createRouter(env)
+    const rawApp = createRouter()
     rawApp.group('/state', group => {
       group.get('/check', ctx => ({ routerMode: ctx.store.routerMode }))
     })
@@ -85,7 +85,7 @@ describe('Router compatibility contract (hono)', () => {
   })
 
   it('routes router-level OPTIONS through router middleware', async () => {
-    const rawApp = createRouter(env)
+    const rawApp = createRouter()
     rawApp.use(async ctx => {
       if (ctx.request.method === 'OPTIONS') {
         ctx.set.headers.set('x-preflight-source', 'middleware')
