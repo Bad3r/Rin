@@ -7,7 +7,7 @@ describe('createRouterWithFactory', () => {
     const expected = {} as Router
     let calls = 0
 
-    const router = createRouterWithFactory(undefined, {
+    const router = createRouterWithFactory({
       createHono: () => {
         calls++
         return expected
@@ -22,7 +22,7 @@ describe('createRouterWithFactory', () => {
     const expected = new Error('hono init failed')
 
     expect(() =>
-      createRouterWithFactory(undefined, {
+      createRouterWithFactory({
         createHono: () => {
           throw expected
         },

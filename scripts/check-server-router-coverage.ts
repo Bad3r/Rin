@@ -20,9 +20,9 @@ type Threshold = {
 }
 
 const THRESHOLDS: Threshold[] = [
-  { file: 'src/core/base.ts', statements: 80, branches: 78 },
-  { file: 'src/core/router-factory.ts', statements: 80, branches: 78 },
-  { file: 'src/core/router-hono.ts', statements: 80, branches: 78 },
+  { file: 'server/src/core/base.ts', statements: 80, branches: 78 },
+  { file: 'server/src/core/router-factory.ts', statements: 80, branches: 78 },
+  { file: 'server/src/core/router-hono.ts', statements: 80, branches: 78 },
 ]
 
 function normalizePath(value: string): string {
@@ -48,10 +48,42 @@ function resolveSummaryPath(): string {
   )
 }
 
-function getCoverageEntry(summary: CoverageSummary, relativeFile: string): FileCoverage | undefined {
-  const target = `/${normalizePath(relativeFile)}`
+function resolveCoverageRoots(summaryPath: string): { workspaceRoot: string; serverRoot: string } {
+  const coverageDir = path.dirname(summaryPath)
+  const serverRoot = path.dirname(coverageDir)
+  const workspaceRoot = path.dirname(serverRoot)
+  return { workspaceRoot, serverRoot }
+}
+
+function canonicalizeCoverageKeyPath(
+  key: string,
+  roots: { workspaceRoot: string; serverRoot: string }
+): string | undefined {
+  const normalized = normalizePath(key).replace(/^\.\/+/, '')
+  if (normalized === 'total') {
+    return undefined
+  }
+
+  if (path.isAbsolute(normalized)) {
+    return normalizePath(path.resolve(normalized))
+  }
+
+  if (normalized.startsWith('src/')) {
+    return normalizePath(path.resolve(roots.serverRoot, normalized))
+  }
+
+  return normalizePath(path.resolve(roots.workspaceRoot, normalized))
+}
+
+function getCoverageEntry(
+  summary: CoverageSummary,
+  relativeFile: string,
+  roots: { workspaceRoot: string; serverRoot: string }
+): FileCoverage | undefined {
+  const target = normalizePath(path.resolve(roots.workspaceRoot, relativeFile))
   for (const [key, value] of Object.entries(summary)) {
-    if (normalizePath(key).endsWith(target)) {
+    const candidate = canonicalizeCoverageKeyPath(key, roots)
+    if (candidate === target) {
       return value
     }
   }
@@ -64,6 +96,7 @@ function readMetric(value: FileCoverage | undefined, metric: 'statements' | 'bra
 
 function main(): void {
   const summaryPath = resolveSummaryPath()
+  const roots = resolveCoverageRoots(summaryPath)
   const raw = fs.readFileSync(summaryPath, 'utf-8')
   const summary = JSON.parse(raw) as CoverageSummary
 
@@ -72,7 +105,7 @@ function main(): void {
   console.log(`[coverage] checking router/core thresholds from ${normalizePath(summaryPath)}`)
 
   for (const rule of THRESHOLDS) {
-    const entry = getCoverageEntry(summary, rule.file)
+    const entry = getCoverageEntry(summary, rule.file, roots)
     if (!entry) {
       failures.push(`${rule.file}: missing from coverage summary`)
       continue
