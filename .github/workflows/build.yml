@@ -75,7 +75,7 @@ jobs:
           bunx wrangler deploy --dry-run --outdir=dist/server
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: build-${{ github.run_id }}
           path: |
