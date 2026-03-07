@@ -35,11 +35,27 @@ bun run test:server       # Run server tests only
  bun run test:coverage     # Run tests with coverage report
 ```
 
+## New Worktree Bootstrap (Required)
+
+When creating a new worktree, always bootstrap local machine files from the main checkout at `~/igit/Rin-fork` before committing or pushing.
+
+Required steps:
+
+```bash
+# From the new worktree root
+mkdir -p .devenv
+cp -f ~/igit/Rin-fork/.devenv/pre-commit-config.yaml .devenv/pre-commit-config.yaml
+cp -f ~/igit/Rin-fork/.env.local .env.local
+```
+
+Do not skip this. Missing `.devenv/pre-commit-config.yaml` will break `prek` hooks, and missing `.env.local` breaks local development/bootstrap flows.
+
 ## Rin CLI
 
 The project uses a unified CLI tool located at `cli/bin/rin.ts`. All development, deployment, and database commands are available through this CLI.
 
 ### CLI Commands
+
 - `bun cli/bin/rin.ts dev [options]` - Start development server
 - `bun cli/bin/rin.ts deploy [options]` - Deploy to Cloudflare
 - `bun cli/bin/rin.ts db migrate` - Run database migrations
@@ -50,6 +66,7 @@ The project uses a unified CLI tool located at `cli/bin/rin.ts`. All development
 The project has comprehensive test coverage for both client and server:
 
 ### Client Tests (Vitest)
+
 - **Location**: `client/src/**/__tests__/*.test.ts`
 - **Runner**: Vitest with jsdom environment
 - **Commands**:
@@ -60,6 +77,7 @@ The project has comprehensive test coverage for both client and server:
   ```
 
 ### Server Tests (Bun)
+
 - **Location**: `server/src/**/__tests__/*.test.ts`, `server/tests/`
 - **Runner**: Bun's native test runner (`bun:test`)
 - **Commands**:
@@ -69,6 +87,7 @@ The project has comprehensive test coverage for both client and server:
   ```
 
 ### Test Structure
+
 - Unit tests for services, utilities, and core functionality
 - Integration tests for API endpoints
 - Security tests for mock isolation
@@ -91,7 +110,7 @@ The project has comprehensive test coverage for both client and server:
 ```typescript
 // External imports first (alphabetical)
 import { eq, and } from "drizzle-orm";
-import React from 'react';
+import React from "react";
 
 // Internal imports (alphabetical)
 import { Router } from "../core/router";
@@ -125,6 +144,7 @@ import { feeds } from "../db/schema";
 ### Commit Messages
 
 Must follow conventional commits format:
+
 ```
 feat: add new feature
 chore: update dependencies
@@ -137,6 +157,7 @@ pref: performance improvements
 ```
 
 Setup the commit hook:
+
 ```bash
 ln -s ../../scripts/git-commit-msg.sh .git/hooks/commit-msg
 ```
@@ -150,7 +171,6 @@ ln -s ../../scripts/git-commit-msg.sh .git/hooks/commit-msg
 ### Project Structure
 
 ```
-/home/xeu/projects/rin/
 ├── client/          # React + Vite frontend
 │   ├── src/
 │   │   ├── components/   # React components
