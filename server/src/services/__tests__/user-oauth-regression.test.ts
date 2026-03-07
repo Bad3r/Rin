@@ -44,7 +44,8 @@ describe('User OAuth regression (hono)', () => {
     })
     app.state('oauth2', {
       generateState: () => 'state-123',
-      createRedirectUrl: (state: string, _provider: string) => `https://github.com/login/oauth/authorize?state=${state}`,
+      createRedirectUrl: (state: string, _provider: string) =>
+        `https://github.com/login/oauth/authorize?state=${state}`,
       authorize: async (_provider: string, _code: string) => ({ accessToken: 'gh-token' }),
     })
     app.use(async ctx => {
