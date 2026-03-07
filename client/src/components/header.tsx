@@ -323,7 +323,7 @@ function UserAvatar({ className, profile }: { className?: string; profile?: Prof
   return (
     <>
       {' '}
-      {config.get<boolean>('login.enabled') && (
+      {config.getBoolean('login.enabled') && (
         <div className={`${className} flex flex-row items-center`}>
           {profile ? (
             <div className='w-8 relative group'>

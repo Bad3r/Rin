@@ -331,7 +331,7 @@ function ItemSwitch({
   const { showAlert, AlertUI } = useAlert()
   const { t } = useTranslation()
   useEffect(() => {
-    const value = config?.get<boolean>(configKey)
+    const value = config?.getBoolean(configKey)
     if (value !== undefined) {
       setChecked(value)
     }
