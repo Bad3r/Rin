@@ -5,6 +5,9 @@ import type { JsonValue } from '@rin/api'
 import ReactLoading from '../components/react-loading'
 import Modal from 'react-modal'
 import { Button } from '../components/button.tsx'
+import { FEED_CARD_VARIANTS, normalizeFeedCardVariant } from '../components/feed-card-options'
+import { FeedCardPreview } from '../components/feed-card-preview'
+import { FEED_LAYOUT_OPTIONS, normalizeFeedLayout } from '../components/feed-layout-options'
 import { HeaderLayoutPreview } from '../components/site-header/layout-preview'
 import {
   HEADER_BEHAVIOR_OPTIONS,
@@ -237,6 +240,8 @@ export function Settings() {
               />
               <ItemTitle title={t('settings.personalization.title')} />
               <HeaderLayoutSetting />
+              <FeedLayoutSetting />
+              <FeedCardVariantSetting />
               <ThemeColorSetting />
               <HeaderBehaviorSetting />
               <ItemTitle title={t('settings.other.title')} />
@@ -422,6 +427,138 @@ function HeaderLayoutSetting() {
             selected={value === option}
             title={t(`settings.header_layout.options.${option}`)}
             description={t(`settings.header_layout.preview.${option}`)}
+            onClick={() => {
+              void updateConfig(option)
+            }}
+          />
+        ))}
+      </div>
+      <AlertUI />
+    </div>
+  )
+}
+
+function FeedLayoutSetting() {
+  const clientConfig = useContext(ClientConfigContext)
+  const [value, setValue] = useState(normalizeFeedLayout(clientConfig.get<string>('feed.layout') || 'list'))
+  const [loading, setLoading] = useState(false)
+  const { showAlert, AlertUI } = useAlert()
+  const { t } = useTranslation()
+
+  useEffect(() => {
+    setValue(normalizeFeedLayout(clientConfig.get<string>('feed.layout') || 'list'))
+  }, [clientConfig])
+
+  async function updateConfig(nextValue: (typeof FEED_LAYOUT_OPTIONS)[number]) {
+    const previousValue = value
+    setValue(nextValue)
+    setLoading(true)
+    try {
+      const { error } = await client.config.update('client', {
+        'feed.layout': nextValue,
+      })
+      if (error) {
+        setValue(previousValue)
+        showAlert(t('settings.update_failed$message', { message: error.value }))
+        return
+      }
+      updateSessionClientConfig('feed.layout', nextValue)
+    } catch (err: unknown) {
+      setValue(previousValue)
+      showAlert(t('settings.update_failed$message', { message: getErrorMessage(err) }))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className='flex flex-col w-full items-start'>
+      <div className='flex flex-row justify-between w-full items-center'>
+        <div className='flex flex-col'>
+          <p className='text-lg font-bold dark:text-white'>{t('settings.feed_layout.title')}</p>
+          <p className='text-xs text-neutral-500'>{t('settings.feed_layout.desc')}</p>
+        </div>
+        <div className='flex flex-row items-center justify-center space-x-4'>
+          {loading && <ReactLoading width='1em' height='1em' type='spin' color='#FC466B' />}
+        </div>
+      </div>
+      <div className='mt-3 flex flex-wrap gap-3'>
+        {FEED_LAYOUT_OPTIONS.map(option => (
+          <button
+            type='button'
+            key={option}
+            onClick={() => {
+              void updateConfig(option)
+            }}
+            className={`rounded-full border px-4 py-2 text-sm transition-all ${
+              value === option
+                ? 'border-theme bg-theme text-white'
+                : 'border-black/10 bg-w t-primary hover:border-black/20 dark:border-white/10 dark:hover:border-white/20'
+            }`}
+          >
+            {t(`settings.feed_layout.options.${option}`)}
+          </button>
+        ))}
+      </div>
+      <AlertUI />
+    </div>
+  )
+}
+
+function FeedCardVariantSetting() {
+  const clientConfig = useContext(ClientConfigContext)
+  const [value, setValue] = useState(
+    normalizeFeedCardVariant(clientConfig.get<string>('feed.card_variant') || 'default')
+  )
+  const [loading, setLoading] = useState(false)
+  const { showAlert, AlertUI } = useAlert()
+  const { t } = useTranslation()
+
+  useEffect(() => {
+    setValue(normalizeFeedCardVariant(clientConfig.get<string>('feed.card_variant') || 'default'))
+  }, [clientConfig])
+
+  async function updateConfig(nextValue: (typeof FEED_CARD_VARIANTS)[number]) {
+    const previousValue = value
+    setValue(nextValue)
+    setLoading(true)
+    try {
+      const { error } = await client.config.update('client', {
+        'feed.card_variant': nextValue,
+      })
+      if (error) {
+        setValue(previousValue)
+        showAlert(t('settings.update_failed$message', { message: error.value }))
+        return
+      }
+      updateSessionClientConfig('feed.card_variant', nextValue)
+    } catch (err: unknown) {
+      setValue(previousValue)
+      showAlert(t('settings.update_failed$message', { message: getErrorMessage(err) }))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className='flex flex-col w-full items-start'>
+      <div className='flex flex-row justify-between w-full items-center'>
+        <div className='flex flex-col'>
+          <p className='text-lg font-bold dark:text-white'>{t('settings.feed_card.title')}</p>
+          <p className='text-xs text-neutral-500'>{t('settings.feed_card.desc')}</p>
+        </div>
+        <div className='flex flex-row items-center justify-center space-x-4'>
+          {loading && <ReactLoading width='1em' height='1em' type='spin' color='#FC466B' />}
+        </div>
+      </div>
+      <div className='mt-3 grid w-full gap-3 md:grid-cols-2'>
+        {FEED_CARD_VARIANTS.map(option => (
+          <FeedCardPreview
+            key={option}
+            variant={option}
+            selected={value === option}
+            title={t(`settings.feed_card.options.${option}`)}
+            description={t(`settings.feed_card.preview.${option}`)}
             onClick={() => {
               void updateConfig(option)
             }}

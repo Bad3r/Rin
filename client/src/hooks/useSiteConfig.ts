@@ -1,4 +1,6 @@
 import { useContext } from 'react'
+import { normalizeFeedCardVariant } from '../components/feed-card-options'
+import { normalizeFeedLayout } from '../components/feed-layout-options'
 import { ClientConfigContext } from '../state/config'
 
 export const SITE_CONFIG_KEYS = {
@@ -8,6 +10,8 @@ export const SITE_CONFIG_KEYS = {
   pageSize: 'site.page_size',
   headerBehavior: 'header.behavior',
   headerLayout: 'header.layout',
+  feedLayout: 'feed.layout',
+  feedCardVariant: 'feed.card_variant',
   themeColor: 'theme.color',
 } as const
 
@@ -35,6 +39,10 @@ function getStringDefault(key: Exclude<keyof typeof SITE_CONFIG_KEYS, 'pageSize'
       return 'fixed'
     case 'headerLayout':
       return 'classic'
+    case 'feedLayout':
+      return 'list'
+    case 'feedCardVariant':
+      return 'default'
     case 'themeColor':
       return '#fc466b'
   }
@@ -50,6 +58,8 @@ export function useSiteConfig() {
     pageSize: parsePageSize(config.get<number | string>(SITE_CONFIG_KEYS.pageSize)),
     headerBehavior: config.get<string>(SITE_CONFIG_KEYS.headerBehavior) || 'fixed',
     headerLayout: config.get<string>(SITE_CONFIG_KEYS.headerLayout) || 'classic',
+    feedLayout: normalizeFeedLayout(config.get<string>(SITE_CONFIG_KEYS.feedLayout) || 'list'),
+    feedCardVariant: normalizeFeedCardVariant(config.get<string>(SITE_CONFIG_KEYS.feedCardVariant) || 'default'),
     themeColor: config.get<string>(SITE_CONFIG_KEYS.themeColor) || '#fc466b',
   }
 }

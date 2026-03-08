@@ -16,6 +16,8 @@ export const defaultClientConfig = new Map(
     'site.page_size': 5,
     'header.layout': 'classic',
     'header.behavior': 'fixed',
+    'feed.layout': 'list',
+    'feed.card_variant': 'default',
     'theme.color': '#fc466b',
   })
 )

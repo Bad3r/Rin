@@ -1,23 +1,30 @@
 import { asDate, type IsoDateTimeString } from '@rin/api'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'wouter'
+import { useSiteConfig } from '../hooks/useSiteConfig'
 import { drawBlurhashToCanvas } from '../utils/blurhash'
 import { parseImageUrlMetadata } from '../utils/image-upload'
 import { timeago } from '../utils/timeago'
 import { useImageLoadState } from '../utils/use-image-load-state'
+import { type FeedCardVariant, normalizeFeedCardVariant } from './feed-card-options'
 import { HashTag } from './hashtag'
 
-function FeedCardImage({ src }: { src: string }) {
+function FeedCardImage({ src, variant }: { src: string; variant: FeedCardVariant }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { src: cleanSrc, blurhash, width, height } = parseImageUrlMetadata(src)
   const { failed, imageRef, loaded, onError, onLoad } = useImageLoadState(cleanSrc)
   const aspectRatio = width && height ? `${width} / ${height}` : undefined
+  const imageFrameClass =
+    variant === 'editorial'
+      ? 'relative flex max-h-80 w-full flex-row items-center overflow-hidden rounded-[20px]'
+      : 'relative mb-2 flex max-h-80 w-full flex-row items-center overflow-hidden rounded-xl'
 
   useEffect(() => {
     if (!blurhash || !canvasRef.current) {
       return
     }
+
     try {
       drawBlurhashToCanvas(canvasRef.current, blurhash)
     } catch (error) {
@@ -26,12 +33,13 @@ function FeedCardImage({ src }: { src: string }) {
   }, [blurhash])
 
   return (
-    <div
-      className='relative mb-2 flex max-h-80 w-full flex-row items-center overflow-hidden rounded-xl'
-      style={{ aspectRatio }}
-    >
+    <div className={imageFrameClass} style={{ aspectRatio }}>
       {blurhash && !loaded ? (
-        <canvas ref={canvasRef} aria-hidden='true' className='absolute inset-0 h-full w-full scale-110 blur-sm' />
+        <canvas
+          ref={canvasRef}
+          aria-hidden='true'
+          className='absolute inset-0 h-full w-full scale-110 object-cover blur-sm'
+        />
       ) : null}
       <img
         ref={imageRef}
@@ -49,6 +57,47 @@ function FeedCardImage({ src }: { src: string }) {
   )
 }
 
+const FEED_CARD_STYLES: Record<
+  FeedCardVariant,
+  {
+    card: string
+    imageWrap: string
+    meta: string
+    summary: string
+    title: string
+  }
+> = {
+  default: {
+    card: 'my-2 inline-block w-full break-inside-avoid rounded-2xl bg-w p-6 duration-300 bg-button',
+    imageWrap: '',
+    meta: 'text-gray-400 text-sm',
+    summary: 'line-clamp-4 text-pretty overflow-hidden dark:text-neutral-500',
+    title: 'text-xl font-bold text-gray-700 dark:text-white text-pretty overflow-hidden',
+  },
+  editorial: {
+    card: 'my-3 inline-block w-full break-inside-avoid overflow-hidden rounded-[28px] border border-black/10 bg-w p-3 shadow-[0_24px_60px_rgba(15,23,42,0.08)] transition-all hover:-translate-y-0.5 hover:shadow-[0_28px_70px_rgba(15,23,42,0.12)] dark:border-white/10',
+    imageWrap: 'mb-3 overflow-hidden rounded-[22px] border border-black/5 dark:border-white/10',
+    meta: 'text-[12px] font-medium uppercase tracking-[0.18em] text-neutral-500 dark:text-neutral-400',
+    summary: 'line-clamp-5 text-pretty text-[15px] leading-7 text-neutral-600 dark:text-neutral-300',
+    title: 'text-2xl font-semibold tracking-[-0.02em] text-neutral-900 dark:text-white text-pretty overflow-hidden',
+  },
+}
+
+export type FeedCardProps = {
+  id: string | number
+  avatar?: string | null
+  draft?: number
+  listed?: number
+  top?: number
+  title: string | null
+  summary?: string
+  hashtags: { id: number; name: string }[]
+  createdAt: IsoDateTimeString | Date
+  updatedAt: IsoDateTimeString | Date
+  preview?: boolean
+  variant?: FeedCardVariant
+}
+
 export function FeedCard({
   id,
   title,
@@ -60,52 +109,60 @@ export function FeedCard({
   hashtags,
   createdAt,
   updatedAt,
-}: {
-  id: string | number
-  avatar?: string | null
-  draft?: number
-  listed?: number
-  top?: number
-  title: string | null
-  summary?: string
-  hashtags: { id: number; name: string }[]
-  createdAt: IsoDateTimeString | Date
-  updatedAt: IsoDateTimeString | Date
-}) {
+  preview = false,
+  variant,
+}: FeedCardProps) {
   const { t } = useTranslation()
-  return useMemo(() => {
-    const createdAtDate = asDate(createdAt, 'feed.createdAt')
-    const updatedAtDate = asDate(updatedAt, 'feed.updatedAt')
-    const isUpdated = createdAtDate.getTime() !== updatedAtDate.getTime()
+  const siteConfig = useSiteConfig()
+  const activeVariant = normalizeFeedCardVariant(variant ?? siteConfig.feedCardVariant)
+  const styles = FEED_CARD_STYLES[activeVariant]
+  const createdAtDate = asDate(createdAt, 'feed.createdAt')
+  const updatedAtDate = asDate(updatedAt, 'feed.updatedAt')
+  const isUpdated = createdAtDate.getTime() !== updatedAtDate.getTime()
 
-    return (
-      <Link href={`/feed/${id}`} target='_blank' className='w-full rounded-2xl bg-w my-2 p-6 duration-300 bg-button'>
-        {avatar && <FeedCardImage src={avatar} />}
-        <h1 className='text-xl font-bold text-gray-700 dark:text-white text-pretty overflow-hidden'>{title || ''}</h1>
-        <p className='space-x-2'>
-          <span className='text-gray-400 text-sm' title={createdAtDate.toLocaleString()}>
+  const body = (
+    <article className={styles.card}>
+      {avatar ? (
+        <div className={styles.imageWrap}>
+          <FeedCardImage src={avatar} variant={activeVariant} />
+        </div>
+      ) : null}
+      <div className={activeVariant === 'editorial' ? 'px-2 pb-2' : ''}>
+        <h1 className={styles.title}>{title || ''}</h1>
+        <p className={`space-x-2 ${styles.meta}`}>
+          <span title={createdAtDate.toLocaleString()}>
             {isUpdated ? t('feed_card.published$time', { time: timeago(createdAtDate) }) : timeago(createdAtDate)}
           </span>
-          {isUpdated && (
-            <span className='text-gray-400 text-sm' title={updatedAtDate.toLocaleString()}>
+          {isUpdated ? (
+            <span title={updatedAtDate.toLocaleString()}>
               {t('feed_card.updated$time', { time: timeago(updatedAtDate) })}
             </span>
-          )}
+          ) : null}
         </p>
-        <p className='space-x-2'>
-          {draft === 1 && <span className='text-gray-400 text-sm'>{t('draft')}</span>}
-          {listed === 0 && <span className='text-gray-400 text-sm'>{t('unlisted')}</span>}
-          {top === 1 && <span className='text-theme text-sm'>{t('article.top.title')}</span>}
+        <p className={`space-x-2 ${styles.meta} ${activeVariant === 'editorial' ? 'mt-2' : ''}`}>
+          {draft === 1 ? <span>{t('draft')}</span> : null}
+          {listed === 0 ? <span>{t('unlisted')}</span> : null}
+          {top === 1 ? <span className='text-theme'>{t('article.top.title')}</span> : null}
         </p>
-        <p className='text-pretty overflow-hidden dark:text-neutral-500'>{summary || ''}</p>
-        {hashtags.length > 0 && (
-          <div className='mt-2 flex flex-row flex-wrap justify-start gap-x-2'>
+        <p className={`${styles.summary} ${activeVariant === 'editorial' ? 'mt-4 max-w-3xl' : ''}`}>{summary || ''}</p>
+        {hashtags.length > 0 ? (
+          <div
+            className={`flex flex-row flex-wrap justify-start gap-2 ${activeVariant === 'editorial' ? 'mt-4' : 'mt-2 gap-x-2'}`}
+          >
             {hashtags.map(({ name }) => (
               <HashTag key={name} name={name} />
             ))}
           </div>
-        )}
-      </Link>
-    )
-  }, [id, title, avatar, draft, listed, top, summary, hashtags, createdAt, updatedAt, t])
+        ) : null}
+      </div>
+    </article>
+  )
+
+  return preview ? (
+    body
+  ) : (
+    <Link href={`/feed/${id}`} target='_blank' className='block w-full'>
+      {body}
+    </Link>
+  )
 }

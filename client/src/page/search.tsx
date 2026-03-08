@@ -20,6 +20,8 @@ export function SearchPage({ keyword }: { keyword: string }) {
   const [feeds, setFeeds] = useState<FeedsData>()
   const page = tryInt(1, query.get('page'))
   const limit = tryInt(10, query.get('limit'), siteConfig.pageSize)
+  const feedListClass =
+    siteConfig.feedLayout === 'masonry' ? 'wauto columns-1 gap-5 md:columns-2' : 'wauto flex flex-col'
   const ref = useRef('')
 
   useEffect(() => {
@@ -57,7 +59,7 @@ export function SearchPage({ keyword }: { keyword: string }) {
             </div>
           </div>
           <Waiting for={status === 'idle'}>
-            <div className='wauto flex flex-col'>
+            <div className={feedListClass}>
               {feeds?.data.map(feedItem => {
                 const { id, ...feed } = feedItem
                 return <FeedCard key={id} id={`${id}`} {...feed} />
@@ -66,7 +68,7 @@ export function SearchPage({ keyword }: { keyword: string }) {
             <div className='wauto flex flex-row items-center mt-4 ani-show'>
               {page > 1 && (
                 <Link
-                  href={`?page=${page - 1}`}
+                  href={`?page=${page - 1}&limit=${limit}`}
                   className={`text-sm font-normal rounded-full px-4 py-2 text-white bg-theme`}
                 >
                   {t('previous')}
@@ -75,7 +77,7 @@ export function SearchPage({ keyword }: { keyword: string }) {
               <div className='flex-1' />
               {feeds?.hasNext && (
                 <Link
-                  href={`?page=${page + 1}`}
+                  href={`?page=${page + 1}&limit=${limit}`}
                   className={`text-sm font-normal rounded-full px-4 py-2 text-white bg-theme`}
                 >
                   {t('next')}
