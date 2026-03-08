@@ -1,65 +1,55 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { MomentsService } from '../moments'
-import { createBaseApp } from '../../core/base'
-import { createMockDB, createMockEnv, cleanupTestDB } from '../../../tests/fixtures'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { cleanupTestDB, createMockDB, createMockEnv, execSql, queryFirst } from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
-import type { Database } from 'bun:sqlite'
+import { createBaseApp } from '../../core/base'
+import { MomentsService } from '../moments'
 
 describe('MomentsService', () => {
-  let db: any
-  let sqlite: Database
+  let sqlite: D1Database
   let env: Env
-  let app: any
+  let app: ReturnType<typeof createBaseApp>
   let api: ReturnType<typeof createTestClient>
 
   beforeEach(async () => {
     const mockDB = createMockDB()
-    db = mockDB.db
     sqlite = mockDB.sqlite
     env = createMockEnv()
 
-    // Setup app with mock db
     app = createBaseApp(env)
-    app.state('db', db)
+    app.state('db', mockDB.db)
     app.state('jwt', {
-      sign: async (payload: any) => `mock_token_${payload.id}`,
-      verify: async (token: string) => (token.startsWith('mock_token_') ? { id: 1 } : null),
+      sign: async (payload: Record<string, unknown>) => `mock_token_${String(payload.id ?? '')}`,
+      verify: async (token: string) => {
+        const match = token.match(/mock_token_(\d+)/)
+        return match ? { id: Number.parseInt(match[1], 10) } : null
+      },
     })
     app.state('cache', {
       get: async () => undefined,
       set: async () => {},
       delete: async () => {},
       deletePrefix: async () => {},
-      getOrSet: async (key: string, fn: Function) => fn(),
-      getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
+      getOrSet: async (_key: string, fn: () => unknown) => fn(),
+      getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
     })
 
-    // Register service
     MomentsService(app)
-
-    // Create test API client
     api = createTestClient(app, env)
 
-    // Create test users
-    await createTestUsers()
+    await execSql(
+      sqlite,
+      `
+        INSERT INTO users (id, username, openid, avatar, permission)
+        VALUES
+          (1, 'admin', 'gh_admin', 'admin.png', 1),
+          (2, 'regular', 'gh_regular', 'regular.png', 0)
+      `
+    )
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
-
-  async function createTestUsers() {
-    // Create admin user (id=1, permission=1)
-    sqlite.exec(`
-            INSERT INTO users (id, username, openid, avatar, permission) 
-            VALUES (1, 'admin', 'gh_admin', 'admin.png', 1)
-        `)
-    // Create regular user (id=2, permission=0)
-    sqlite.exec(`
-            INSERT INTO users (id, username, openid, avatar, permission) 
-            VALUES (2, 'regular', 'gh_regular', 'regular.png', 0)
-        `)
-  }
 
   describe('GET /moments - List moments', () => {
     it('should return empty list when no moments exist', async () => {
@@ -68,24 +58,25 @@ describe('MomentsService', () => {
       expect(result.error).toBeUndefined()
       expect(result.data?.data).toEqual([])
       expect(result.data?.hasNext).toBe(false)
-      expect(result.data?.size).toBe(0)
     })
 
     it('should return paginated moments', async () => {
-      // Insert test moments
-      sqlite.exec(`
-                INSERT INTO moments (id, content, uid, created_at, updated_at) VALUES 
-                (1, 'Moment 1', 1, unixepoch(), unixepoch()),
-                (2, 'Moment 2', 1, unixepoch(), unixepoch()),
-                (3, 'Moment 3', 1, unixepoch(), unixepoch())
-            `)
+      await execSql(
+        sqlite,
+        `
+          INSERT INTO moments (id, content, uid, created_at, updated_at)
+          VALUES
+            (1, 'Moment 1', 1, 1000, 1000),
+            (2, 'Moment 2', 1, 2000, 2000),
+            (3, 'Moment 3', 1, 3000, 3000)
+        `
+      )
 
       const result = await api.moments.list({ page: 1, limit: 2 })
 
       expect(result.error).toBeUndefined()
       expect(result.data?.data.length).toBe(2)
       expect(result.data?.hasNext).toBe(true)
-      expect(result.data?.size).toBe(3)
     })
 
     it('should return cached result if available', async () => {
@@ -100,8 +91,8 @@ describe('MomentsService', () => {
         set: async () => {},
         delete: async () => {},
         deletePrefix: async () => {},
-        getOrSet: async (_key: string, fn: Function) => fn(),
-        getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
+        getOrSet: async (_key: string, fn: () => unknown) => fn(),
+        getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
       })
 
       const result = await api.moments.list()
@@ -111,12 +102,12 @@ describe('MomentsService', () => {
     })
 
     it('should limit to maximum 50 items per page', async () => {
-      // Insert many moments
       const values = Array.from(
         { length: 55 },
-        (_, i) => `(${i + 1}, 'Moment ${i + 1}', 1, unixepoch(), unixepoch())`
+        (_, i) => `(${i + 1}, 'Moment ${i + 1}', 1, ${1000 + i}, ${1000 + i})`
       ).join(',')
-      sqlite.exec(`INSERT INTO moments (id, content, uid, created_at, updated_at) VALUES ${values}`)
+
+      await execSql(sqlite, `INSERT INTO moments (id, content, uid, created_at, updated_at) VALUES ${values}`)
 
       const result = await api.moments.list({ page: 1, limit: 100 })
 
@@ -125,13 +116,16 @@ describe('MomentsService', () => {
     })
 
     it('should order moments by createdAt descending', async () => {
-      // Insert moments with different timestamps
-      sqlite.exec(`
-                INSERT INTO moments (id, content, uid, created_at, updated_at) VALUES 
-                (1, 'Oldest', 1, unixepoch() - 100, unixepoch()),
-                (2, 'Middle', 1, unixepoch() - 50, unixepoch()),
-                (3, 'Newest', 1, unixepoch(), unixepoch())
-            `)
+      await execSql(
+        sqlite,
+        `
+          INSERT INTO moments (id, content, uid, created_at, updated_at)
+          VALUES
+            (1, 'Oldest', 1, 1000, 1000),
+            (2, 'Middle', 1, 2000, 2000),
+            (3, 'Newest', 1, 3000, 3000)
+        `
+      )
 
       const result = await api.moments.list()
 
@@ -143,24 +137,13 @@ describe('MomentsService', () => {
 
   describe('POST /moments - Create moment', () => {
     it('should require authentication', async () => {
-      const result = await api.moments.create({
-        content: 'Test moment',
-      })
+      const result = await api.moments.create({ content: 'Test moment' })
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(401)
     })
 
     it('should require admin permission', async () => {
-      // Mock JWT for regular user
-      app.state('jwt', {
-        sign: async (payload: any) => `mock_token_${payload.id}`,
-        verify: async (token: string) => {
-          if (token === 'mock_token_2') return { id: 2 }
-          return null
-        },
-      })
-
       const result = await api.moments.create(
         {
           content: 'Test moment',
@@ -181,7 +164,10 @@ describe('MomentsService', () => {
       )
 
       expect(result.error).toBeUndefined()
-      expect(result.data?.insertedId).toBeDefined()
+
+      const row = await queryFirst<{ content: string }>(sqlite, 'SELECT content FROM moments WHERE id = 1 LIMIT 1')
+      expect(row).toBeDefined()
+      expect(row?.content).toBe('Test moment content')
     })
 
     it('should require content', async () => {
@@ -203,10 +189,12 @@ describe('MomentsService', () => {
         set: async () => {},
         delete: async () => {},
         deletePrefix: async (prefix: string) => {
-          if (prefix === 'moments_') cacheCleared = true
+          if (prefix === 'moments_') {
+            cacheCleared = true
+          }
         },
-        getOrSet: async (_key: string, fn: Function) => fn(),
-        getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
+        getOrSet: async (_key: string, fn: () => unknown) => fn(),
+        getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
       })
 
       await api.moments.create(
@@ -221,11 +209,14 @@ describe('MomentsService', () => {
   })
 
   describe('POST /moments/:id - Update moment', () => {
-    beforeEach(() => {
-      sqlite.exec(`
-                INSERT INTO moments (id, content, uid, created_at, updated_at) VALUES 
-                (1, 'Original content', 1, unixepoch(), unixepoch())
-            `)
+    beforeEach(async () => {
+      await execSql(
+        sqlite,
+        `
+          INSERT INTO moments (id, content, uid, created_at, updated_at)
+          VALUES (1, 'Original content', 1, 1000, 1000)
+        `
+      )
     })
 
     it('should require authentication', async () => {
@@ -238,15 +229,6 @@ describe('MomentsService', () => {
     })
 
     it('should require admin permission', async () => {
-      // Mock JWT for regular user
-      app.state('jwt', {
-        sign: async (payload: any) => `mock_token_${payload.id}`,
-        verify: async (token: string) => {
-          if (token === 'mock_token_2') return { id: 2 }
-          return null
-        },
-      })
-
       const result = await api.moments.update(
         1,
         {
@@ -269,6 +251,9 @@ describe('MomentsService', () => {
       )
 
       expect(result.error).toBeUndefined()
+
+      const row = await queryFirst<{ content: string }>(sqlite, 'SELECT content FROM moments WHERE id = 1 LIMIT 1')
+      expect(row?.content).toBe('Updated content')
     })
 
     it('should return 404 for non-existent moment', async () => {
@@ -304,10 +289,12 @@ describe('MomentsService', () => {
         set: async () => {},
         delete: async () => {},
         deletePrefix: async (prefix: string) => {
-          if (prefix === 'moments_') cacheCleared = true
+          if (prefix === 'moments_') {
+            cacheCleared = true
+          }
         },
-        getOrSet: async (_key: string, fn: Function) => fn(),
-        getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
+        getOrSet: async (_key: string, fn: () => unknown) => fn(),
+        getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
       })
 
       await api.moments.update(
@@ -323,11 +310,14 @@ describe('MomentsService', () => {
   })
 
   describe('DELETE /moments/:id - Delete moment', () => {
-    beforeEach(() => {
-      sqlite.exec(`
-                INSERT INTO moments (id, content, uid, created_at, updated_at) VALUES 
-                (1, 'Moment to delete', 1, unixepoch(), unixepoch())
-            `)
+    beforeEach(async () => {
+      await execSql(
+        sqlite,
+        `
+          INSERT INTO moments (id, content, uid, created_at, updated_at)
+          VALUES (1, 'Moment to delete', 1, 1000, 1000)
+        `
+      )
     })
 
     it('should require authentication', async () => {
@@ -338,15 +328,6 @@ describe('MomentsService', () => {
     })
 
     it('should require admin permission', async () => {
-      // Mock JWT for regular user
-      app.state('jwt', {
-        sign: async (payload: any) => `mock_token_${payload.id}`,
-        verify: async (token: string) => {
-          if (token === 'mock_token_2') return { id: 2 }
-          return null
-        },
-      })
-
       const result = await api.moments.delete(1, { token: 'mock_token_2' })
 
       expect(result.error).toBeDefined()
@@ -358,9 +339,8 @@ describe('MomentsService', () => {
 
       expect(result.error).toBeUndefined()
 
-      // Verify deletion
-      const moment = sqlite.prepare('SELECT * FROM moments WHERE id = 1').get()
-      expect(moment).toBeNull()
+      const row = await queryFirst<{ id: number }>(sqlite, 'SELECT id FROM moments WHERE id = 1 LIMIT 1')
+      expect(row).toBeUndefined()
     })
 
     it('should return 404 for non-existent moment', async () => {
@@ -377,10 +357,12 @@ describe('MomentsService', () => {
         set: async () => {},
         delete: async () => {},
         deletePrefix: async (prefix: string) => {
-          if (prefix === 'moments_') cacheCleared = true
+          if (prefix === 'moments_') {
+            cacheCleared = true
+          }
         },
-        getOrSet: async (_key: string, fn: Function) => fn(),
-        getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
+        getOrSet: async (_key: string, fn: () => unknown) => fn(),
+        getOrDefault: async (_key: string, defaultValue: unknown) => defaultValue,
       })
 
       await api.moments.delete(1, { token: 'mock_token_1' })

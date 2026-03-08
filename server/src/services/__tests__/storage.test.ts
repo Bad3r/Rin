@@ -1,13 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { StorageService } from '../storage'
 import { createBaseApp } from '../../core/base'
-import { createMockDB, createMockEnv, cleanupTestDB } from '../../../tests/fixtures'
+import { cleanupTestDB, createMockDB, createMockEnv, createTestUser as seedTestUser } from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
-import type { Database } from 'bun:sqlite'
 
 describe('StorageService', () => {
   let db: any
-  let sqlite: Database
+  let sqlite: D1Database
   let env: Env
   let app: any
   let api: ReturnType<typeof createTestClient>
@@ -23,7 +22,10 @@ describe('StorageService', () => {
     app.state('db', db)
     app.state('jwt', {
       sign: async (payload: any) => `mock_token_${payload.id}`,
-      verify: async (token: string) => (token.startsWith('mock_token_') ? { id: 1 } : null),
+      verify: async (token: string) => {
+        const match = token.match(/mock_token_(\d+)/)
+        return match ? { id: parseInt(match[1], 10) } : null
+      },
     })
 
     // Register service
@@ -36,15 +38,12 @@ describe('StorageService', () => {
     await createTestUser()
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
   async function createTestUser() {
-    sqlite.exec(`
-            INSERT INTO users (id, username, openid, avatar, permission) 
-            VALUES (1, 'testuser', 'gh_test', 'avatar.png', 1)
-        `)
+    await seedTestUser(sqlite)
   }
 
   describe('POST /storage - Upload file', () => {
@@ -60,14 +59,17 @@ describe('StorageService', () => {
 
     it('should return 500 when S3_ENDPOINT is not defined', async () => {
       const envNoS3 = createMockEnv({
-        S3_ENDPOINT: '' as any,
+        S3_ENDPOINT: '',
       })
 
       const appNoS3 = createBaseApp(envNoS3)
       appNoS3.state('db', db)
       appNoS3.state('jwt', {
         sign: async (payload: any) => `mock_token_${payload.id}`,
-        verify: async (token: string) => (token.startsWith('mock_token_') ? { id: 1 } : null),
+        verify: async (token: string) => {
+          const match = token.match(/mock_token_(\d+)/)
+          return match ? { id: parseInt(match[1], 10) } : null
+        },
       })
       StorageService(appNoS3)
 
@@ -77,8 +79,7 @@ describe('StorageService', () => {
       const result = await apiNoS3.storage.upload(file, 'test.txt', { token: 'mock_token_1' })
 
       expect(result.error).toBeDefined()
-      // Could be 400 (validation) or 500 (env check)
-      expect(result.error?.status).toBeGreaterThanOrEqual(400)
+      expect(result.error?.status).toBe(500)
     })
 
     it('should return error when S3_ACCESS_KEY_ID is not defined', async () => {
@@ -90,7 +91,10 @@ describe('StorageService', () => {
       appNoKey.state('db', db)
       appNoKey.state('jwt', {
         sign: async (payload: any) => `mock_token_${payload.id}`,
-        verify: async (token: string) => (token.startsWith('mock_token_') ? { id: 1 } : null),
+        verify: async (token: string) => {
+          const match = token.match(/mock_token_(\d+)/)
+          return match ? { id: parseInt(match[1], 10) } : null
+        },
       })
       StorageService(appNoKey)
 
@@ -100,7 +104,7 @@ describe('StorageService', () => {
       const result = await apiNoKey.storage.upload(file, 'test.txt', { token: 'mock_token_1' })
 
       expect(result.error).toBeDefined()
-      expect(result.error?.status).toBeGreaterThanOrEqual(400)
+      expect(result.error?.status).toBe(500)
     })
 
     it('should return error when S3_SECRET_ACCESS_KEY is not defined', async () => {
@@ -112,7 +116,10 @@ describe('StorageService', () => {
       appNoSecret.state('db', db)
       appNoSecret.state('jwt', {
         sign: async (payload: any) => `mock_token_${payload.id}`,
-        verify: async (token: string) => (token.startsWith('mock_token_') ? { id: 1 } : null),
+        verify: async (token: string) => {
+          const match = token.match(/mock_token_(\d+)/)
+          return match ? { id: parseInt(match[1], 10) } : null
+        },
       })
       StorageService(appNoSecret)
 
@@ -122,19 +129,22 @@ describe('StorageService', () => {
       const result = await apiNoSecret.storage.upload(file, 'test.txt', { token: 'mock_token_1' })
 
       expect(result.error).toBeDefined()
-      expect(result.error?.status).toBeGreaterThanOrEqual(400)
+      expect(result.error?.status).toBe(500)
     })
 
     it('should return error when S3_BUCKET is not defined', async () => {
       const envNoBucket = createMockEnv({
-        S3_BUCKET: '' as any,
+        S3_BUCKET: '',
       })
 
       const appNoBucket = createBaseApp(envNoBucket)
       appNoBucket.state('db', db)
       appNoBucket.state('jwt', {
         sign: async (payload: any) => `mock_token_${payload.id}`,
-        verify: async (token: string) => (token.startsWith('mock_token_') ? { id: 1 } : null),
+        verify: async (token: string) => {
+          const match = token.match(/mock_token_(\d+)/)
+          return match ? { id: parseInt(match[1], 10) } : null
+        },
       })
       StorageService(appNoBucket)
 
@@ -144,7 +154,7 @@ describe('StorageService', () => {
       const result = await apiNoBucket.storage.upload(file, 'test.txt', { token: 'mock_token_1' })
 
       expect(result.error).toBeDefined()
-      expect(result.error?.status).toBeGreaterThanOrEqual(400)
+      expect(result.error?.status).toBe(500)
     })
 
     it('should extract file extension from key', async () => {
@@ -153,8 +163,8 @@ describe('StorageService', () => {
       const file = new File(['test content'], 'test.txt', { type: 'text/plain' })
       const result = await api.storage.upload(file, 'document.pdf', { token: 'mock_token_1' })
 
-      // Will fail due to S3 not being available, but verifies auth passes
-      expect(result.error?.status).not.toBe(401)
+      // Upload path is reached and fails in S3 layer under test env.
+      expect(result.error?.status).toBe(400)
     })
   })
 })

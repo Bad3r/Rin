@@ -1,13 +1,19 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ConfigService } from '../config'
 import { createBaseApp } from '../../core/base'
-import { createMockDB, createMockEnv, cleanupTestDB } from '../../../tests/fixtures'
+import {
+  cleanupTestDB,
+  createMockDB,
+  createMockEnv,
+  createTestUser as seedTestUser,
+  execSql,
+  queryAll,
+} from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
-import type { Database } from 'bun:sqlite'
 
 describe('ConfigService', () => {
   let db: any
-  let sqlite: Database
+  let sqlite: D1Database
   let env: Env
   let app: any
   let api: ReturnType<typeof createTestClient>
@@ -23,7 +29,10 @@ describe('ConfigService', () => {
     app.state('db', db)
     app.state('jwt', {
       sign: async (payload: any) => `mock_token_${payload.id}`,
-      verify: async (token: string) => (token.startsWith('mock_token_') ? { id: 1 } : null),
+      verify: async (token: string) => {
+        const match = token.match(/mock_token_(\d+)/)
+        return match ? { id: parseInt(match[1], 10) } : null
+      },
     })
     app.state('cache', {
       get: async () => undefined,
@@ -59,15 +68,12 @@ describe('ConfigService', () => {
     await createTestUser()
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    await cleanupTestDB(sqlite)
   })
 
   async function createTestUser() {
-    sqlite.exec(`
-            INSERT INTO users (id, username, openid, avatar, permission) 
-            VALUES (1, 'testuser', 'gh_test', 'avatar.png', 1)
-        `)
+    await seedTestUser(sqlite)
   }
 
   describe('GET /config/:type - Get config', () => {
@@ -101,10 +107,13 @@ describe('ConfigService', () => {
 
     it('should mask sensitive fields in server config', async () => {
       // Set some AI config with API key
-      sqlite.exec(`
-                INSERT INTO info (key, value) VALUES 
-                ('ai_summary.api_key', 'secret_key_123')
-            `)
+      await execSql(
+        sqlite,
+        `
+          INSERT INTO info (key, value) VALUES 
+          ('ai_summary.api_key', 'secret_key_123')
+        `
+      )
 
       const result = await api.config.get('server', { token: 'mock_token_1' })
 
@@ -163,7 +172,7 @@ describe('ConfigService', () => {
       expect(result.error).toBeUndefined()
 
       // Verify AI config was saved
-      const dbResult = sqlite.prepare("SELECT * FROM info WHERE key LIKE 'ai_summary.%'").all()
+      const dbResult = await queryAll(sqlite, "SELECT * FROM info WHERE key LIKE 'ai_summary.%'")
       expect(dbResult.length).toBeGreaterThan(0)
     })
 

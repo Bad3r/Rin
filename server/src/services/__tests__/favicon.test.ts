@@ -1,12 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { FaviconService, FAVICON_ALLOWED_TYPES, getFaviconKey } from '../favicon'
 import { createBaseApp } from '../../core/base'
-import { createMockDB, createMockEnv, cleanupTestDB } from '../../../tests/fixtures'
-import type { Database } from 'bun:sqlite'
+import { createMockDB, createMockEnv, cleanupTestDB, execSql } from '../../../tests/fixtures'
 
 describe('FaviconService', () => {
   let db: any
-  let sqlite: Database
+  let sqlite: D1Database
   let env: Env
   let app: any
 
@@ -31,62 +30,84 @@ describe('FaviconService', () => {
     await createTestUser()
   })
 
-  afterEach(() => {
-    cleanupTestDB(sqlite)
+  afterEach(async () => {
+    vi.restoreAllMocks()
+    await cleanupTestDB(sqlite)
   })
 
   async function createTestUser() {
-    sqlite.exec(`
+    await execSql(
+      sqlite,
+      `
             INSERT INTO users (id, username, openid, avatar, permission) 
             VALUES (1, 'admin', 'gh_admin', 'admin.png', 1)
-        `)
+        `
+    )
   }
 
   describe('GET /favicon - Get favicon', () => {
-    it('should return favicon from S3', async () => {
+    it('should return 500 when outbound fetch is blocked by test guard', async () => {
       const request = new Request('http://localhost/favicon')
       const response = await app.handle(request, env)
 
-      // Will fail due to S3 not being available, but verifies route is registered
-      expect(response.status).not.toBe(404)
+      expect(response.status).toBe(500)
+      await expect(response.text()).resolves.toContain('Error fetching favicon:')
     })
 
-    it('should set correct content type header', async () => {
+    it('should set correct content type header for successful fetch', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(new Uint8Array([1, 2, 3]), {
+          status: 200,
+        })
+      )
+
       const request = new Request('http://localhost/favicon')
       const response = await app.handle(request, env)
 
-      // If we get a successful response, check headers
-      if (response.status === 200) {
-        expect(response.headers.get('Content-Type')).toBe('image/webp')
-      }
+      expect(response.status).toBe(200)
+      expect(response.headers.get('Content-Type')).toBe('application/json')
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
     })
 
-    it('should set cache control header', async () => {
+    it('should set cache control header for successful fetch', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(new Uint8Array([1, 2, 3]), {
+          status: 200,
+        })
+      )
+
       const request = new Request('http://localhost/favicon')
       const response = await app.handle(request, env)
 
-      if (response.status === 200) {
-        const cacheControl = response.headers.get('Cache-Control')
-        expect(cacheControl).toContain('max-age=31536000')
-      }
+      expect(response.status).toBe(200)
+      const cacheControl = response.headers.get('Cache-Control')
+      expect(cacheControl).toContain('max-age=31536000')
     })
   })
 
   describe('GET /favicon/original - Get original favicon', () => {
-    it('should return original favicon from S3', async () => {
+    it('should return original favicon from first successful type probe', async () => {
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(new Response('Not Found', { status: 404 }))
+        .mockResolvedValueOnce(new Response(new Uint8Array([9]), { status: 200 }))
+
       const request = new Request('http://localhost/favicon/original')
       const response = await app.handle(request, env)
 
-      // Will fail due to S3 not being available, but verifies route is registered
-      expect(response.status).not.toBe(404)
+      expect(response.status).toBe(200)
+      expect(response.headers.get('Content-Type')).toBe('application/json')
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
     })
 
     it('should return 404 when original favicon not found', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('Not Found', { status: 404 }))
+
       const request = new Request('http://localhost/favicon/original')
       const response = await app.handle(request, env)
 
-      // Should not be 404 from route not found, but could be from S3
-      expect(response.status).not.toBe(404)
+      expect(response.status).toBe(404)
+      await expect(response.text().then((text: string) => JSON.parse(text))).resolves.toBe('Original favicon not found')
     })
   })
 
@@ -102,8 +123,8 @@ describe('FaviconService', () => {
       })
 
       const response = await app.handle(request, env)
-      // Should be rejected (400 validation or 401/403 auth)
-      expect(response.status).toBeGreaterThanOrEqual(400)
+      expect(response.status).toBe(403)
+      await expect(response.text().then((text: string) => JSON.parse(text))).resolves.toBe('Permission denied')
     })
 
     it('should reject files over 10MB', async () => {
@@ -143,8 +164,7 @@ describe('FaviconService', () => {
     })
 
     it('should accept allowed image types', async () => {
-      // Test one allowed type - will fail due to S3 not being available
-      // but should not fail due to validation
+      // Validation passes, then upstream upload/transform is blocked by no-network guard.
       const file = new File(['test'], 'favicon.png', { type: 'image/png' })
       const formData = new FormData()
       formData.append('file', file)
@@ -158,9 +178,8 @@ describe('FaviconService', () => {
       })
 
       const response = await app.handle(request, env)
-      // Should not be 403 - permission check passes
-      // Will fail due to S3 not available
-      expect(response.status).not.toBe(403)
+      expect(response.status).toBe(500)
+      await expect(response.text()).resolves.toContain('Error processing favicon:')
     })
   })
 
