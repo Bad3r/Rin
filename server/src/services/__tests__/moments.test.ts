@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { MomentsService } from '../moments'
 import { createBaseApp } from '../../core/base'
 import { createMockDB, createMockEnv, cleanupTestDB } from '../../../tests/fixtures'

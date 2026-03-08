@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { FaviconService, FAVICON_ALLOWED_TYPES, getFaviconKey } from '../favicon'
 import { createBaseApp } from '../../core/base'
 import { createMockDB, createMockEnv, cleanupTestDB } from '../../../tests/fixtures'
