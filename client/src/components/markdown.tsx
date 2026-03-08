@@ -83,16 +83,17 @@ function MarkdownImage({
   }, [blurhash])
 
   return (
-    <span
-      className={`relative inline-block max-w-full overflow-hidden ${roundedClass}`}
+    <button
+      type='button'
+      aria-label={alt ? `View image: ${alt}` : 'View image'}
+      onClick={() => {
+        show(cleanSrc)
+      }}
+      className={`relative inline-block max-w-full overflow-hidden border-0 bg-transparent p-0 text-left ${roundedClass}`}
       style={{ zoom: scale, aspectRatio }}
     >
       {blurhash && !loaded ? (
-        <canvas
-          ref={canvasRef}
-          aria-hidden='true'
-          className={`absolute inset-0 h-full w-full scale-110 blur-sm ${roundedClass}`}
-        />
+        <canvas ref={canvasRef} className={`absolute inset-0 h-full w-full scale-110 blur-sm ${roundedClass}`} />
       ) : null}
       <img
         ref={imageRef}
@@ -100,16 +101,13 @@ function MarkdownImage({
         alt={alt}
         width={width}
         height={height}
-        onClick={() => {
-          show(cleanSrc)
-        }}
         onLoad={onLoad}
         onError={onError}
         className={`mx-auto max-w-full cursor-zoom-in transition-opacity ${roundedClass} ${className || ''} ${
           blurhash && (!loaded || failed) ? 'opacity-0' : 'opacity-100'
         }`}
       />
-    </span>
+    </button>
   )
 }
 

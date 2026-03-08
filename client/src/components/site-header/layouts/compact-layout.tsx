@@ -39,14 +39,15 @@ export const compactLayoutDefinition: HeaderLayoutDefinition = {
   renderMobile({ children, profile, siteConfig, isAtTop }) {
     return (
       <MobileTopHeader
-        children={children}
         profile={profile}
         siteConfig={siteConfig}
         isAtTop={isAtTop}
         showDescription={false}
         showInlineNav
         avatarClassName='h-8 w-8 rounded-lg'
-      />
+      >
+        {children}
+      </MobileTopHeader>
     )
   },
   renderPreview(data) {

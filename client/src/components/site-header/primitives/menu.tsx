@@ -19,6 +19,7 @@ export function Menu({ profile }: { profile?: Profile | null }) {
         trigger={
           <div>
             <button
+              type='button'
               onClick={() => setOpen(true)}
               className='w-10 h-10 rounded-full flex flex-row items-center justify-center text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100'
             >

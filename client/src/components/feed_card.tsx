@@ -35,11 +35,7 @@ function FeedCardImage({ src, variant }: { src: string; variant: FeedCardVariant
   return (
     <div className={imageFrameClass} style={{ aspectRatio }}>
       {blurhash && !loaded ? (
-        <canvas
-          ref={canvasRef}
-          aria-hidden='true'
-          className='absolute inset-0 h-full w-full scale-110 object-cover blur-sm'
-        />
+        <canvas ref={canvasRef} className='absolute inset-0 h-full w-full scale-110 object-cover blur-sm' />
       ) : null}
       <img
         ref={imageRef}
