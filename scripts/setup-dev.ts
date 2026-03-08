@@ -88,6 +88,9 @@ not_found_handling = "single-page-application"
 [triggers]
 crons = ["*/20 * * * *"]
 
+[ai]
+binding = "AI"
+
 [vars]
 S3_FOLDER = "${env.S3_FOLDER || 'images/'}"
 S3_CACHE_FOLDER = "${env.S3_CACHE_FOLDER || 'cache/'}"
