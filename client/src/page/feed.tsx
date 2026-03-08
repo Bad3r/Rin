@@ -292,7 +292,7 @@ export function TOCHeader({ TOC }: { TOC: () => JSX.Element }) {
   const [isOpened, setIsOpened] = useState(false)
 
   return (
-    <div className='lg:hidden'>
+    <div className='shrink-0 lg:hidden'>
       <button
         type='button'
         onClick={() => setIsOpened(true)}

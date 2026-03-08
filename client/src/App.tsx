@@ -26,6 +26,7 @@ import { ClientConfigContext, ConfigWrapper, defaultClientConfig } from './state
 import { type Profile, ProfileContext } from './state/profile'
 import { getAuthCookieToken, getAuthToken, removeAuthToken } from './utils/auth'
 import { tryInt } from './utils/int'
+import { applyThemeColor } from './utils/theme-color'
 
 function App() {
   const ref = useRef(false)
@@ -78,16 +79,37 @@ function App() {
       const configObj = JSON.parse(config)
       const configWrapper = new ConfigWrapper(configObj, defaultClientConfig)
       setConfig(configWrapper)
+      applyThemeColor(configWrapper.get<string>('theme.color'))
     } else {
       client.config.get('client').then(({ data }) => {
         if (data) {
           sessionStorage.setItem('config', JSON.stringify(data))
           const config = new ConfigWrapper(data, defaultClientConfig)
           setConfig(config)
+          applyThemeColor(config.get<string>('theme.color'))
         }
       })
     }
+
+    const handleStorageChange = () => {
+      const storedConfig = sessionStorage.getItem('config')
+      if (!storedConfig) return
+
+      try {
+        const nextConfig = new ConfigWrapper(JSON.parse(storedConfig), defaultClientConfig)
+        setConfig(nextConfig)
+        applyThemeColor(nextConfig.get<string>('theme.color'))
+      } catch (err) {
+        console.error('Failed to refresh client config from session storage:', err)
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
     ref.current = true
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+    }
   }, [])
   const favicon = '/favicon'
   return (

@@ -5,6 +5,14 @@ import type { JsonValue } from '@rin/api'
 import ReactLoading from '../components/react-loading'
 import Modal from 'react-modal'
 import { Button } from '../components/button.tsx'
+import { HeaderLayoutPreview } from '../components/site-header/layout-preview'
+import {
+  HEADER_BEHAVIOR_OPTIONS,
+  HEADER_LAYOUT_OPTIONS,
+  normalizeHeaderBehavior,
+  normalizeHeaderLayout,
+} from '../components/site-header/layout-options'
+import { Helmet } from '../components/helmet'
 import { useAlert, useConfirm } from '../components/dialog.tsx'
 import { client, endpoint, oauth_url } from '../main.tsx'
 import {
@@ -16,6 +24,7 @@ import {
   defaultServerConfigWrapper,
   ServerConfigContext,
 } from '../state/config.tsx'
+import { applyThemeColor, normalizeThemeColor } from '../utils/theme-color'
 
 import '../utils/thumb.css'
 
@@ -28,6 +37,21 @@ function getErrorMessage(err: unknown): string {
   }
   return 'Unknown error'
 }
+
+function updateSessionClientConfig(key: string, value: JsonValue) {
+  const config = sessionStorage.getItem('config')
+  const nextConfig = config ? { ...JSON.parse(config), [key]: value } : { [key]: value }
+  sessionStorage.setItem('config', JSON.stringify(nextConfig))
+  window.dispatchEvent(new Event('storage'))
+}
+
+const THEME_COLOR_OPTIONS = [
+  { label: 'rose', value: '#fc466b' },
+  { label: 'violet', value: '#7c3aed' },
+  { label: 'blue', value: '#2563eb' },
+  { label: 'teal', value: '#0f766e' },
+  { label: 'orange', value: '#ea580c' },
+]
 
 export function Settings() {
   const { t } = useTranslation()
@@ -50,6 +74,7 @@ export function Settings() {
           sessionStorage.setItem('config', JSON.stringify(data))
           const config = new ConfigWrapper(data, defaultClientConfig)
           setClientConfig(config)
+          applyThemeColor(config.get<string>('theme.color'))
         }
       })
       .catch((err: unknown) => {
@@ -74,6 +99,26 @@ export function Settings() {
       })
     ref.current = true
   }, [showAlert, t])
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const storedConfig = sessionStorage.getItem('config')
+      if (!storedConfig) return
+
+      try {
+        const config = new ConfigWrapper(JSON.parse(storedConfig), defaultClientConfig)
+        setClientConfig(config)
+        applyThemeColor(config.get<string>('theme.color'))
+      } catch (err) {
+        console.error('Failed to refresh settings config from session storage:', err)
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [])
 
   async function handleFaviconChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -130,6 +175,9 @@ export function Settings() {
     <div className='flex flex-col justify-center items-center'>
       <ServerConfigContext.Provider value={serverConfig}>
         <ClientConfigContext.Provider value={clientConfig}>
+          <Helmet>
+            <title>{`${t('settings.title')} - ${clientConfig.get<string>('site.name') || 'Rin'}`}</title>
+          </Helmet>
           <main className='wauto rounded-2xl bg-w m-2 p-6' aria-label={t('main_content')}>
             <div className='flex flex-row items-center space-x-2'>
               <h1 className='text-2xl font-bold t-primary'>{t('settings.title')}</h1>
@@ -187,6 +235,10 @@ export function Settings() {
                 configKey='site.page_size'
                 configKeyTitle={t('settings.site.page_size.label')}
               />
+              <ItemTitle title={t('settings.personalization.title')} />
+              <HeaderLayoutSetting />
+              <ThemeColorSetting />
+              <HeaderBehaviorSetting />
               <ItemTitle title={t('settings.other.title')} />
               <ItemSwitch
                 title={t('settings.login.enable.title')}
@@ -311,6 +363,234 @@ function ItemTitle({ title }: { title: string }) {
   return <h1 className='text-sm t-primary pt-4'>{title}</h1>
 }
 
+function HeaderLayoutSetting() {
+  const clientConfig = useContext(ClientConfigContext)
+  const [value, setValue] = useState(normalizeHeaderLayout(clientConfig.get<string>('header.layout')))
+  const [loading, setLoading] = useState(false)
+  const { showAlert, AlertUI } = useAlert()
+  const { t } = useTranslation()
+
+  useEffect(() => {
+    setValue(normalizeHeaderLayout(clientConfig.get<string>('header.layout')))
+  }, [clientConfig])
+
+  const previewData = {
+    avatar: clientConfig.get<string>('site.avatar') || '',
+    name: clientConfig.get<string>('site.name') || 'Rin',
+    themeColor: normalizeThemeColor(clientConfig.get<string>('theme.color')),
+  }
+
+  async function updateConfig(nextValue: (typeof HEADER_LAYOUT_OPTIONS)[number]) {
+    const previousValue = value
+    setValue(nextValue)
+    setLoading(true)
+    try {
+      const { error } = await client.config.update('client', {
+        'header.layout': nextValue,
+      })
+      if (error) {
+        setValue(previousValue)
+        showAlert(t('settings.update_failed$message', { message: error.value }))
+        return
+      }
+      updateSessionClientConfig('header.layout', nextValue)
+    } catch (err: unknown) {
+      setValue(previousValue)
+      showAlert(t('settings.update_failed$message', { message: getErrorMessage(err) }))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className='flex flex-col w-full items-start'>
+      <div className='flex flex-row justify-between w-full items-center'>
+        <div className='flex flex-col'>
+          <p className='text-lg font-bold dark:text-white'>{t('settings.header_layout.title')}</p>
+          <p className='text-xs text-neutral-500'>{t('settings.header_layout.desc')}</p>
+        </div>
+        <div className='flex flex-row items-center justify-center space-x-4'>
+          {loading && <ReactLoading width='1em' height='1em' type='spin' color='#FC466B' />}
+        </div>
+      </div>
+      <div className='mt-3 grid w-full gap-3 md:grid-cols-2'>
+        {HEADER_LAYOUT_OPTIONS.map(option => (
+          <HeaderLayoutPreview
+            key={option}
+            data={previewData}
+            layout={option}
+            selected={value === option}
+            title={t(`settings.header_layout.options.${option}`)}
+            description={t(`settings.header_layout.preview.${option}`)}
+            onClick={() => {
+              void updateConfig(option)
+            }}
+          />
+        ))}
+      </div>
+      <AlertUI />
+    </div>
+  )
+}
+
+function ThemeColorSetting() {
+  const clientConfig = useContext(ClientConfigContext)
+  const [value, setValue] = useState(normalizeThemeColor(clientConfig.get<string>('theme.color')))
+  const [loading, setLoading] = useState(false)
+  const { showAlert, AlertUI } = useAlert()
+  const { t } = useTranslation()
+
+  useEffect(() => {
+    setValue(normalizeThemeColor(clientConfig.get<string>('theme.color')))
+  }, [clientConfig])
+
+  async function updateConfig(nextValue: string) {
+    const normalized = normalizeThemeColor(nextValue)
+    const previousValue = value
+    setValue(normalized)
+    applyThemeColor(normalized)
+    setLoading(true)
+    try {
+      const { error } = await client.config.update('client', {
+        'theme.color': normalized,
+      })
+      if (error) {
+        setValue(previousValue)
+        applyThemeColor(previousValue)
+        showAlert(t('settings.update_failed$message', { message: error.value }))
+        return
+      }
+      updateSessionClientConfig('theme.color', normalized)
+    } catch (err: unknown) {
+      setValue(previousValue)
+      applyThemeColor(previousValue)
+      showAlert(t('settings.update_failed$message', { message: getErrorMessage(err) }))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className='flex flex-col w-full items-start'>
+      <div className='flex flex-row justify-between w-full items-center'>
+        <div className='flex flex-col'>
+          <p className='text-lg font-bold dark:text-white'>{t('settings.theme_color.title')}</p>
+          <p className='text-xs text-neutral-500'>{t('settings.theme_color.desc')}</p>
+        </div>
+        <div className='flex flex-row items-center justify-center space-x-4'>
+          <span className='text-sm font-medium t-primary'>{value}</span>
+          {loading && <ReactLoading width='1em' height='1em' type='spin' color='#FC466B' />}
+        </div>
+      </div>
+      <div className='mt-3 flex w-full flex-wrap gap-3'>
+        {THEME_COLOR_OPTIONS.map(option => {
+          const selected = value === option.value
+          return (
+            <button
+              type='button'
+              key={option.value}
+              onClick={() => {
+                void updateConfig(option.value)
+              }}
+              className={`flex items-center gap-3 rounded-xl border px-3 py-2 transition-all ${
+                selected
+                  ? 'border-theme bg-theme/5 shadow-sm shadow-theme/10'
+                  : 'border-black/10 hover:border-black/20 dark:border-white/10 dark:hover:border-white/20'
+              }`}
+            >
+              <span
+                className='h-6 w-6 rounded-full border border-black/10 dark:border-white/10'
+                style={{ backgroundColor: option.value }}
+              />
+              <span className='text-sm t-primary'>{t(`settings.theme_color.options.${option.label}`)}</span>
+              {selected ? <i className='ri-check-line text-theme' /> : null}
+            </button>
+          )
+        })}
+        <label className='flex items-center gap-3 rounded-xl border border-black/10 px-3 py-2 hover:border-black/20 dark:border-white/10 dark:hover:border-white/20'>
+          <input
+            type='color'
+            value={value}
+            onChange={event => {
+              void updateConfig(event.target.value)
+            }}
+            className='color-input-reset h-6 w-6 cursor-pointer rounded-full border-0 bg-transparent p-0'
+          />
+          <span className='text-sm t-primary'>{t('settings.theme_color.custom')}</span>
+        </label>
+      </div>
+      <AlertUI />
+    </div>
+  )
+}
+
+function HeaderBehaviorSetting() {
+  const clientConfig = useContext(ClientConfigContext)
+  const [value, setValue] = useState(normalizeHeaderBehavior(clientConfig.get<string>('header.behavior')))
+  const [loading, setLoading] = useState(false)
+  const { showAlert, AlertUI } = useAlert()
+  const { t } = useTranslation()
+
+  useEffect(() => {
+    setValue(normalizeHeaderBehavior(clientConfig.get<string>('header.behavior')))
+  }, [clientConfig])
+
+  async function updateConfig(nextValue: (typeof HEADER_BEHAVIOR_OPTIONS)[number]) {
+    const previousValue = value
+    setValue(nextValue)
+    setLoading(true)
+    try {
+      const { error } = await client.config.update('client', {
+        'header.behavior': nextValue,
+      })
+      if (error) {
+        setValue(previousValue)
+        showAlert(t('settings.update_failed$message', { message: error.value }))
+        return
+      }
+      updateSessionClientConfig('header.behavior', nextValue)
+    } catch (err: unknown) {
+      setValue(previousValue)
+      showAlert(t('settings.update_failed$message', { message: getErrorMessage(err) }))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className='flex flex-col w-full items-start'>
+      <div className='flex flex-row justify-between w-full items-center'>
+        <div className='flex flex-col'>
+          <p className='text-lg font-bold dark:text-white'>{t('settings.header_behavior.title')}</p>
+          <p className='text-xs text-neutral-500'>{t('settings.header_behavior.desc')}</p>
+        </div>
+        <div className='flex flex-row items-center justify-center space-x-4'>
+          {loading && <ReactLoading width='1em' height='1em' type='spin' color='#FC466B' />}
+        </div>
+      </div>
+      <div className='mt-3 flex flex-wrap gap-3'>
+        {HEADER_BEHAVIOR_OPTIONS.map(option => (
+          <button
+            type='button'
+            key={option}
+            onClick={() => {
+              void updateConfig(option)
+            }}
+            className={`rounded-full border px-4 py-2 text-sm transition-all ${
+              value === option
+                ? 'border-theme bg-theme text-white'
+                : 'border-black/10 bg-w t-primary hover:border-black/20 dark:border-white/10 dark:hover:border-white/20'
+            }`}
+          >
+            {t(`settings.header_behavior.options.${option}`)}
+          </button>
+        ))}
+      </div>
+      <AlertUI />
+    </div>
+  )
+}
+
 function ItemSwitch({
   title,
   description,
@@ -347,14 +627,12 @@ function ItemSwitch({
       .then(({ error }) => {
         if (error) {
           setChecked(checkedValue)
+          setLoading(false)
+          showAlert(t('settings.update_failed$message', { message: error.value }))
+          return
         }
         if (type === 'client') {
-          const config = sessionStorage.getItem('config')
-          if (config) {
-            sessionStorage.setItem('config', JSON.stringify({ ...JSON.parse(config), [key]: value }))
-          } else {
-            sessionStorage.setItem('config', JSON.stringify({ [key]: value }))
-          }
+          updateSessionClientConfig(key, value)
         }
         setLoading(false)
       })
@@ -425,14 +703,15 @@ function ItemInput({
       .update(type, {
         [key]: value,
       })
-      .then(() => {
+      .then(({ error }) => {
+        if (error) {
+          showAlert(t('settings.update_failed$message', { message: error.value }))
+          setValue(config?.get<string>(configKey) || '')
+          setLoading(false)
+          return
+        }
         if (type === 'client') {
-          const config = sessionStorage.getItem('config')
-          if (config) {
-            sessionStorage.setItem('config', JSON.stringify({ ...JSON.parse(config), [key]: value }))
-          } else {
-            sessionStorage.setItem('config', JSON.stringify({ [key]: value }))
-          }
+          updateSessionClientConfig(key, value)
         }
         setLoading(false)
       })

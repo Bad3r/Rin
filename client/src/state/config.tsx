@@ -14,6 +14,9 @@ export const defaultClientConfig = new Map(
     'site.description': 'A lightweight personal blogging system',
     'site.avatar': '',
     'site.page_size': 5,
+    'header.layout': 'classic',
+    'header.behavior': 'fixed',
+    'theme.color': '#fc466b',
   })
 )
 
