@@ -1,9 +1,53 @@
 import { asDate, type IsoDateTimeString } from '@rin/api'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'wouter'
+import { drawBlurhashToCanvas } from '../utils/blurhash'
+import { parseImageUrlMetadata } from '../utils/image-upload'
 import { timeago } from '../utils/timeago'
+import { useImageLoadState } from '../utils/use-image-load-state'
 import { HashTag } from './hashtag'
+
+function FeedCardImage({ src }: { src: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const { src: cleanSrc, blurhash, width, height } = parseImageUrlMetadata(src)
+  const { failed, imageRef, loaded, onError, onLoad } = useImageLoadState(cleanSrc)
+  const aspectRatio = width && height ? `${width} / ${height}` : undefined
+
+  useEffect(() => {
+    if (!blurhash || !canvasRef.current) {
+      return
+    }
+    try {
+      drawBlurhashToCanvas(canvasRef.current, blurhash)
+    } catch (error) {
+      console.error('Failed to render blurhash', error)
+    }
+  }, [blurhash])
+
+  return (
+    <div
+      className='relative mb-2 flex max-h-80 w-full flex-row items-center overflow-hidden rounded-xl'
+      style={{ aspectRatio }}
+    >
+      {blurhash && !loaded ? (
+        <canvas ref={canvasRef} aria-hidden='true' className='absolute inset-0 h-full w-full scale-110 blur-sm' />
+      ) : null}
+      <img
+        ref={imageRef}
+        src={cleanSrc}
+        alt=''
+        width={width}
+        height={height}
+        onLoad={onLoad}
+        onError={onError}
+        className={`absolute inset-0 h-full w-full object-cover object-center hover:scale-105 translation duration-300 ${
+          blurhash && (!loaded || failed) ? 'opacity-0' : 'opacity-100'
+        }`}
+      />
+    </div>
+  )
+}
 
 export function FeedCard({
   id,
@@ -36,15 +80,7 @@ export function FeedCard({
 
     return (
       <Link href={`/feed/${id}`} target='_blank' className='w-full rounded-2xl bg-w my-2 p-6 duration-300 bg-button'>
-        {avatar && (
-          <div className='flex flex-row items-center mb-2 rounded-xl overflow-clip'>
-            <img
-              src={avatar}
-              alt=''
-              className='object-cover object-center w-full max-h-96 hover:scale-105 translation duration-300'
-            />
-          </div>
-        )}
+        {avatar && <FeedCardImage src={avatar} />}
         <h1 className='text-xl font-bold text-gray-700 dark:text-white text-pretty overflow-hidden'>{title || ''}</h1>
         <p className='space-x-2'>
           <span className='text-gray-400 text-sm' title={createdAtDate.toLocaleString()}>

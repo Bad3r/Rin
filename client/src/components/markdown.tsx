@@ -1,5 +1,5 @@
 import 'katex/dist/katex.min.css'
-import React, { cloneElement, isValidElement, useCallback, useMemo, useRef } from 'react'
+import React, { cloneElement, isValidElement, useCallback, useEffect, useMemo, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { base16AteliersulphurpoolLight, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -14,7 +14,10 @@ import Download from 'yet-another-react-lightbox/plugins/download'
 import Zoom from 'yet-another-react-lightbox/plugins/zoom'
 import remarkMermaid from '../remark/remarkMermaid'
 import 'yet-another-react-lightbox/styles.css'
+import { drawBlurhashToCanvas } from '../utils/blurhash'
 import { useColorMode } from '../utils/darkModeUtils'
+import { parseImageUrlMetadata } from '../utils/image-upload'
+import { useImageLoadState } from '../utils/use-image-load-state'
 
 interface SectionChildProps {
   node?: { tagName?: string }
@@ -45,6 +48,69 @@ const isMarkdownImageLinkAtEnd = (text: string) => {
   }
 
   return false
+}
+
+function MarkdownImage({
+  src,
+  alt,
+  show,
+  rounded,
+  scale,
+  className,
+}: {
+  src?: string
+  alt?: string
+  show: (src?: string) => void
+  rounded: boolean
+  scale: string
+  className?: string
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const { src: cleanSrc, blurhash, width, height } = parseImageUrlMetadata(src)
+  const { failed, imageRef, loaded, onError, onLoad } = useImageLoadState(cleanSrc)
+  const roundedClass = rounded ? 'rounded-xl' : ''
+  const aspectRatio = width && height ? `${width} / ${height}` : undefined
+
+  useEffect(() => {
+    if (!blurhash || !canvasRef.current) {
+      return
+    }
+    try {
+      drawBlurhashToCanvas(canvasRef.current, blurhash)
+    } catch (error) {
+      console.error('Failed to render blurhash', error)
+    }
+  }, [blurhash])
+
+  return (
+    <span
+      className={`relative inline-block max-w-full overflow-hidden ${roundedClass}`}
+      style={{ zoom: scale, aspectRatio }}
+    >
+      {blurhash && !loaded ? (
+        <canvas
+          ref={canvasRef}
+          aria-hidden='true'
+          className={`absolute inset-0 h-full w-full scale-110 blur-sm ${roundedClass}`}
+        />
+      ) : null}
+      <img
+        ref={imageRef}
+        src={cleanSrc}
+        alt={alt}
+        width={width}
+        height={height}
+        onClick={() => {
+          show(cleanSrc)
+        }}
+        onLoad={onLoad}
+        onError={onError}
+        className={`mx-auto max-w-full cursor-zoom-in transition-opacity ${roundedClass} ${className || ''} ${
+          blurhash && (!loaded || failed) ? 'opacity-0' : 'opacity-100'
+        }`}
+      />
+    </span>
+  )
 }
 
 export function Markdown({ content }: { content: string }) {
@@ -97,23 +163,15 @@ export function Markdown({ content }: { content: string }) {
               const offset = node?.position?.start.offset ?? 0
               const previousContent = content.slice(0, offset)
               const newlinesBefore = countNewlinesBeforeNode(previousContent, offset)
-              const imageAlt = typeof props.alt === 'string' ? props.alt : ''
               const Image = ({ rounded, scale }: { rounded: boolean; scale: string }) => (
-                <button
-                  type='button'
-                  className='bg-transparent border-0 p-0'
-                  onClick={() => {
-                    show(src)
-                  }}
-                >
-                  <img
-                    src={src}
-                    {...props}
-                    alt={imageAlt}
-                    className={`mx-auto ${rounded ? 'rounded-xl' : ''}`}
-                    style={{ zoom: scale }}
-                  />
-                </button>
+                <MarkdownImage
+                  src={src}
+                  alt={typeof props.alt === 'string' ? props.alt : ''}
+                  show={show}
+                  rounded={rounded}
+                  scale={scale}
+                  className={props.className}
+                />
               )
               if (
                 newlinesBefore >= 1 ||
