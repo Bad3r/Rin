@@ -45,7 +45,7 @@ function FeedCardImage({ src, variant }: { src: string; variant: FeedCardVariant
         height={height}
         onLoad={onLoad}
         onError={onError}
-        className={`absolute inset-0 h-full w-full object-cover object-center hover:scale-105 translation duration-300 ${
+        className={`absolute inset-0 h-full w-full object-cover object-center hover:scale-105 transition duration-300 ${
           blurhash && (!loaded || failed) ? 'opacity-0' : 'opacity-100'
         }`}
       />
