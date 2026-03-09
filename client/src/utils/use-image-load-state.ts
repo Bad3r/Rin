@@ -6,19 +6,26 @@ export function useImageLoadState(src?: string) {
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
-    setLoaded(false)
-    setFailed(false)
-
     const image = imageRef.current
-    if (!src || !image || !image.complete) {
+    if (!src || !image) {
+      setLoaded(false)
+      setFailed(false)
+      return
+    }
+
+    if (!image.complete) {
+      setLoaded(false)
+      setFailed(false)
       return
     }
 
     if (image.naturalWidth > 0) {
       setLoaded(true)
+      setFailed(false)
       return
     }
 
+    setLoaded(false)
     setFailed(true)
   }, [src])
 

@@ -1,11 +1,28 @@
 import '../../test/setup'
 import { render, waitFor } from '@testing-library/react'
 import type { MutableRefObject } from 'react'
+import { useEffect } from 'react'
 import { describe, expect, it } from 'vitest'
 import { useImageLoadState } from '../use-image-load-state'
 
-function TestImage({ src, complete, naturalWidth }: { src: string; complete: boolean; naturalWidth: number }) {
+function TestImage({
+  src,
+  complete,
+  naturalWidth,
+  fireLoadOnRef = false,
+  onStatusChange,
+}: {
+  src: string
+  complete: boolean
+  naturalWidth: number
+  fireLoadOnRef?: boolean
+  onStatusChange?: (status: string) => void
+}) {
   const { imageRef, loaded, failed, onLoad, onError } = useImageLoadState(src)
+
+  useEffect(() => {
+    onStatusChange?.(JSON.stringify({ failed, loaded }))
+  }, [failed, loaded, onStatusChange])
 
   return (
     <>
@@ -24,6 +41,10 @@ function TestImage({ src, complete, naturalWidth }: { src: string; complete: boo
             configurable: true,
             get: () => naturalWidth,
           })
+
+          if (fireLoadOnRef) {
+            onLoad()
+          }
         }}
         src={src}
         alt=''
@@ -55,5 +76,41 @@ describe('useImageLoadState', () => {
     await waitFor(() => {
       expect(getByTestId('status')).toHaveTextContent('{"failed":true,"loaded":false}')
     })
+  })
+
+  it('does not reset a cached image after onLoad fires during ref assignment', async () => {
+    const statusChanges: string[] = []
+    const { getByTestId, rerender } = render(
+      <TestImage
+        src='https://example.com/a.png'
+        complete={false}
+        naturalWidth={0}
+        onStatusChange={status => {
+          statusChanges.push(status)
+        }}
+      />
+    )
+
+    statusChanges.length = 0
+
+    rerender(
+      <TestImage
+        src='https://example.com/b.png'
+        complete={true}
+        naturalWidth={640}
+        fireLoadOnRef
+        onStatusChange={status => {
+          statusChanges.push(status)
+        }}
+      />
+    )
+
+    await waitFor(() => {
+      expect(getByTestId('status')).toHaveTextContent('{"failed":false,"loaded":true}')
+    })
+
+    const firstLoadedIndex = statusChanges.indexOf('{"failed":false,"loaded":true}')
+    expect(firstLoadedIndex).toBeGreaterThanOrEqual(0)
+    expect(statusChanges.slice(firstLoadedIndex)).toEqual(['{"failed":false,"loaded":true}'])
   })
 })
