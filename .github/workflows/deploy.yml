@@ -30,6 +30,10 @@ on:
         description: 'GitHub release download URL (.tar.gz/.zip) for this repository. Used when artifact_source=url.'
         required: false
         type: string
+      artifact_sha256:
+        description: 'SHA-256 checksum for artifact_url. Required when artifact_source=url.'
+        required: false
+        type: string
       environment:
         description: 'Deployment environment'
         required: true
@@ -155,12 +159,14 @@ jobs:
         env:
           ARTIFACT_SOURCE: ${{ github.event.inputs.artifact_source }}
           ARTIFACT_URL: ${{ github.event.inputs.artifact_url }}
+          ARTIFACT_SHA256: ${{ github.event.inputs.artifact_sha256 }}
           VERSION_INPUT: ${{ github.event.inputs.version }}
         with:
           script: |
             const { owner, repo } = context.repo;
             const artifactSourceInput = (process.env.ARTIFACT_SOURCE || '').trim().toLowerCase();
             const artifactUrlInput = (process.env.ARTIFACT_URL || '').trim();
+            const artifactSha256Input = (process.env.ARTIFACT_SHA256 || '').trim().toLowerCase();
             const versionInput = (process.env.VERSION_INPUT || '').trim();
 
             let artifactSource = artifactSourceInput;
@@ -196,10 +202,21 @@ jobs:
             let releaseTargetCommitish = 'unknown';
             let assetName = 'unknown';
             let downloadAuthMode = 'none';
+            let artifactSha256 = '';
 
             if (artifactSource === 'url') {
               if (!artifactUrlInput) {
                 core.setFailed('artifact_source=url requires artifact_url to be set.');
+                return;
+              }
+
+              if (!artifactSha256Input) {
+                core.setFailed('artifact_source=url requires artifact_sha256 to be set.');
+                return;
+              }
+
+              if (!/^[0-9a-f]{64}$/.test(artifactSha256Input)) {
+                core.setFailed('artifact_sha256 must be a 64-character lowercase hexadecimal SHA-256 digest.');
                 return;
               }
 
@@ -232,6 +249,7 @@ jobs:
 
               resolvedUrl = parsed.toString();
               assetName = decodeURIComponent(parsed.pathname.split('/').pop() || 'unknown');
+              artifactSha256 = artifactSha256Input;
               if (!(assetName.endsWith('.tar.gz') || assetName.endsWith('.zip'))) {
                 core.setFailed(
                   `artifact_url must reference a .tar.gz or .zip artifact. Received asset '${assetName}'.`
@@ -306,18 +324,22 @@ jobs:
             core.info(`Resolved release target commitish: ${releaseTargetCommitish}`);
             core.info(`Resolved asset name: ${assetName}`);
             core.info(`Resolved download auth mode: ${downloadAuthMode}`);
+            core.info(`Resolved artifact SHA-256: ${artifactSha256 || '(not required for this source)'}`);
             core.setOutput('artifact_source', artifactSource);
             core.setOutput('artifact_url', resolvedUrl);
             core.setOutput('release_tag', releaseTag);
             core.setOutput('release_target_commitish', releaseTargetCommitish);
             core.setOutput('asset_name', assetName);
             core.setOutput('download_auth_mode', downloadAuthMode);
+            core.setOutput('artifact_sha256', artifactSha256);
 
       - name: Download artifacts from resolved source
         if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
+          ARTIFACT_SOURCE: ${{ steps.dispatch_artifact.outputs.artifact_source }}
           RESOLVED_ARTIFACT_URL: ${{ steps.dispatch_artifact.outputs.artifact_url }}
           RESOLVED_ASSET_NAME: ${{ steps.dispatch_artifact.outputs.asset_name }}
+          RESOLVED_ARTIFACT_SHA256: ${{ steps.dispatch_artifact.outputs.artifact_sha256 }}
           DOWNLOAD_AUTH_MODE: ${{ steps.dispatch_artifact.outputs.download_auth_mode }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -355,6 +377,23 @@ jobs:
             curl -fSL "$URL" -o "$OUT_PATH"
           fi
 
+          if [[ "$ARTIFACT_SOURCE" == "url" ]]; then
+            EXPECTED_SHA="$RESOLVED_ARTIFACT_SHA256"
+            if [[ -z "$EXPECTED_SHA" ]]; then
+              echo "::error::Resolved artifact SHA-256 is empty for artifact_source=url."
+              exit 1
+            fi
+
+            ACTUAL_SHA=$(sha256sum "$OUT_PATH" | awk '{print $1}')
+            echo "Expected SHA-256: $EXPECTED_SHA"
+            echo "Actual SHA-256:   $ACTUAL_SHA"
+
+            if [[ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]]; then
+              echo "::error::Downloaded artifact checksum mismatch."
+              exit 1
+            fi
+          fi
+
           if [[ "$OUT_PATH" == *.zip ]]; then
             unzip -q ./artifacts/build.zip -d ./artifacts
             rm ./artifacts/build.zip
@@ -377,6 +416,7 @@ jobs:
           RELEASE_TAG: ${{ steps.dispatch_artifact.outputs.release_tag }}
           RELEASE_TARGET_COMMITISH: ${{ steps.dispatch_artifact.outputs.release_target_commitish }}
           ASSET_NAME: ${{ steps.dispatch_artifact.outputs.asset_name }}
+          ARTIFACT_SHA256: ${{ steps.dispatch_artifact.outputs.artifact_sha256 }}
           DOWNLOAD_AUTH_MODE: ${{ steps.dispatch_artifact.outputs.download_auth_mode }}
         run: |
           set -euo pipefail
@@ -391,6 +431,7 @@ jobs:
           echo "- release_tag: ${RELEASE_TAG}"
           echo "- release_target_commitish: ${RELEASE_TARGET_COMMITISH}"
           echo "- asset_name: ${ASSET_NAME}"
+          echo "- artifact_sha256: ${ARTIFACT_SHA256:-<not-provided>}"
           echo "- download_auth_mode: ${DOWNLOAD_AUTH_MODE}"
           echo "- url_host: ${URL_HOST}"
           echo "- url_path: ${URL_PATH}"
