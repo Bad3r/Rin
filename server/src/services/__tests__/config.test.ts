@@ -69,17 +69,12 @@ describe('ConfigService', () => {
     api = createTestClient(app, env)
 
     // Create test user
-    await createTestUser()
+    await seedTestUser(sqlite)
   })
 
   afterEach(async () => {
     await cleanupTestDB(sqlite)
   })
-
-  async function createTestUser() {
-    await seedTestUser(sqlite)
-  }
-
   describe('GET /config/:type - Get config', () => {
     it('should get client config without authentication', async () => {
       const result = await api.config.get('client')
