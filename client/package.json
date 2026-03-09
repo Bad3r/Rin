@@ -52,7 +52,7 @@
     "remark-github-blockquote-alert": "^2.0.1",
     "remark-math": "^6.0.0",
     "remark-rehype": "^11.1.0",
-    "remixicon": "^4.2.0",
+    "remixicon": "^4.9.1",
     "typescript-cookie": "^1.0.6",
     "wouter": "3.9.0",
     "yet-another-react-lightbox": "^3.21.1"
