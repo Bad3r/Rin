@@ -58,11 +58,9 @@ export const compactLayoutDefinition: HeaderLayoutDefinition = {
       >
         <div className='grid grid-cols-[auto_1fr_auto] items-center gap-4'>
           <div className='flex items-center gap-2'>
-            <img
-              src={data.avatar || ''}
-              alt=''
-              className={`h-8 w-8 shrink-0 rounded-full object-cover ${data.avatar ? '' : 'hidden'}`}
-            />
+            {data.avatar ? (
+              <img src={data.avatar} alt='' className='h-8 w-8 shrink-0 rounded-full object-cover' />
+            ) : null}
             <p className='max-w-16 truncate text-[10px] font-semibold text-neutral-900 dark:text-neutral-100'>
               {data.name.trim() || 'Rin'}
             </p>
