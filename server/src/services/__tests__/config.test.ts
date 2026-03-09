@@ -11,6 +11,20 @@ import {
 } from '../../../tests/fixtures'
 import { createTestClient } from '../../../tests/test-api-client'
 
+function createConfigStore(initialEntries: Array<[string, unknown]> = []) {
+  const values = new Map<string, unknown>(initialEntries)
+
+  return {
+    get: async (key: string) => values.get(key),
+    set: async (key: string, value: unknown) => {
+      values.set(key, value)
+    },
+    save: async () => {},
+    all: async () => new Map(values),
+    getOrDefault: async (key: string, defaultValue: unknown) => (values.has(key) ? values.get(key) : defaultValue),
+  }
+}
+
 describe('ConfigService', () => {
   let db: any
   let sqlite: D1Database
@@ -44,19 +58,9 @@ describe('ConfigService', () => {
       getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
     })
     app.state('serverConfig', {
-      get: async (_key: string) => undefined,
-      set: async (_key: string, _value: any, _autoSave?: boolean) => {},
-      save: async () => {},
-      all: async () => [],
-      getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
+      ...createConfigStore(),
     })
-    app.state('clientConfig', {
-      get: async (_key: string) => undefined,
-      set: async (_key: string, _value: any, _autoSave?: boolean) => {},
-      save: async () => {},
-      all: async () => [],
-      getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
-    })
+    app.state('clientConfig', createConfigStore())
 
     // Register service
     ConfigService(app)
@@ -144,6 +148,23 @@ describe('ConfigService', () => {
       )
 
       expect(result.error).toBeUndefined()
+    })
+
+    it('should persist personalization client config keys across update and read', async () => {
+      const personalizationConfig = {
+        'header.layout': 'compact',
+        'header.behavior': 'scroll-hide',
+        'feed.layout': 'grid',
+        'feed.card_variant': 'editorial',
+        'theme.color': '#2563eb',
+      }
+
+      const updateResult = await api.config.update('client', personalizationConfig, { token: 'mock_token_1' })
+      expect(updateResult.error).toBeUndefined()
+
+      const getResult = await api.config.get('client')
+      expect(getResult.error).toBeUndefined()
+      expect(getResult.data).toMatchObject(personalizationConfig)
     })
 
     it('should allow admin to update server config', async () => {
