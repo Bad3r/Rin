@@ -24,7 +24,7 @@
         "@types/react-modal": "^3.16.3",
         "@types/react-syntax-highlighter": "^15.5.13",
         "dompurify": "^3.2.7",
-        "i18next": "^25.8.10",
+        "i18next": "^25.8.14",
         "i18next-browser-languagedetector": "^8.0.0",
         "i18next-http-backend": "^3.0.2",
         "lodash": "^4.17.21",
@@ -1339,7 +1339,7 @@
 
     "https-proxy-agent": ["https-proxy-agent@7.0.5", "https://registry.npmmirror.com/https-proxy-agent/-/https-proxy-agent-7.0.5.tgz", { "dependencies": { "agent-base": "^7.0.2", "debug": "4" } }, "sha512-1e4Wqeblerz+tMKPIq2EMGiiWW1dIjZOksyHWSUm1rmuvw/how9hBHZ38lAGj5ID4Ik6EdkOw7NmWPy6LAwalw=="],
 
-    "i18next": ["i18next@25.8.10", "", { "dependencies": { "@babel/runtime": "^7.28.4" }, "peerDependencies": { "typescript": "^5" }, "optionalPeers": ["typescript"] }, "sha512-CtPJLMAz1G8sxo+mIzfBjGgLxWs7d6WqIjlmmv9BTsOat4pJIfwZ8cm07n3kFS6bP9c6YwsYutYrwsEeJVBo2g=="],
+    "i18next": ["i18next@25.8.14", "", { "dependencies": { "@babel/runtime": "^7.28.4" }, "peerDependencies": { "typescript": "^5" }, "optionalPeers": ["typescript"] }, "sha512-paMUYkfWJMsWPeE/Hejcw+XLhHrQPehem+4wMo+uELnvIwvCG019L9sAIljwjCmEMtFQQO3YeitJY8Kctei3iA=="],
 
     "i18next-browser-languagedetector": ["i18next-browser-languagedetector@8.0.0", "https://registry.npmmirror.com/i18next-browser-languagedetector/-/i18next-browser-languagedetector-8.0.0.tgz", { "dependencies": { "@babel/runtime": "^7.23.2" } }, "sha512-zhXdJXTTCoG39QsrOCiOabnWj2jecouOqbchu3EfhtSHxIB5Uugnm9JaizenOy39h7ne3+fLikIjeW88+rgszw=="],
 
