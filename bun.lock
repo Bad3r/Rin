@@ -48,7 +48,7 @@
         "remark-github-blockquote-alert": "^2.0.1",
         "remark-math": "^6.0.0",
         "remark-rehype": "^11.1.0",
-        "remixicon": "^4.2.0",
+        "remixicon": "^4.9.1",
         "typescript-cookie": "^1.0.6",
         "wouter": "3.9.0",
         "yet-another-react-lightbox": "^3.21.1",
@@ -1837,7 +1837,7 @@
 
     "remark-stringify": ["remark-stringify@11.0.0", "https://registry.npmmirror.com/remark-stringify/-/remark-stringify-11.0.0.tgz", { "dependencies": { "@types/mdast": "^4.0.0", "mdast-util-to-markdown": "^2.0.0", "unified": "^11.0.0" } }, "sha512-1OSmLd3awB/t8qdoEOMazZkNsfVTeY4fTsgzcQFdXNq8ToTN4ZGwrMnlda4K6smTFKD+GRV6O48i6Z4iKgPPpw=="],
 
-    "remixicon": ["remixicon@4.3.0", "https://registry.npmmirror.com/remixicon/-/remixicon-4.3.0.tgz", {}, "sha512-jRYQ37dTFSkJtvcxwTUAkIiXkYRvA9EDvVuXPNrmt2xf/VS//CRgFtsX2TAFBoQOhh9SDh7l6La4Xu12snEyxg=="],
+    "remixicon": ["remixicon@4.9.1", "", {}, "sha512-36gLSoujkabnCFZFDyP17VNh9piuBA/rsXUb4auSJWLGsHVXtmxLj/EM5FjaEAGnk8oIAj1Azob/DZ2N+90lAQ=="],
 
     "remove-trailing-separator": ["remove-trailing-separator@1.1.0", "", {}, "sha512-/hS+Y0u3aOfIETiaiirUFwDBDzmXPvO+jAfKTitUngIPzdKc6Z0LoFjM/CK5PL4C+eKwHohlHAb6H0VFfmmUsw=="],
 
