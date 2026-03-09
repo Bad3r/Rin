@@ -17,6 +17,7 @@ import 'yet-another-react-lightbox/styles.css'
 import { drawBlurhashToCanvas } from '../utils/blurhash'
 import { useColorMode } from '../utils/darkModeUtils'
 import { parseImageUrlMetadata } from '../utils/image-upload'
+import { isMarkdownImageLinkAtEnd } from '../utils/markdown-image'
 import { useImageLoadState } from '../utils/use-image-load-state'
 
 interface SectionChildProps {
@@ -34,20 +35,6 @@ const countNewlinesBeforeNode = (text: string, offset: number) => {
     }
   }
   return newlinesBefore
-}
-
-const isMarkdownImageLinkAtEnd = (text: string) => {
-  const trimmed = text.trim()
-
-  const match = trimmed.match(/(.*)(!\\[.*?\\]\\(.*?\\))$/s)
-
-  if (match) {
-    const [, beforeImage, _] = match
-
-    return beforeImage.trim().length === 0 || beforeImage.endsWith('\n')
-  }
-
-  return false
 }
 
 function MarkdownImage({
