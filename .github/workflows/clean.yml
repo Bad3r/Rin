@@ -50,7 +50,7 @@ jobs:
           echo "✅ Preview deployment cleaned up"
 
       - name: Comment PR cleanup
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const prNumber = context.issue.number;
