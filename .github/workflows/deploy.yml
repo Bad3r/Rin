@@ -81,7 +81,7 @@ jobs:
       - name: Resolve PR build run
         if: ${{ github.event_name == 'pull_request' }}
         id: pr_build
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -151,7 +151,7 @@ jobs:
       - name: Resolve workflow_dispatch artifact source
         if: ${{ github.event_name == 'workflow_dispatch' }}
         id: dispatch_artifact
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           ARTIFACT_SOURCE: ${{ github.event.inputs.artifact_source }}
           ARTIFACT_URL: ${{ github.event.inputs.artifact_url }}
@@ -446,7 +446,7 @@ jobs:
 
       - name: Evaluate deployment gate
         id: gate
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           IS_PRODUCTION: ${{ steps.meta.outputs.is_production }}
           PR_NUMBER: ${{ steps.meta.outputs.pr_number }}
@@ -611,7 +611,7 @@ jobs:
 
       - name: Comment on PR
         if: needs.prepare.outputs.pr_number != '0'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const url = '${{ steps.deploy.outputs.url }}';
