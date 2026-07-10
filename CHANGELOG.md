@@ -12,7 +12,6 @@ which automatically generates release notes from commit messages.
 ## [Unreleased]
 
 ### Added
-- Established a fork-owned Cloudflare deployment foundation with tracked root `wrangler.toml`, Cloudflare preflight/provisioning scripts, and deployment doc updates ([#15](https://github.com/Bad3r/Rin/pull/15)).
 - Split tests into explicit `unit`/`integration`/`remote` tiers with local network guards and opt-in remote smoke wiring in CI/deploy paths ([#13](https://github.com/Bad3r/Rin/pull/13)).
 - Migrated server tests to Vitest on Cloudflare Workers via `@cloudflare/vitest-pool-workers`, including Miniflare+D1 test wiring ([#31](https://github.com/Bad3r/Rin/pull/31)).
 - Added manual deploy artifact source modes (`latest`, `version`, `url`) with release asset auto-resolution for workflow dispatches ([#18](https://github.com/Bad3r/Rin/pull/18)).
