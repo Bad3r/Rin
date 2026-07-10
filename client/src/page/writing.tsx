@@ -238,7 +238,7 @@ export function WritingPage({ id }: { id?: number }) {
       const current = formStateRef.current
       const setters = settersRef.current
       if (current.title === '' && feedData.title) setters.setTitle(feedData.title)
-      if (current.tags === '' && feedData.hashtags) {
+      if (current.tags === '' && Array.isArray(feedData.hashtags)) {
         setters.setTags(feedData.hashtags.map(({ name }: { name: string }) => `#${name}`).join(' '))
       }
       if (current.alias === '' && feedData.alias) setters.setAlias(feedData.alias)

@@ -42,6 +42,7 @@ describe('FeedService', () => {
           }
         }
       },
+      save: async () => {},
       getOrSet: async (key: string, fn: Function) => {
         if (cacheStore.has(key)) {
           return cacheStore.get(key)

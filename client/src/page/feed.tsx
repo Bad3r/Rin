@@ -34,6 +34,7 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
   const config = useContext(ClientConfigContext)
   const counterEnabled = config.getBoolean('counter.enabled')
   const [aiSummaryEnabled, setAiSummaryEnabled] = useState(config.get<boolean>('ai_summary.enabled') ?? false)
+  const feedHashtags = Array.isArray(feed?.hashtags) ? feed.hashtags : []
 
   // Listen for config changes
   useEffect(() => {
@@ -155,7 +156,7 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
             content={feed.content.length > 200 ? feed.content.substring(0, 200) : feed.content}
           />
           <meta name='author' content={feed.user.username} />
-          <meta name='keywords' content={feed.hashtags.map(({ name }) => name).join(', ')} />
+          <meta name='keywords' content={feedHashtags.map(({ name }) => name).join(', ')} />
           <meta
             name='description'
             content={feed.content.length > 200 ? feed.content.substring(0, 200) : feed.content}
@@ -251,9 +252,9 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
                 )}
                 <Markdown content={feed.content} />
                 <div className='mt-6 flex flex-col gap-2'>
-                  {feed.hashtags.length > 0 && (
+                  {feedHashtags.length > 0 && (
                     <div className='flex flex-row flex-wrap gap-x-2'>
-                      {feed.hashtags.map(({ name }) => (
+                      {feedHashtags.map(({ name }) => (
                         <HashTag key={name} name={name} />
                       ))}
                     </div>

@@ -97,7 +97,12 @@ export function CommentService(router: Router): void {
         const webhookUrl =
           typeof webhookUrlValue === 'string' && webhookUrlValue.length > 0 ? webhookUrlValue : env.WEBHOOK_URL
         const frontendUrl = ctx.url.origin
-        await notify(webhookUrl, `${frontendUrl}/feed/${feedId}\n${notifyLine}\n${content}`)
+        try {
+          await notify(webhookUrl, `${frontendUrl}/feed/${feedId}\n${notifyLine}\n${content}`)
+        } catch (error) {
+          // The comment is already stored; webhook delivery failures must not fail the request (upstream #474).
+          console.error('[Comment] Webhook notification failed:', error)
+        }
         return 'OK'
       },
       commentCreateSchema

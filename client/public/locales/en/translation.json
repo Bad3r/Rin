@@ -367,7 +367,9 @@
     }
   },
   "sitename": "Site Name",
+  "sort_latest": "Latest",
   "sort_order": "Sort Order",
+  "sort_popular": "Popular",
   "status": "Status",
   "summary": "Summary",
   "tags": "Tags",
@@ -377,6 +379,7 @@
   "top": {
     "title": "Top"
   },
+  "total_tags": "Total {{count}} tags",
   "unlisted": "Unlisted",
   "untop": {
     "title": "Untop"

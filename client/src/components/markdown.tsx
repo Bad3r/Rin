@@ -5,6 +5,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { base16AteliersulphurpoolLight, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
+import remarkBreaks from 'remark-breaks'
 import gfm from 'remark-gfm'
 import { remarkAlert } from 'remark-github-blockquote-alert'
 import remarkMath from 'remark-math'
@@ -141,7 +142,7 @@ export function Markdown({ content }: { content: string }) {
     () => (
       <div className='toc-content dark:text-neutral-300'>
         <ReactMarkdown
-          remarkPlugins={[gfm, remarkMermaid, remarkMath, remarkAlert]}
+          remarkPlugins={[gfm, remarkMermaid, remarkMath, remarkAlert, remarkBreaks]}
           rehypePlugins={[rehypeKatex, rehypeRaw]}
           components={{
             img({ node, src, ...props }) {
@@ -297,42 +298,72 @@ export function Markdown({ content }: { content: string }) {
             },
             h1({ children, ...props }) {
               return (
-                <h1 id={children?.toString()} className='text-3xl font-bold mt-4' {...props}>
+                <h1
+                  id={children?.toString()}
+                  {...props}
+                  className={`${props.className || ''} text-3xl font-bold mt-4`.trim()}
+                  style={{ ...props.style, scrollMarginTop: 'var(--header-scroll-offset, 7rem)' }}
+                >
                   {children}
                 </h1>
               )
             },
             h2({ children, ...props }) {
               return (
-                <h2 id={children?.toString()} className='text-2xl font-bold mt-4' {...props}>
+                <h2
+                  id={children?.toString()}
+                  {...props}
+                  className={`${props.className || ''} text-2xl font-bold mt-4`.trim()}
+                  style={{ ...props.style, scrollMarginTop: 'var(--header-scroll-offset, 7rem)' }}
+                >
                   {children}
                 </h2>
               )
             },
             h3({ children, ...props }) {
               return (
-                <h3 id={children?.toString()} className='text-xl font-bold mt-4' {...props}>
+                <h3
+                  id={children?.toString()}
+                  {...props}
+                  className={`${props.className || ''} text-xl font-bold mt-4`.trim()}
+                  style={{ ...props.style, scrollMarginTop: 'var(--header-scroll-offset, 7rem)' }}
+                >
                   {children}
                 </h3>
               )
             },
             h4({ children, ...props }) {
               return (
-                <h4 id={children?.toString()} className='text-lg font-bold mt-4' {...props}>
+                <h4
+                  id={children?.toString()}
+                  {...props}
+                  className={`${props.className || ''} text-lg font-bold mt-4`.trim()}
+                  style={{ ...props.style, scrollMarginTop: 'var(--header-scroll-offset, 7rem)' }}
+                >
                   {children}
                 </h4>
               )
             },
             h5({ children, ...props }) {
               return (
-                <h5 id={children?.toString()} className='text-base font-bold mt-4' {...props}>
+                <h5
+                  id={children?.toString()}
+                  {...props}
+                  className={`${props.className || ''} text-base font-bold mt-4`.trim()}
+                  style={{ ...props.style, scrollMarginTop: 'var(--header-scroll-offset, 7rem)' }}
+                >
                   {children}
                 </h5>
               )
             },
             h6({ children, ...props }) {
               return (
-                <h6 id={children?.toString()} className='text-sm font-bold mt-4' {...props}>
+                <h6
+                  id={children?.toString()}
+                  {...props}
+                  className={`${props.className || ''} text-sm font-bold mt-4`.trim()}
+                  style={{ ...props.style, scrollMarginTop: 'var(--header-scroll-offset, 7rem)' }}
+                >
                   {children}
                 </h6>
               )
@@ -376,6 +407,22 @@ export function Markdown({ content }: { content: string }) {
                 <section {...props} className={sectionClassName}>
                   {modifiedChildren}
                 </section>
+              )
+            },
+            iframe({ node, src, title, ...props }) {
+              return (
+                <div className='my-4 w-full'>
+                  <iframe
+                    src={src}
+                    title={title || 'Embedded content'}
+                    className='w-full rounded-xl border border-black/10 dark:border-white/10'
+                    style={{ minHeight: '400px' }}
+                    loading='lazy'
+                    referrerPolicy='no-referrer'
+                    sandbox='allow-scripts allow-same-origin allow-popups allow-forms'
+                    {...props}
+                  />
+                </div>
               )
             },
             div({ children, node, ...props }) {

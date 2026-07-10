@@ -24,6 +24,16 @@ if (typeof document === 'undefined') {
   })
 }
 
+// jsdom does not implement ResizeObserver, which the header scroll-offset effect uses.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  class ResizeObserverStub {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver
+}
+
 beforeAll(() => {
   const virtualConsole = (window as unknown as { _virtualConsole?: JsdomVirtualConsole })._virtualConsole
 

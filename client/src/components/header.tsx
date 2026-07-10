@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState, type ReactNode } from 'react'
+import { useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useSiteConfig } from '../hooks/useSiteConfig'
 import { ProfileContext } from '../state/profile'
 import { getHeaderLayoutDefinition } from './site-header/layout-registry'
@@ -13,6 +13,7 @@ export function Header({ children }: { children?: ReactNode }) {
   const layoutDefinition = getHeaderLayoutDefinition(headerLayout)
   const [isRevealed, setIsRevealed] = useState(true)
   const [isAtTop, setIsAtTop] = useState(true)
+  const headerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     let lastScrollY = window.scrollY
@@ -35,6 +36,32 @@ export function Header({ children }: { children?: ReactNode }) {
     }
   }, [headerBehavior])
 
+  // Publish the measured header height so anchor jumps land below the fixed header.
+  useEffect(() => {
+    const root = document.documentElement
+    const setHeaderScrollOffset = () => {
+      const headerHeight = headerRef.current?.getBoundingClientRect().height ?? 0
+      root.style.setProperty('--header-scroll-offset', `${Math.ceil(headerHeight + 16)}px`)
+    }
+
+    setHeaderScrollOffset()
+
+    const resizeObserver = new ResizeObserver(() => {
+      setHeaderScrollOffset()
+    })
+
+    if (headerRef.current) {
+      resizeObserver.observe(headerRef.current)
+    }
+
+    window.addEventListener('resize', setHeaderScrollOffset)
+
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', setHeaderScrollOffset)
+    }
+  }, [])
+
   const isFixedTopHeader = layoutDefinition.kind === 'top' && headerBehavior !== 'static'
   const headerPaddingClassName = headerLayout === 'compact' ? 'mx-0 mt-0' : 'mx-4 mt-4'
   const containerClassName = isFixedTopHeader
@@ -49,7 +76,7 @@ export function Header({ children }: { children?: ReactNode }) {
       {headerLayout === 'compact' ? (
         <div className='pointer-events-none fixed inset-x-0 top-0 -z-10 h-64 bg-gradient-to-b from-theme/15 to-white/0 dark:from-theme/20 dark:to-transparent' />
       ) : null}
-      <div className={containerClassName}>
+      <div ref={headerRef} className={containerClassName}>
         <div className='w-screen'>
           {headerLayout === 'compact' ? (
             <div className='w-full'>

@@ -15,6 +15,7 @@ export function HashtagPage({ name }: { name: string }) {
   const [hashtag, setHashtag] = useState<TagDetail>()
   const feedListClass =
     siteConfig.feedLayout === 'masonry' ? 'wauto columns-1 gap-5 md:columns-2' : 'wauto flex flex-col'
+  const hashtagFeeds = Array.isArray(hashtag?.feeds) ? hashtag.feeds : []
   const ref = useRef('')
   const fetchFeeds = useCallback(() => {
     const nameDecoded = decodeURI(name)
@@ -47,13 +48,13 @@ export function HashtagPage({ name }: { name: string }) {
             <p>{hashtag?.name}</p>
             <div className='flex flex-row justify-between'>
               <p className='text-sm mt-4 text-neutral-500 font-normal'>
-                {t('article.total$count', { count: hashtag?.feeds?.length })}
+                {t('article.total$count', { count: hashtagFeeds.length })}
               </p>
             </div>
           </div>
           <Waiting for={status === 'idle'}>
             <div className={feedListClass}>
-              {hashtag?.feeds?.map(feedItem => {
+              {hashtagFeeds.map(feedItem => {
                 const { id, ...feed } = feedItem
                 return <FeedCard key={id} id={`${id}`} {...feed} />
               })}

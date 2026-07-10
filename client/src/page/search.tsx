@@ -22,6 +22,7 @@ export function SearchPage({ keyword }: { keyword: string }) {
   const limit = tryInt(10, query.get('limit'), siteConfig.pageSize)
   const feedListClass =
     siteConfig.feedLayout === 'masonry' ? 'wauto columns-1 gap-5 md:columns-2' : 'wauto flex flex-col'
+  const feedData = Array.isArray(feeds?.data) ? feeds.data : []
   const ref = useRef('')
 
   useEffect(() => {
@@ -60,7 +61,7 @@ export function SearchPage({ keyword }: { keyword: string }) {
           </div>
           <Waiting for={status === 'idle'}>
             <div className={feedListClass}>
-              {feeds?.data.map(feedItem => {
+              {feedData.map(feedItem => {
                 const { id, ...feed } = feedItem
                 return <FeedCard key={id} id={`${id}`} {...feed} />
               })}

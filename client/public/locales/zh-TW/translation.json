@@ -367,7 +367,9 @@
     }
   },
   "sitename": "網站名稱",
+  "sort_latest": "最新",
   "sort_order": "排序",
+  "sort_popular": "熱門",
   "status": "狀態",
   "summary": "簡介",
   "tags": "標籤",
@@ -377,6 +379,7 @@
   "top": {
     "title": "置頂"
   },
+  "total_tags": "共 {{count}} 個標籤",
   "unlisted": "未列出",
   "untop": {
     "title": "取消置頂"

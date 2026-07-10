@@ -33,7 +33,7 @@ function FeedCardImage({ src, variant }: { src: string; variant: FeedCardVariant
   }, [blurhash])
 
   return (
-    <div className={imageFrameClass} style={{ aspectRatio }}>
+    <div className={imageFrameClass} style={{ aspectRatio: aspectRatio || '16 / 9' }}>
       {blurhash && !loaded ? (
         <canvas ref={canvasRef} className='absolute inset-0 h-full w-full scale-110 object-cover blur-sm' />
       ) : null}
@@ -87,7 +87,7 @@ export type FeedCardProps = {
   top?: number
   title: string | null
   summary?: string
-  hashtags: { id: number; name: string }[]
+  hashtags?: { id: number; name: string }[]
   createdAt: IsoDateTimeString | Date
   updatedAt: IsoDateTimeString | Date
   preview?: boolean
@@ -110,6 +110,7 @@ export function FeedCard({
 }: FeedCardProps) {
   const { t } = useTranslation()
   const siteConfig = useSiteConfig()
+  const safeHashtags = Array.isArray(hashtags) ? hashtags : []
   const activeVariant = normalizeFeedCardVariant(variant ?? siteConfig.feedCardVariant)
   const styles = FEED_CARD_STYLES[activeVariant]
   const createdAtDate = asDate(createdAt, 'feed.createdAt')
@@ -140,12 +141,14 @@ export function FeedCard({
           {listed === 0 ? <span>{t('unlisted')}</span> : null}
           {top === 1 ? <span className='text-theme'>{t('article.top.title')}</span> : null}
         </p>
-        <p className={`${styles.summary} ${activeVariant === 'editorial' ? 'mt-4 max-w-3xl' : ''}`}>{summary || ''}</p>
-        {hashtags.length > 0 ? (
+        <p className={`whitespace-pre-line ${styles.summary} ${activeVariant === 'editorial' ? 'mt-4 max-w-3xl' : ''}`}>
+          {summary || ''}
+        </p>
+        {safeHashtags.length > 0 ? (
           <div
             className={`flex flex-row flex-wrap justify-start gap-2 ${activeVariant === 'editorial' ? 'mt-4' : 'mt-2 gap-x-2'}`}
           >
-            {hashtags.map(({ name }) => (
+            {safeHashtags.map(({ name }) => (
               <HashTag key={name} name={name} />
             ))}
           </div>
