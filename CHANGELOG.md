@@ -12,6 +12,10 @@ which automatically generates release notes from commit messages.
 ## [Unreleased]
 
 ### Added
+- Ported guest comments from upstream ([openRin/Rin#515](https://github.com/openRin/Rin/pull/515)): unauthenticated visitors can comment with a required name and optional email/website, toggleable via the `comment.guest.enabled` client config; public comment lists never expose guest emails (fork hardening).
+- Ported hashtags page latest/popular sorting with a translated total count (upstream #489/#490).
+- Custom footer HTML now executes its `<script>` tags so analytics snippets work (upstream #476); supersedes the prior DOMPurify sanitization of this owner-only config.
+- Markdown rendering: sandboxed `iframe` embeds, single-newline line breaks via `remark-breaks`, plain-text summary extraction on the server, and HTML `<img>` cover-image fallback (upstream June content fixes).
 - Split tests into explicit `unit`/`integration`/`remote` tiers with local network guards and opt-in remote smoke wiring in CI/deploy paths ([#13](https://github.com/Bad3r/Rin/pull/13)).
 - Migrated server tests to Vitest on Cloudflare Workers via `@cloudflare/vitest-pool-workers`, including Miniflare+D1 test wiring ([#31](https://github.com/Bad3r/Rin/pull/31)).
 - Added manual deploy artifact source modes (`latest`, `version`, `url`) with release asset auto-resolution for workflow dispatches ([#18](https://github.com/Bad3r/Rin/pull/18)).
@@ -20,6 +24,8 @@ which automatically generates release notes from commit messages.
 - Added DevSkim security scanning workflow ([21a7ff4](https://github.com/Bad3r/Rin/commit/21a7ff4)).
 
 ### Changed
+- Realigned D1 migrations to upstream numbering: upstream `0009` (AI summary status/error columns) and `0010` (guest comments table rebuild) adopted verbatim; fork migrations moved to `0011` (feeds.top), `0012` (About seed), `0013` (unique About alias index). The wrangler duplicate-top catch-up now keys on `0011.sql`.
+- Re-landed the selective upstream intake originally merged as [#48](https://github.com/Bad3r/Rin/pull/48) and lost in a history rewrite: customizable header layouts (upstream #465), feed card presentation settings (#467), blurhash loading-race fix (#466), UV/PV hiding when disabled (#461), plus deploy artifact checksum verification and wrangler typegen/AI-binding hardening.
 - Server routing is now Hono-only with retained behavior-contract coverage for router semantics, OAuth regressions, friend route mounting, and worker `/api/*` prefix handling.
 - Coverage CI now enforces minimum router/core thresholds (`src/core/base.ts`, `src/core/router-factory.ts`, `src/core/router-hono.ts`) to guard post-cutover regressions.
 - Tightened shared/client/server type boundaries and stabilized worker coverage cold starts for test reliability ([#32](https://github.com/Bad3r/Rin/pull/32)).
@@ -34,6 +40,12 @@ which automatically generates release notes from commit messages.
 - Removed the legacy router adapter and `ROUTER_IMPL` environment toggle from runtime/test configuration.
 
 ### Fixed
+- Feed detail caches are invalidated even when the alias is unchanged, invalidations are persisted, and pinning invalidates the alias entry (upstream #492/#529).
+- Comment webhook delivery failures are logged instead of failing comment creation (upstream #474).
+- Content rendering hardened against missing data across feed/hashtag/moments/search/writing pages and mermaid processing; feed cards keep a 16:9 frame when images lack metadata (upstream June fixes).
+- TOC anchor jumps land below the fixed header (upstream #468); the mobile menu restores page scrolling after navigation (upstream #481); the loading spinner follows the configured theme color (upstream #491).
+- AI summaries strip model reasoning tags and fail loudly when a response contains only reasoning (upstream fix).
+- treefmt no longer routes markdown files to biome, unblocking docs-only commits.
 - Hardened search privacy and correctness by separating public/authenticated search cache keys, fixing search pagination propagation, and ensuring idempotent about-page bootstrap/seed behavior ([#37](https://github.com/Bad3r/Rin/pull/37)).
 - Aligned server cache invalidation behavior and documented/covered partial-index assumptions for feed queries ([#37](https://github.com/Bad3r/Rin/pull/37)).
 - Fixed moments editor corruption paths and restored alias-based `/about` authoring flow, including missing-about create CTA behavior for authenticated admins ([#36](https://github.com/Bad3r/Rin/pull/36)).

@@ -1,5 +1,8 @@
-> [!CAUTION]
-> This fork will include a major rewrite, it is not ready to be used by other users
+> [!NOTE]
+> This fork tracks upstream [openRin/Rin](https://github.com/openRin/Rin) as a hardened,
+> self-maintained deployment with selective feature intake. The previously planned Astro/Preact
+> rewrite was shelved on 2026-07-10. See [FORK.md](FORK.md) for the fork's goals, audited state,
+> and decision record.
 
 ![Cover](./docs/docs/public/rin-logo.png)
 

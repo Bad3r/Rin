@@ -142,13 +142,17 @@ registrations; the rest validate inline.
 1. **PR #48 content is not on main** despite its merged status. The selective upstream intake
    (header layouts, feed card presentation, blurhash race fix, PV/UV hiding) plus `[ai]` typegen and
    deploy hardening (68 files) lives only at commit `1e22c3d`, still reachable in the object store:
-   `git branch recover-intake 1e22c3d`.
+   `git branch recover-intake 1e22c3d`. RESOLVED 2026-07-10: the payload was re-applied
+   byte-faithfully on the reconciliation branch (the pre-merge tree is identical to `37d97a4`);
+   branch `recover-intake` preserves the original commit.
 2. **PR #15 content is not on main.** The deploy foundation (tracked root `wrangler.toml`,
    `cf:preflight`/`cf:bootstrap` provisioning, generated deploy config) was merged into side branch
    `chore/test-tiering-local-vs-remote` (commit `e3f0aba`) after that branch had already been
    squash-merged as PR #13. Root `wrangler.toml` therefore remains untracked local config on main.
+   RESOLVED 2026-07-10: payload consciously dropped; the artifact-based deploy flow (PR #18, PR #48)
+   is the working pipeline and generates wrangler config at deploy time. Recoverable at `e3f0aba`.
 3. **CHANGELOG.md overstates main**: its Unreleased section lists the PR #15 deploy foundation, which
-   is absent from the tree.
+   is absent from the tree. RESOLVED 2026-07-10: entry removed.
 4. Branch `upstream-intake/main-20260307` is a plain snapshot of upstream/main from 2026-03-08, not
    fork work.
 
@@ -163,7 +167,11 @@ Current main contains zero upstream commits after the fork point. Upstream moved
   about index). Upstream: `0009` (ai_summary_status/error), `0010` (guest comments table rebuild).
   At the fork point upstream's Drizzle schema already contained `top` and `ai_summary` columns while
   its migration files stopped at `0008`; both sides then closed that schema/migration gap
-  differently. Production fork D1 sits at `migration_version` 11 with fork semantics.
+  differently. RESOLVED 2026-07-10: the fork adopted upstream `0009`/`0010` verbatim and renumbered
+  its own migrations to `0011`-`0013` (top, About seed, unique About index). Upstream still has no
+  migration for `feeds.top` at all (created only by its `fixTopField` code path, nullable); the
+  fork's `0011` is strictly stronger. Production D1 still sits at `migration_version` 11 with OLD
+  fork semantics and must be rebuilt (see follow-ups).
 - Significant upstream work the fork lacks: guest comments (upstream #515), the v0.3.0 stabilization
   wave (webhook fixes, client config bootstrap, public cache gating, scroll restore, storage
   streaming, alias cache invalidation), markdown editor toolbar, header layouts and feed card
@@ -208,23 +216,25 @@ Things of lasting value that only exist here:
 
 ## Outstanding follow-ups
 
-Reconciliation sprint backlog from the 2026-07-10 decision, in execution order:
+The 2026-07-10 reconciliation sprint landed on `chore/option-b-reconciliation`: PR #48 payload
+restored, PR #15 payload dropped (CHANGELOG corrected), migrations realigned to upstream numbering,
+guest comments (upstream #515) plus the v0.3.0/June fix wave ported, docs and hygiene refreshed.
+Remaining:
 
-1. Recover the PR #48 payload: branch `recover-intake` (created 2026-07-10 at `1e22c3d`) holds it;
-   rebase onto main and re-merge. Restores header layouts, feed card presentation, the blurhash
-   race fix, PV/UV hiding, and typegen/deploy hardening.
-2. Decide the PR #15 payload at `e3f0aba` (on `chore/test-tiering-local-vs-remote`): recover the
-   preflight/bootstrap deploy foundation or drop it. Correct `CHANGELOG.md` either way.
-3. Realign migrations to upstream numbering (see Decision): adopt upstream 0009
-   (ai_summary_status/error) and 0010 (guest comments rebuild) as-is, renumber fork 0009-0011 to
-   follow, extend the catch-up logic in `scripts/migration-utils.ts`, then rebuild the unused
-   production D1 from the realigned sequence after a precautionary `wrangler d1 export`.
-4. Port guest comments (upstream #515) and the highest-value v0.3.0 fixes (webhooks, client config
-   bootstrap, cache gating, alias cache invalidation), then the June rendering fixes.
-5. Doc refresh: `AGENTS.md` still claims `bun:test` (server uses vitest pool-workers), React 18
-   (client is on 19), and `deploy:server`/`deploy:client` scripts that no longer exist; truth-up
-   `CHANGELOG.md`; update the README caution now the rewrite is shelved.
-6. Hygiene: remove tracked `worker-startup.cpuprofile`, resolve the error-boundary Sentry TODO
-   (`client/src/components/error-boundary.tsx`), review elkjs (EPL-2.0) for AGPL compliance.
-7. Steady state afterward: merge bot PRs, run a quarterly upstream intake pass, and open upstream
-   PRs for fork changes that add real value (auth/privacy fixes, test infrastructure).
+1. Rebuild the production D1 from the realigned migration sequence. The DB carries no real content
+   (deployment not yet in use); still export first: `wrangler d1 export rin --remote`, then recreate
+   the database (or drop all tables plus `info`) and let the deploy migration path apply 0000-0013.
+   Local dev DBs (`.wrangler` state) should simply be deleted and re-migrated.
+2. Quarterly upstream intake candidates, rough value order: customizable webhook settings plus the
+   webhook config resolver (upstream d56ed6b, 4393230, c83a091, 63693f8), markdown editor toolbar
+   (3b16c2b), public cache gating inside CacheImpl (4921279), admin login access when the login
+   entry is hidden (7ac58e6), feed edit lookup by numeric id and split cache keys (e0a46dc), client
+   config bootstrap via the worker app shell (e53e8ef/f830332), AI summary status admin tooling
+   (735b26b, 46b9d77).
+3. Upstream PR candidates from the fork (per the decision's upstreaming goal): excluding
+   guest_email from public comment lists, a real migration for feeds.top (upstream creates it only
+   via the fixTopField code path, nullable, and misses it entirely when the info table pre-exists),
+   and the Workers-runtime test infrastructure.
+4. Review elkjs (EPL-2.0, via mermaid) for AGPL-3.0 compliance.
+5. Steady state: merge bot PRs as they arrive; run the quarterly intake pass over
+   `git log upstream/main`; checkpoint remains 2026-10-01 for the sprint being merged to main.

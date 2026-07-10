@@ -10,7 +10,8 @@ bun dev:server            # Server only (Wrangler dev server on port 11498)
 bun dev:cron              # Server with cron triggers enabled
 
 # Building
-bun run build             # Build all workspaces (turbo)
+bun run build             # Build client, then bundle the Worker via wrangler dry-run
+bun run build:all         # Build all workspaces (turbo)
 bun run check             # TypeScript type check (turbo)
 
 # Database (using Rin CLI)
@@ -22,17 +23,17 @@ bun run format:check      # Check formatting
 bun run format:write      # Fix formatting
 
 # Deployment (using Rin CLI)
-bun run deploy            # Deploy both frontend (Pages) and backend (Workers)
-bun run deploy:server     # Deploy backend only
- bun run deploy:client     # Deploy frontend only
+bun run deploy            # Deploy the single Worker (server + SPA assets) to Cloudflare
 
 # Release (using Rin CLI)
 bun run release <version> # Create a new release (patch/minor/major/x.y.z)
 
 # Testing
-bun run test              # Run all tests (client + server)
-bun run test:server       # Run server tests only
- bun run test:coverage     # Run tests with coverage report
+bun run test              # Client tests + server unit/integration tiers + script tests
+bun run test:unit         # Client tests + server unit tier
+bun run test:integration  # Server integration tier
+bun run test:remote       # Remote smoke (needs ENABLE_REMOTE_INTEGRATION_TESTS=true and RIN_REMOTE_BASE_URL)
+bun run test:coverage     # Coverage + junit reporters + server router coverage gate
 ```
 
 ## New Worktree Bootstrap (Required)
@@ -76,14 +77,15 @@ The project has comprehensive test coverage for both client and server:
   cd client && bun run test:coverage # With coverage report
   ```
 
-### Server Tests (Bun)
+### Server Tests (Vitest on Workers)
 
-- **Location**: `server/src/**/__tests__/*.test.ts`, `server/tests/`
-- **Runner**: Bun's native test runner (`bun:test`)
+- **Location**: `server/src/**/__tests__/*.test.ts`, `server/tests/{security,unit,integration,remote}`
+- **Runner**: Vitest via `@cloudflare/vitest-pool-workers` (Miniflare with a real D1 and migrations applied in setup); outbound network is blocked in local tiers
 - **Commands**:
   ```bash
-  cd server && bun run test          # Run tests once
-  cd server && bun run test:coverage # With coverage report
+  cd server && bun run test:unit         # Unit tier
+  cd server && bun run test:integration  # Integration tier
+  cd server && bun run test:coverage     # With coverage + router coverage gate
   ```
 
 ### Test Structure
@@ -194,9 +196,9 @@ ln -s ../../scripts/git-commit-msg.sh .git/hooks/commit-msg
 
 ### Key Technologies
 
-- **Client**: React 18, Vite, TailwindCSS, Wouter (routing), i18next, Vitest
-- **Server**: Hono-like router, Drizzle ORM, Cloudflare Workers/D1, bun:test
+- **Client**: React 19, Vite, TailwindCSS, Wouter (routing), i18next, Vitest
+- **Server**: Hono behind the fork's router contract (`server/src/core/router-*.ts`), Drizzle ORM, Cloudflare Workers/D1
 - **Shared Types**: @rin/api package for type-safe API communication
 - **Package Manager**: Bun
 - **Build**: Turbo for monorepo orchestration
-- **Testing**: Vitest (client), Bun native test runner (server)
+- **Testing**: Vitest (client, jsdom) and Vitest via @cloudflare/vitest-pool-workers (server)
