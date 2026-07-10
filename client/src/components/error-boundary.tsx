@@ -132,13 +132,8 @@ export class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoun
     // Log error
     console.error('Global Error Boundary caught an error:', error, errorInfo)
 
-    // Call custom error handler if provided
+    // External error reporting can hook in through the onError prop.
     this.props.onError?.(error, errorInfo)
-
-    // TODO: Integrate with error tracking service (e.g., Sentry)
-    // if (import.meta.env.PROD) {
-    //   reportError(error, errorInfo);
-    // }
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps) {
