@@ -7,8 +7,8 @@ export function Waiting({ for: wait, children }: { for?: WaitCondition; children
   return (
     <>
       {!wait ? (
-        <div className='w-full h-96 flex flex-col justify-center items-center mb-8 ani-show-fast'>
-          <ReactLoading type='cylon' color='#FC466B' />
+        <div className='w-full h-96 flex flex-col justify-center items-center mb-8 ani-show-fast text-theme'>
+          <ReactLoading type='cylon' color='currentColor' />
         </div>
       ) : (
         children

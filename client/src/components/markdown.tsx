@@ -1,10 +1,11 @@
 import 'katex/dist/katex.min.css'
-import React, { cloneElement, isValidElement, useCallback, useMemo, useRef } from 'react'
+import React, { cloneElement, isValidElement, useCallback, useEffect, useMemo, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { base16AteliersulphurpoolLight, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
+import remarkBreaks from 'remark-breaks'
 import gfm from 'remark-gfm'
 import { remarkAlert } from 'remark-github-blockquote-alert'
 import remarkMath from 'remark-math'
@@ -14,7 +15,11 @@ import Download from 'yet-another-react-lightbox/plugins/download'
 import Zoom from 'yet-another-react-lightbox/plugins/zoom'
 import remarkMermaid from '../remark/remarkMermaid'
 import 'yet-another-react-lightbox/styles.css'
+import { drawBlurhashToCanvas } from '../utils/blurhash'
 import { useColorMode } from '../utils/darkModeUtils'
+import { parseImageUrlMetadata } from '../utils/image-upload'
+import { isMarkdownImageLinkAtEnd } from '../utils/markdown-image'
+import { useImageLoadState } from '../utils/use-image-load-state'
 
 interface SectionChildProps {
   node?: { tagName?: string }
@@ -33,18 +38,65 @@ const countNewlinesBeforeNode = (text: string, offset: number) => {
   return newlinesBefore
 }
 
-const isMarkdownImageLinkAtEnd = (text: string) => {
-  const trimmed = text.trim()
+function MarkdownImage({
+  src,
+  alt,
+  show,
+  rounded,
+  scale,
+  className,
+}: {
+  src?: string
+  alt?: string
+  show: (src?: string) => void
+  rounded: boolean
+  scale: string
+  className?: string
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const { src: cleanSrc, blurhash, width, height } = parseImageUrlMetadata(src)
+  const { failed, imageRef, loaded, onError, onLoad } = useImageLoadState(cleanSrc)
+  const roundedClass = rounded ? 'rounded-xl' : ''
+  const aspectRatio = width && height ? `${width} / ${height}` : undefined
 
-  const match = trimmed.match(/(.*)(!\\[.*?\\]\\(.*?\\))$/s)
+  useEffect(() => {
+    if (!blurhash || !canvasRef.current) {
+      return
+    }
+    try {
+      drawBlurhashToCanvas(canvasRef.current, blurhash)
+    } catch (error) {
+      console.error('Failed to render blurhash', error)
+    }
+  }, [blurhash])
 
-  if (match) {
-    const [, beforeImage, _] = match
-
-    return beforeImage.trim().length === 0 || beforeImage.endsWith('\n')
-  }
-
-  return false
+  return (
+    <button
+      type='button'
+      aria-label={alt ? `View image: ${alt}` : 'View image'}
+      onClick={() => {
+        show(cleanSrc)
+      }}
+      className={`relative inline-block max-w-full overflow-hidden border-0 bg-transparent p-0 text-left ${roundedClass}`}
+      style={{ zoom: scale, aspectRatio }}
+    >
+      {blurhash && !loaded ? (
+        <canvas ref={canvasRef} className={`absolute inset-0 h-full w-full scale-110 blur-sm ${roundedClass}`} />
+      ) : null}
+      <img
+        ref={imageRef}
+        src={cleanSrc}
+        alt={alt}
+        width={width}
+        height={height}
+        onLoad={onLoad}
+        onError={onError}
+        className={`mx-auto max-w-full cursor-zoom-in transition-opacity ${roundedClass} ${className || ''} ${
+          blurhash && (!loaded || failed) ? 'opacity-0' : 'opacity-100'
+        }`}
+      />
+    </button>
+  )
 }
 
 export function Markdown({ content }: { content: string }) {
@@ -90,30 +142,22 @@ export function Markdown({ content }: { content: string }) {
     () => (
       <div className='toc-content dark:text-neutral-300'>
         <ReactMarkdown
-          remarkPlugins={[gfm, remarkMermaid, remarkMath, remarkAlert]}
+          remarkPlugins={[gfm, remarkMermaid, remarkMath, remarkAlert, remarkBreaks]}
           rehypePlugins={[rehypeKatex, rehypeRaw]}
           components={{
             img({ node, src, ...props }) {
               const offset = node?.position?.start.offset ?? 0
               const previousContent = content.slice(0, offset)
               const newlinesBefore = countNewlinesBeforeNode(previousContent, offset)
-              const imageAlt = typeof props.alt === 'string' ? props.alt : ''
               const Image = ({ rounded, scale }: { rounded: boolean; scale: string }) => (
-                <button
-                  type='button'
-                  className='bg-transparent border-0 p-0'
-                  onClick={() => {
-                    show(src)
-                  }}
-                >
-                  <img
-                    src={src}
-                    {...props}
-                    alt={imageAlt}
-                    className={`mx-auto ${rounded ? 'rounded-xl' : ''}`}
-                    style={{ zoom: scale }}
-                  />
-                </button>
+                <MarkdownImage
+                  src={src}
+                  alt={typeof props.alt === 'string' ? props.alt : ''}
+                  show={show}
+                  rounded={rounded}
+                  scale={scale}
+                  className={props.className}
+                />
               )
               if (
                 newlinesBefore >= 1 ||
@@ -254,42 +298,72 @@ export function Markdown({ content }: { content: string }) {
             },
             h1({ children, ...props }) {
               return (
-                <h1 id={children?.toString()} className='text-3xl font-bold mt-4' {...props}>
+                <h1
+                  id={children?.toString()}
+                  {...props}
+                  className={`${props.className || ''} text-3xl font-bold mt-4`.trim()}
+                  style={{ ...props.style, scrollMarginTop: 'var(--header-scroll-offset, 7rem)' }}
+                >
                   {children}
                 </h1>
               )
             },
             h2({ children, ...props }) {
               return (
-                <h2 id={children?.toString()} className='text-2xl font-bold mt-4' {...props}>
+                <h2
+                  id={children?.toString()}
+                  {...props}
+                  className={`${props.className || ''} text-2xl font-bold mt-4`.trim()}
+                  style={{ ...props.style, scrollMarginTop: 'var(--header-scroll-offset, 7rem)' }}
+                >
                   {children}
                 </h2>
               )
             },
             h3({ children, ...props }) {
               return (
-                <h3 id={children?.toString()} className='text-xl font-bold mt-4' {...props}>
+                <h3
+                  id={children?.toString()}
+                  {...props}
+                  className={`${props.className || ''} text-xl font-bold mt-4`.trim()}
+                  style={{ ...props.style, scrollMarginTop: 'var(--header-scroll-offset, 7rem)' }}
+                >
                   {children}
                 </h3>
               )
             },
             h4({ children, ...props }) {
               return (
-                <h4 id={children?.toString()} className='text-lg font-bold mt-4' {...props}>
+                <h4
+                  id={children?.toString()}
+                  {...props}
+                  className={`${props.className || ''} text-lg font-bold mt-4`.trim()}
+                  style={{ ...props.style, scrollMarginTop: 'var(--header-scroll-offset, 7rem)' }}
+                >
                   {children}
                 </h4>
               )
             },
             h5({ children, ...props }) {
               return (
-                <h5 id={children?.toString()} className='text-base font-bold mt-4' {...props}>
+                <h5
+                  id={children?.toString()}
+                  {...props}
+                  className={`${props.className || ''} text-base font-bold mt-4`.trim()}
+                  style={{ ...props.style, scrollMarginTop: 'var(--header-scroll-offset, 7rem)' }}
+                >
                   {children}
                 </h5>
               )
             },
             h6({ children, ...props }) {
               return (
-                <h6 id={children?.toString()} className='text-sm font-bold mt-4' {...props}>
+                <h6
+                  id={children?.toString()}
+                  {...props}
+                  className={`${props.className || ''} text-sm font-bold mt-4`.trim()}
+                  style={{ ...props.style, scrollMarginTop: 'var(--header-scroll-offset, 7rem)' }}
+                >
                   {children}
                 </h6>
               )
@@ -333,6 +407,22 @@ export function Markdown({ content }: { content: string }) {
                 <section {...props} className={sectionClassName}>
                   {modifiedChildren}
                 </section>
+              )
+            },
+            iframe({ node, src, title, ...props }) {
+              return (
+                <div className='my-4 w-full'>
+                  <iframe
+                    src={src}
+                    title={title || 'Embedded content'}
+                    className='w-full rounded-xl border border-black/10 dark:border-white/10'
+                    style={{ minHeight: '400px' }}
+                    loading='lazy'
+                    referrerPolicy='no-referrer'
+                    sandbox='allow-scripts allow-same-origin allow-popups allow-forms'
+                    {...props}
+                  />
+                </div>
               )
             },
             div({ children, node, ...props }) {

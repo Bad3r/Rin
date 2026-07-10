@@ -51,3 +51,6 @@ worker-configuration.d.ts
 
 # Local planning scratch docs
 *plan*.md
+
+# Profiler output
+*.cpuprofile

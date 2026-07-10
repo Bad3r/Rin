@@ -1,5 +1,4 @@
-import DOMPurify from 'dompurify'
-import { useCallback, useContext, useEffect, useState } from 'react'
+import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { Helmet } from './helmet'
 import { useTranslation } from 'react-i18next'
 import Popup from 'reactjs-popup'
@@ -14,7 +13,9 @@ function Footer() {
   const [modeState, setModeState] = useState<ThemeMode>('system')
   const config = useContext(ClientConfigContext)
   const footerHtml = config.get<string>('footer')
-  const loginEnabled = config.get<boolean>('login.enabled')
+  const footerHtmlRef = useRef<HTMLDivElement | null>(null)
+  const mountedScriptNodesRef = useRef<HTMLScriptElement[]>([])
+  const loginEnabled = config.getBoolean('login.enabled')
   const [doubleClickTimes, setDoubleClickTimes] = useState(0)
 
   const setMode = useCallback((mode: ThemeMode) => {
@@ -43,6 +44,54 @@ function Footer() {
     setMode(mode)
   }, [setMode])
 
+  // Footer HTML is owner-only config; scripts (e.g. analytics) must actually execute,
+  // so mount it through a template and re-create script nodes (upstream #476).
+  useEffect(() => {
+    const container = footerHtmlRef.current
+    if (!container) {
+      return
+    }
+
+    mountedScriptNodesRef.current.forEach(script => {
+      script.remove()
+    })
+    mountedScriptNodesRef.current = []
+    container.replaceChildren()
+
+    if (!footerHtml) {
+      return
+    }
+
+    const template = document.createElement('template')
+    template.innerHTML = footerHtml
+
+    const scripts = Array.from(template.content.querySelectorAll('script'))
+    scripts.forEach(script => {
+      script.remove()
+    })
+
+    container.appendChild(template.content.cloneNode(true))
+
+    scripts.forEach(script => {
+      const nextScript = document.createElement('script')
+
+      Array.from(script.attributes).forEach(attribute => {
+        nextScript.setAttribute(attribute.name, attribute.value)
+      })
+
+      nextScript.textContent = script.textContent
+      container.appendChild(nextScript)
+      mountedScriptNodesRef.current.push(nextScript)
+    })
+
+    return () => {
+      mountedScriptNodesRef.current.forEach(script => {
+        script.remove()
+      })
+      mountedScriptNodesRef.current = []
+    }
+  }, [footerHtml])
+
   return (
     <footer>
       <Helmet>
@@ -51,8 +100,7 @@ function Footer() {
         <link rel='alternate' type='application/json' title={siteName} href='/rss.json' />
       </Helmet>
       <div className='flex flex-col mb-8 space-y-2 justify-center items-center t-primary ani-show'>
-        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: footer is explicitly configured by trusted blog owners */}
-        {footerHtml && <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(footerHtml) }} />}
+        <div ref={footerHtmlRef} />
         <p className='text-sm text-neutral-500 font-normal link-line'>
           <button
             type='button'
@@ -74,7 +122,7 @@ function Footer() {
           <a className='hover:underline' href='https://github.com/Bad3r/Rin' target='_blank' rel='noopener'>
             Rin
           </a>
-          {config.get<boolean>('rss') && (
+          {config.getBoolean('rss') && (
             <>
               <Spliter />
               <Popup

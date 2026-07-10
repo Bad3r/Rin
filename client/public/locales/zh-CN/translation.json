@@ -42,7 +42,12 @@
   "clear": "清除",
   "close": "关闭",
   "comment": {
+    "anonymous": "匿名",
     "empty": "评论内容不能为空",
+    "guest_email_placeholder": "邮箱（可选）",
+    "guest_name_placeholder": "昵称（必填）",
+    "guest_name_required": "游客昵称不能为空",
+    "guest_website_placeholder": "网站（可选）",
     "placeholder": {
       "title": "说点什么吧"
     },
@@ -266,6 +271,9 @@
     "other": {
       "title": "其他设置"
     },
+    "personalization": {
+      "title": "个性化"
+    },
     "site": {
       "title": "站点信息",
       "name": {
@@ -289,6 +297,64 @@
         "label": "每页文章数"
       }
     },
+    "header_layout": {
+      "title": "Header 布局样式",
+      "desc": "选择桌面端站点头部的排布方式，并在下方预览效果",
+      "options": {
+        "classic": "经典居中",
+        "compact": "极简纯文本"
+      },
+      "preview": {
+        "classic": "品牌、居中导航和操作区保持当前这套平衡布局。",
+        "compact": "几乎去掉所有装饰，只保留最必要的信息和操作。"
+      }
+    },
+    "header_behavior": {
+      "title": "Header 显示方式",
+      "desc": "控制页面滚动时 Header 是否固定显示在顶部",
+      "options": {
+        "fixed": "固定",
+        "static": "不固定",
+        "reveal": "上划时显示"
+      }
+    },
+    "feed_card": {
+      "title": "文章卡片样式",
+      "desc": "选择文章列表、搜索结果和标签页中卡片的视觉风格",
+      "options": {
+        "default": "默认",
+        "editorial": "杂志风"
+      },
+      "preview": {
+        "default": "当前这套紧凑卡片，表面处理简单，干净直接。",
+        "editorial": "更有展示感的卡片，带轻微主题染色、更强层级和类似画册的 framing。"
+      }
+    },
+    "feed_layout": {
+      "title": "文章列表布局",
+      "desc": "选择文章列表、搜索结果和标签页里卡片的排列方式",
+      "preview_note": "仅预览。保存设置后才会应用到站点。",
+      "options": {
+        "list": "单列",
+        "masonry": "瀑布流"
+      },
+      "preview": {
+        "list": "稳定的单列阅读节奏，每行只放一张卡片。",
+        "masonry": "按卡片高度自动拼接的多列布局，更适合长短不一的内容。"
+      }
+    },
+    "theme_color": {
+      "title": "主题色",
+      "desc": "选择按钮、高亮和交互元素使用的强调色",
+      "custom": "自定义",
+      "options": {
+        "rose": "玫红",
+        "violet": "紫色",
+        "blue": "蓝色",
+        "teal": "青绿",
+        "orange": "橙色"
+      }
+    },
     "rss": {
       "desc": "启用站点底部 RSS 订阅链接",
       "title": "RSS 订阅链接"
@@ -301,7 +367,9 @@
     }
   },
   "sitename": "站点名称",
+  "sort_latest": "最新",
   "sort_order": "排序",
+  "sort_popular": "热门",
   "status": "状态",
   "summary": "简介",
   "tags": "标签",
@@ -311,6 +379,7 @@
   "top": {
     "title": "置顶"
   },
+  "total_tags": "共 {{count}} 个标签",
   "unlisted": "未列出",
   "untop": {
     "title": "取消置顶"

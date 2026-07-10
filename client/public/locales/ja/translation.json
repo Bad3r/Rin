@@ -42,7 +42,12 @@
   "clear": "クリア",
   "close": "閉じる",
   "comment": {
+    "anonymous": "匿名",
     "empty": "コメント内容は空にできません",
+    "guest_email_placeholder": "メール（任意）",
+    "guest_name_placeholder": "お名前（必須）",
+    "guest_name_required": "お名前は必須です",
+    "guest_website_placeholder": "ウェブサイト（任意）",
     "placeholder": {
       "title": "何か言ってください..."
     },
@@ -257,6 +262,90 @@
     "other": {
       "title": "その他の設定"
     },
+    "personalization": {
+      "title": "パーソナライズ"
+    },
+    "site": {
+      "title": "サイト情報",
+      "name": {
+        "title": "サイト名",
+        "desc": "サイトタイトルとナビゲーションバーに表示される名前を設定します",
+        "label": "サイト名"
+      },
+      "description": {
+        "title": "サイト説明",
+        "desc": "ナビゲーションバーに表示される短い説明を設定します",
+        "label": "サイト説明"
+      },
+      "avatar": {
+        "title": "サイトアバター",
+        "desc": "ナビゲーションバーに表示する画像を URL、アップロード、またはドラッグ&ドロップで設定します",
+        "label": "アバター URL"
+      },
+      "page_size": {
+        "title": "ページサイズ",
+        "desc": "記事一覧で 1 ページあたりに表示する件数を設定します",
+        "label": "1ページあたりの記事数"
+      }
+    },
+    "header_layout": {
+      "title": "ヘッダーレイアウト",
+      "desc": "デスクトップでのサイトヘッダー配置を選び、下でプレビューできます",
+      "options": {
+        "classic": "クラシック中央配置",
+        "compact": "ミニマル"
+      },
+      "preview": {
+        "classic": "ブランド、中央ナビ、操作エリアを現在に近いバランスで保ちます。",
+        "compact": "装飾をほぼ外し、必要最小限の情報と操作だけを見せる構成です。"
+      }
+    },
+    "header_behavior": {
+      "title": "ヘッダー表示",
+      "desc": "スクロール時にヘッダーを上部へ固定するかどうかを切り替えます",
+      "options": {
+        "fixed": "固定",
+        "static": "固定しない",
+        "reveal": "上スクロールで表示"
+      }
+    },
+    "feed_card": {
+      "title": "記事カードのスタイル",
+      "desc": "記事一覧、検索結果、タグ一覧で使うカード表現を選びます",
+      "options": {
+        "default": "標準",
+        "editorial": "エディトリアル"
+      },
+      "preview": {
+        "default": "現在のコンパクトなカード。装飾は少なく、シンプルな見た目です。",
+        "editorial": "淡いテーマカラー、強めの階層感、誌面のような額装感を持つ表現です。"
+      }
+    },
+    "feed_layout": {
+      "title": "記事一覧レイアウト",
+      "desc": "記事一覧、検索結果、タグ一覧でのカードの並び方を選びます",
+      "preview_note": "プレビュー専用です。保存後にサイトへ適用されます。",
+      "options": {
+        "list": "1カラム",
+        "masonry": "Masonry"
+      },
+      "preview": {
+        "list": "1行に1枚ずつ並ぶ、安定した読みやすいレイアウトです。",
+        "masonry": "カードの高さに応じて詰める、多段の瀑布型レイアウトです。"
+      }
+    },
+    "theme_color": {
+      "title": "テーマカラー",
+      "desc": "ボタンや強調表示、操作要素に使うアクセントカラーを選びます",
+      "custom": "カスタム",
+      "options": {
+        "rose": "ローズ",
+        "violet": "バイオレット",
+        "blue": "ブルー",
+        "teal": "ティール",
+        "orange": "オレンジ"
+      }
+    },
     "rss": {
       "desc": "サイトフッターにRSS購読リンクを有効にする",
       "title": "RSS 購読リンク"
@@ -269,7 +358,9 @@
     }
   },
   "sitename": "サイト名",
+  "sort_latest": "新着",
   "sort_order": "ソート順",
+  "sort_popular": "人気",
   "status": "ステータス",
   "summary": "概要",
   "tags": "タグ",
@@ -279,6 +370,7 @@
   "top": {
     "title": "キャッシュをクリア"
   },
+  "total_tags": "全 {{count}} 個のタグ",
   "unlisted": "リストされていない",
   "untop": {
     "title": "トップ解除"

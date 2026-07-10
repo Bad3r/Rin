@@ -77,19 +77,23 @@ Starting from 0.3.0, Rin now uses Workers to host static assets instead of Cloud
 
 Ensure your Cloudflare API Token has the following permissions:
 - **Cloudflare Workers**:Edit
-- **Account**:Read
 - **D1**:Edit
 - **R2**:Edit (if using R2 storage)
 
 ![1000000663](/cloudflare-api-key-en.png)
 
-### Step 5: Deploy
+### Step 5: Rename the Branch
+
+1. If the previously forked branch was `dev`, you need to manually rename it to `main` or `master`.
+
+### Step 6: Deploy
 
 1. Go to the Actions tab in your repository
-2. Select the **"Deploy"** workflow
+2. Select the **"Build"** workflow
 3. Click **"Run workflow"**
+4. After successful build, the `Deploy` workflow will be automatically triggered to automatically deploy to workers.
 
-### Step 6: Verify Deployment
+### Step 7: Verify Deployment
 
 1. Visit your frontend URL
 2. Test the login functionality

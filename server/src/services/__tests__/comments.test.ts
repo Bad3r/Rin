@@ -130,6 +130,25 @@ describe('CommentService', () => {
       // the order may depend on insertion order or id order
       expect(result.data?.length).toBe(2)
     })
+
+    it('should return guest comments with null user and no guest email', async () => {
+      await execSql(
+        sqlite,
+        `
+            INSERT INTO comments (id, feed_id, user_id, content, guest_name, guest_email, guest_website) VALUES
+                (10, 1, NULL, 'Guest comment', 'Visitor', 'visitor@example.com', 'https://example.com')
+        `
+      )
+
+      const result = await api.comment.list(1)
+
+      expect(result.error).toBeUndefined()
+      const guest = result.data?.find(comment => comment.user === null)
+      expect(guest).toBeDefined()
+      expect(guest?.guestName).toBe('Visitor')
+      expect(guest?.guestWebsite).toBe('https://example.com')
+      expect(guest).not.toHaveProperty('guestEmail')
+    })
   })
 
   describe('POST /comment/:feed - Create comment', () => {
@@ -149,13 +168,59 @@ describe('CommentService', () => {
       expect(comments.length).toBe(3)
     })
 
-    it('should require authentication', async () => {
+    it('should create guest comment without authentication', async () => {
+      const result = await api.comment.create(1, {
+        content: 'Guest comment',
+        guestName: '  Visitor  ',
+        guestEmail: ' visitor@example.com ',
+        guestWebsite: ' https://example.com ',
+      })
+
+      expect(result.error).toBeUndefined()
+
+      const rows = await queryAll<any>(sqlite, `SELECT * FROM comments WHERE feed_id = 1 AND user_id IS NULL`)
+      expect(rows.length).toBe(1)
+      expect(rows[0].guest_name).toBe('Visitor')
+      expect(rows[0].guest_email).toBe('visitor@example.com')
+      expect(rows[0].guest_website).toBe('https://example.com')
+      expect(rows[0].approved).toBe(1)
+    })
+
+    it('should require guest name for unauthenticated comments', async () => {
       const result = await api.comment.create(1, {
         content: 'Test comment',
       })
 
       expect(result.error).toBeDefined()
-      expect(result.error?.status).toBe(401)
+      expect(result.error?.status).toBe(400)
+      expect(result.error?.value).toBe('Guest name is required')
+    })
+
+    it('should reject blank guest name', async () => {
+      const result = await api.comment.create(1, {
+        content: 'Test comment',
+        guestName: '   ',
+      })
+
+      expect(result.error).toBeDefined()
+      expect(result.error?.status).toBe(400)
+      expect(result.error?.value).toBe('Guest name is required')
+    })
+
+    it('should reject non-http guest website schemes', async () => {
+      for (const guestWebsite of ['javascript:alert(1)', 'data:text/html,x', 'ftp://example.com', 'not a url']) {
+        const result = await api.comment.create(1, {
+          content: 'Guest comment',
+          guestName: 'Visitor',
+          guestWebsite,
+        })
+
+        expect(result.error?.status).toBe(400)
+        expect(result.error?.value).toBe('Guest website must be an http(s) URL')
+      }
+
+      const rows = await queryAll(sqlite, `SELECT * FROM comments WHERE feed_id = 1 AND user_id IS NULL`)
+      expect(rows.length).toBe(0)
     })
 
     it('should require content', async () => {
@@ -171,8 +236,9 @@ describe('CommentService', () => {
       expect(result.error?.status).toBe(400)
     })
 
-    it('should return 401 for non-existent user token', async () => {
-      // Token for non-existent user should be rejected during auth
+    it('should treat non-existent user token as guest', async () => {
+      // deriveAuth leaves uid undefined for unknown users, so the request
+      // falls through to the guest path and fails on the missing guest name.
       const result = await api.comment.create(
         1,
         {
@@ -182,7 +248,8 @@ describe('CommentService', () => {
       )
 
       expect(result.error).toBeDefined()
-      expect(result.error?.status).toBe(401)
+      expect(result.error?.status).toBe(400)
+      expect(result.error?.value).toBe('Guest name is required')
     })
 
     it('should return 400 for non-existent feed', async () => {
@@ -238,6 +305,32 @@ describe('CommentService', () => {
 
       expect(result.error).toBeDefined()
       expect(result.error?.status).toBe(404)
+    })
+
+    it('should deny guest comment deletion by non-admin users', async () => {
+      await execSql(
+        sqlite,
+        `INSERT INTO comments (id, feed_id, user_id, content, guest_name) VALUES (11, 1, NULL, 'Guest comment', 'Visitor')`
+      )
+
+      const result = await api.comment.delete(11, { token: 'mock_token_1' })
+
+      expect(result.error).toBeDefined()
+      expect(result.error?.status).toBe(403)
+    })
+
+    it('should allow admin to delete guest comments', async () => {
+      await execSql(
+        sqlite,
+        `INSERT INTO comments (id, feed_id, user_id, content, guest_name) VALUES (12, 1, NULL, 'Guest comment', 'Visitor')`
+      )
+
+      const result = await api.comment.delete(12, { token: 'mock_token_3', isAdmin: true })
+
+      expect(result.error).toBeUndefined()
+
+      const rows = await queryAll(sqlite, `SELECT * FROM comments WHERE id = 12`)
+      expect(rows.length).toBe(0)
     })
   })
 })

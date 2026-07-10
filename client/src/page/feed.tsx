@@ -32,8 +32,9 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
   const { showConfirm, ConfirmUI } = useConfirm()
   const [top, setTop] = useState<number>(0)
   const config = useContext(ClientConfigContext)
-  const counterEnabled = config.get<boolean>('counter.enabled')
+  const counterEnabled = config.getBoolean('counter.enabled')
   const [aiSummaryEnabled, setAiSummaryEnabled] = useState(config.get<boolean>('ai_summary.enabled') ?? false)
+  const feedHashtags = Array.isArray(feed?.hashtags) ? feed.hashtags : []
 
   // Listen for config changes
   useEffect(() => {
@@ -155,7 +156,7 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
             content={feed.content.length > 200 ? feed.content.substring(0, 200) : feed.content}
           />
           <meta name='author' content={feed.user.username} />
-          <meta name='keywords' content={feed.hashtags.map(({ name }) => name).join(', ')} />
+          <meta name='keywords' content={feedHashtags.map(({ name }) => name).join(', ')} />
           <meta
             name='description'
             content={feed.content.length > 200 ? feed.content.substring(0, 200) : feed.content}
@@ -251,9 +252,9 @@ export function FeedPage({ id, TOC, clean }: { id: string; TOC: () => JSX.Elemen
                 )}
                 <Markdown content={feed.content} />
                 <div className='mt-6 flex flex-col gap-2'>
-                  {feed.hashtags.length > 0 && (
+                  {feedHashtags.length > 0 && (
                     <div className='flex flex-row flex-wrap gap-x-2'>
-                      {feed.hashtags.map(({ name }) => (
+                      {feedHashtags.map(({ name }) => (
                         <HashTag key={name} name={name} />
                       ))}
                     </div>
@@ -292,7 +293,7 @@ export function TOCHeader({ TOC }: { TOC: () => JSX.Element }) {
   const [isOpened, setIsOpened] = useState(false)
 
   return (
-    <div className='lg:hidden'>
+    <div className='shrink-0 lg:hidden'>
       <button
         type='button'
         onClick={() => setIsOpened(true)}
@@ -334,24 +335,49 @@ export function TOCHeader({ TOC }: { TOC: () => JSX.Element }) {
   )
 }
 
+function safeHttpUrl(raw: string): string {
+  try {
+    const url = new URL(raw)
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : ''
+  } catch {
+    return ''
+  }
+}
+
 function CommentInput({ id, onRefresh }: { id: string; onRefresh: () => void }) {
   const { t } = useTranslation()
   const [content, setContent] = useState('')
+  const [guestName, setGuestName] = useState('')
+  const [guestEmail, setGuestEmail] = useState('')
+  const [guestWebsite, setGuestWebsite] = useState('')
   const [error, setError] = useState('')
   const { showAlert, AlertUI } = useAlert()
   const profile = useContext(ProfileContext)
+  const config = useContext(ClientConfigContext)
   const [, setLocation] = useLocation()
+  const guestEnabled = config.getBoolean('comment.guest.enabled')
   function errorHumanize(error: string) {
     if (error === 'Unauthorized') return t('login.required')
     else if (error === 'Content is required') return t('comment.empty')
+    else if (error === 'Guest name is required') return t('comment.guest_name_required')
     return error
   }
   function submit() {
-    if (!profile) {
+    if (!profile && !guestEnabled) {
       setLocation('/login')
       return
     }
-    client.comment.create(parseInt(id, 10), { content }).then(({ error }) => {
+    const body: { content: string; guestName?: string; guestEmail?: string; guestWebsite?: string } = { content }
+    if (!profile) {
+      if (!guestName.trim()) {
+        setError(t('comment.guest_name_required'))
+        return
+      }
+      body.guestName = guestName.trim()
+      if (guestEmail.trim()) body.guestEmail = guestEmail.trim()
+      if (guestWebsite.trim()) body.guestWebsite = guestWebsite.trim()
+    }
+    client.comment.create(parseInt(id, 10), body).then(({ error }) => {
       if (error) {
         setError(errorHumanize(error.value))
       } else {
@@ -368,8 +394,33 @@ function CommentInput({ id, onRefresh }: { id: string; onRefresh: () => void }) 
       <div className='flex flex-col w-full items-start mb-4'>
         <label htmlFor='comment'>{t('comment.title')}</label>
       </div>
-      {profile ? (
+      {profile || guestEnabled ? (
         <>
+          {!profile && (
+            <div className='flex flex-col sm:flex-row w-full gap-2 mb-2'>
+              <input
+                type='text'
+                placeholder={t('comment.guest_name_placeholder')}
+                className='bg-w w-full rounded-lg px-3 py-2'
+                value={guestName}
+                onChange={e => setGuestName(e.target.value)}
+              />
+              <input
+                type='email'
+                placeholder={t('comment.guest_email_placeholder')}
+                className='bg-w w-full rounded-lg px-3 py-2'
+                value={guestEmail}
+                onChange={e => setGuestEmail(e.target.value)}
+              />
+              <input
+                type='url'
+                placeholder={t('comment.guest_website_placeholder')}
+                className='bg-w w-full rounded-lg px-3 py-2'
+                value={guestWebsite}
+                onChange={e => setGuestWebsite(e.target.value)}
+              />
+            </div>
+          )}
           <textarea
             id='comment'
             placeholder={t('comment.placeholder.title')}
@@ -421,7 +472,7 @@ function Comments({ id }: { id: string }) {
   }, [id, loadComments])
   return (
     <>
-      {config.get<boolean>('comment.enabled') && (
+      {config.getBoolean('comment.enabled') && (
         <div className='m-2 flex flex-col justify-center items-center'>
           <CommentInput id={id} onRefresh={loadComments} />
           {error && (
@@ -464,12 +515,26 @@ function CommentItem({ comment, onRefresh }: { comment: ApiComment; onRefresh: (
       })
     })
   }
+  const commenterName = comment.user?.username || comment.guestName || t('comment.anonymous')
+  // Defense in depth with the server-side check: only http(s) URLs may reach an href.
+  const guestWebsite = !comment.user && comment.guestWebsite ? safeHttpUrl(comment.guestWebsite) : ''
   return (
     <div className='flex flex-row items-start rounded-xl mt-2'>
-      <img src={comment.user.avatar || ''} alt={comment.user.username} className='w-8 h-8 rounded-full mt-4' />
+      <img src={comment.user?.avatar || ''} alt={commenterName} className='w-8 h-8 rounded-full mt-4' />
       <div className='flex flex-col flex-1 w-0 ml-2 bg-w rounded-xl p-4'>
-        <div className='flex flex-row'>
-          <span className='t-primary text-base font-bold'>{comment.user.username}</span>
+        <div className='flex flex-row items-center'>
+          <span className='t-primary text-base font-bold'>{commenterName}</span>
+          {guestWebsite && (
+            <a
+              href={guestWebsite}
+              target='_blank'
+              rel='noopener noreferrer nofollow'
+              className='ml-1'
+              aria-label={t('comment.guest_website_placeholder')}
+            >
+              <i className='ri-external-link-line t-secondary'></i>
+            </a>
+          )}
           <div className='flex-1 w-0' />
           <span title={commentCreatedAt.toLocaleString()} className='text-gray-400 text-sm'>
             {timeago(commentCreatedAt)}
@@ -477,7 +542,7 @@ function CommentItem({ comment, onRefresh }: { comment: ApiComment; onRefresh: (
         </div>
         <p className='t-primary break-words'>{comment.content}</p>
         <div className='flex flex-row justify-end'>
-          {(profile?.permission || profile?.id === comment.user.id) && (
+          {(profile?.permission || (comment.user && profile?.id === comment.user.id)) && (
             <Popup
               arrow={false}
               trigger={

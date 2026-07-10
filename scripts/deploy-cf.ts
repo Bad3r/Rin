@@ -2,8 +2,18 @@ import { readdir } from 'node:fs/promises'
 import { isIP } from 'node:net'
 import { $ } from 'bun'
 import stripIndent from 'strip-indent'
-import { fixTopField, getMigrationVersion, isInfoExist, updateMigrationVersion } from './db-fix-top-field'
-import { isKnownTopColumnCatchUpCase } from './migration-utils'
+import {
+  fixTopField,
+  getMigrationVersion,
+  hasCommentsGuestColumn,
+  isInfoExist,
+  updateMigrationVersion,
+} from './db-fix-top-field'
+import {
+  OLD_NUMBERING_ABORT_MESSAGE,
+  isIncompatibleOldNumberingState,
+  isKnownTopColumnCatchUpCase,
+} from './migration-utils'
 
 process.env.WRANGLER_SEND_METRICS ??= 'false'
 
@@ -281,6 +291,13 @@ mode = ${toTomlString('smart')}
   const typ = 'remote'
   const migrationVersion = await getMigrationVersion(typ, DB_NAME)
   const isInfoExistResult = await isInfoExist(typ, DB_NAME)
+  if (migrationVersion >= 9 && migrationVersion < 13) {
+    const guestColumn = await hasCommentsGuestColumn(typ, DB_NAME)
+    if (isIncompatibleOldNumberingState(migrationVersion, guestColumn)) {
+      console.error(`migration_version ${migrationVersion}: ${OLD_NUMBERING_ABORT_MESSAGE}`)
+      process.exit(1)
+    }
+  }
 
   try {
     const files = await readdir('./server/sql', { recursive: false })

@@ -1,3 +1,4 @@
+import { JSDOM } from 'jsdom'
 import '@testing-library/jest-dom'
 import { afterAll, beforeAll, vi } from 'vitest'
 
@@ -10,6 +11,28 @@ const originalConsoleLog = console.log
 const originalConsoleInfo = console.info
 const originalConsoleWarn = console.warn
 let originalVirtualConsoleEmit: JsdomVirtualConsole['emit'] | undefined
+
+if (typeof document === 'undefined') {
+  const { window } = new JSDOM('<!doctype html><html><body></body></html>')
+
+  Object.assign(globalThis, {
+    document: window.document,
+    HTMLElement: window.HTMLElement,
+    HTMLImageElement: window.HTMLImageElement,
+    navigator: window.navigator,
+    window,
+  })
+}
+
+// jsdom does not implement ResizeObserver, which the header scroll-offset effect uses.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  class ResizeObserverStub {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver
+}
 
 beforeAll(() => {
   const virtualConsole = (window as unknown as { _virtualConsole?: JsdomVirtualConsole })._virtualConsole

@@ -17,6 +17,7 @@ import { generateAISummary } from '../utils/ai'
 import type { CacheImpl } from '../utils/cache'
 import { HyperLogLog } from '../utils/hyperloglog'
 import { extractImage } from '../utils/image'
+import { stripMarkdown } from '../utils/markdown'
 import { bindTagToPost } from './tag'
 
 // Lazy-loaded modules for WordPress import
@@ -152,8 +153,9 @@ export function FeedService(router: Router): void {
           })
         ).map(({ content, hashtags, summary, ...other }) => {
           const avatar = extractImage(content)
+          const plainText = stripMarkdown(content)
           return {
-            summary: summary.length > 0 ? summary : content.length > 100 ? content.slice(0, 100) : content,
+            summary: summary.length > 0 ? summary : plainText.length > 100 ? plainText.slice(0, 100) : plainText,
             hashtags: hashtags.map(({ hashtag }) => hashtag),
             avatar,
             ...other,
@@ -411,8 +413,9 @@ export function FeedService(router: Router): void {
       function formatAndCacheData(feed: AdjacentFeed | null | undefined, feedDirection: 'previous_feed' | 'next_feed') {
         if (feed) {
           const hashtags_flatten = feed.hashtags.map(f => f.hashtag)
+          const plainText = stripMarkdown(feed.content)
           const summary =
-            feed.summary.length > 0 ? feed.summary : feed.content.length > 50 ? feed.content.slice(0, 50) : feed.content
+            feed.summary.length > 0 ? feed.summary : plainText.length > 50 ? plainText.slice(0, 50) : plainText
           const cacheKey = `${feed.id}_${feedDirection}_${id_num}`
           const cacheData = {
             id: feed.id,
@@ -596,7 +599,7 @@ export function FeedService(router: Router): void {
         }
 
         await db.update(feeds).set({ top }).where(eq(feeds.id, feed.id))
-        await clearFeedCache(cache, feed.id, null, null)
+        await clearFeedCache(cache, feed.id, feed.alias, feed.alias)
         return 'Updated'
       },
       feedSetTopSchema
@@ -689,8 +692,9 @@ export function FeedService(router: Router): void {
           })
         )
       ).map(({ content, hashtags, summary, ...other }) => {
+        const plainText = stripMarkdown(content)
         return {
-          summary: summary.length > 0 ? summary : content.length > 100 ? content.slice(0, 100) : content,
+          summary: summary.length > 0 ? summary : plainText.length > 100 ? plainText.slice(0, 100) : plainText,
           hashtags: hashtags.map(({ hashtag }) => hashtag),
           ...other,
         }
@@ -841,10 +845,18 @@ type FeedItem = {
 async function clearFeedCache(cache: CacheImpl, id: number, alias: string | null, newAlias: string | null) {
   await cache.deletePrefix('feeds_')
   await cache.deletePrefix('search_')
-  await cache.delete(`feed_${id}`, false)
+
+  // The detail cache must be invalidated even when the alias is unchanged (upstream #492),
+  // and the batched deletes must be persisted (upstream #529).
+  const detailKeys = new Set([`feed_${id}`])
+  if (alias) detailKeys.add(`feed_${alias}`)
+  if (newAlias && newAlias !== alias) detailKeys.add(`feed_${newAlias}`)
+
+  for (const key of detailKeys) {
+    await cache.delete(key, false)
+  }
+
   await cache.deletePrefix(`${id}_previous_feed`)
   await cache.deletePrefix(`${id}_next_feed`)
-  if (alias === newAlias) return
-  if (alias) await cache.delete(`feed_${alias}`, false)
-  if (newAlias) await cache.delete(`feed_${newAlias}`, false)
+  await cache.save()
 }

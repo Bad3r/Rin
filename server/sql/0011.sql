@@ -1,4 +1,4 @@
--- Ensure only one About alias row can exist.
-CREATE UNIQUE INDEX IF NOT EXISTS `feeds_alias_about_unique` ON `feeds` (`alias`) WHERE `alias` = 'about';
+-- Add top column to feeds table for pinning/ordering support
+ALTER TABLE `feeds` ADD COLUMN `top` integer DEFAULT 0 NOT NULL;
 --> statement-breakpoint
 UPDATE `info` SET `value` = '11' WHERE `key` = 'migration_version';

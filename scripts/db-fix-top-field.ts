@@ -20,6 +20,14 @@ export async function fixTopField(typ: 'local' | 'remote', db: string, isInfoExi
   }
 }
 
+export async function hasCommentsGuestColumn(typ: 'local' | 'remote', db: string) {
+  const result =
+    await $`bunx wrangler d1 execute ${db}  --${typ} --json --command "SELECT name FROM pragma_table_info('comments') WHERE name='guest_name'"`
+      .quiet()
+      .json()
+  return result[0].results.length > 0
+}
+
 export async function isInfoExist(typ: 'local' | 'remote', db: string) {
   const result =
     await $`bunx wrangler d1 execute ${db}  --${typ} --json --command "SELECT name FROM sqlite_master WHERE type='table' AND name='info'"`

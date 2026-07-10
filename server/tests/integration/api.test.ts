@@ -26,6 +26,7 @@ describe('Integration Tests - API Flow', () => {
       set: async () => {},
       delete: async () => {},
       deletePrefix: async () => {},
+      save: async () => {},
       getOrSet: async (_key: string, fn: Function) => fn(),
       getOrDefault: async (_key: string, defaultValue: any) => defaultValue,
     })
