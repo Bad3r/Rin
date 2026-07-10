@@ -14,6 +14,11 @@ export const defaultClientConfig = new Map(
     'site.description': 'A lightweight personal blogging system',
     'site.avatar': '',
     'site.page_size': 5,
+    'header.layout': 'classic',
+    'header.behavior': 'fixed',
+    'feed.layout': 'list',
+    'feed.card_variant': 'default',
+    'theme.color': '#fc466b',
   })
 )
 
@@ -43,6 +48,26 @@ export class ConfigWrapper {
   }
   default<T>(key: string) {
     return this.defaultConfig.get(key) as T
+  }
+
+  getBoolean(key: string): boolean {
+    const value = this.get<unknown>(key)
+
+    if (typeof value === 'boolean') {
+      return value
+    }
+
+    if (typeof value === 'string') {
+      const normalizedValue = value.trim().toLowerCase()
+      if (normalizedValue === 'true') return true
+      if (normalizedValue === 'false') return false
+    }
+
+    if (typeof value === 'number') {
+      return value !== 0
+    }
+
+    return Boolean(value)
   }
 }
 

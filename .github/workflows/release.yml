@@ -97,6 +97,7 @@ jobs:
       - name: Save build metadata
         run: |
           set -euo pipefail
+          DEPLOY_SCRIPT_HASH=$(cat ./scripts/deploy-cf.ts ./scripts/db-fix-top-field.ts ./scripts/migration-utils.ts | sha256sum | awk '{print $1}')
           mkdir -p ./build-meta
 
           # Intentional policy: only releases whose tagged commit is already reachable
@@ -116,11 +117,12 @@ jobs:
           echo "${GITHUB_SHA}" > ./build-meta/head_sha
           echo "${GITHUB_REF}" > ./build-meta/source_ref
           echo "${GITHUB_REF_NAME}" > ./build-meta/release_tag
+          echo "$DEPLOY_SCRIPT_HASH" > ./build-meta/deploy_script_hash
 
       - name: Package build artifacts
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
-          tar -czf "build-v${VERSION}-cloudflare.tar.gz" dist/ build-meta/
+          tar -czf "build-v${VERSION}-cloudflare.tar.gz" dist/ build-meta/ server/sql/
           echo "Artifact packaged: build-v${VERSION}-cloudflare.tar.gz"
           ls -lh build-v*.tar.gz
 

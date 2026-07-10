@@ -76,21 +76,27 @@ GITHUB_CLIENT_SECRET  → RIN_GITHUB_CLIENT_SECRET
 ### 第四步：更新 Cloudflare API Key 权限
 
 确保您的 Cloudflare API Token 具有以下权限：
-- **Cloudflare Workers**:Edit
-- **Account**:Read
 - **D1**:Edit
-- **R2**:Edit (如果使用 R2 存储)
+- **Workers R2 存储**:Edit (如果使用 R2 存储)
+- **Workers 脚本**:Edit
 
 ![1000000663](/cloudflare-api-key-cn.png)
 
 
-### 第五步：部署
+### 第五步：重命名分支名
+
+
+1. 若先前 fork 仓库的分支为 `dev`，需手动重命名为 `main` 或 `master`
+
+
+### 第六步：部署
 
 1. 进入仓库的 Actions 标签
-2. 选择 **"Deploy"** 工作流
+2. 选择 **"Build"** 工作流
 3. 点击 **"Run workflow"**
+4. 在构建成功后会自动触发 `Deploy` 工作流自动部署到 workers
 
-### 第六步：验证部署
+### 第七步：验证部署
 
 1. 访问您的前端 URL
 2. 测试登录功能

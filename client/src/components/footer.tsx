@@ -14,7 +14,7 @@ function Footer() {
   const [modeState, setModeState] = useState<ThemeMode>('system')
   const config = useContext(ClientConfigContext)
   const footerHtml = config.get<string>('footer')
-  const loginEnabled = config.get<boolean>('login.enabled')
+  const loginEnabled = config.getBoolean('login.enabled')
   const [doubleClickTimes, setDoubleClickTimes] = useState(0)
 
   const setMode = useCallback((mode: ThemeMode) => {
@@ -74,7 +74,7 @@ function Footer() {
           <a className='hover:underline' href='https://github.com/Bad3r/Rin' target='_blank' rel='noopener'>
             Rin
           </a>
-          {config.get<boolean>('rss') && (
+          {config.getBoolean('rss') && (
             <>
               <Spliter />
               <Popup

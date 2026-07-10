@@ -35,6 +35,8 @@ export function FeedsPage() {
   })
   const page = tryInt(1, query.get('page'))
   const limit = tryInt(10, query.get('limit'), siteConfig.pageSize)
+  const feedListClass =
+    siteConfig.feedLayout === 'masonry' ? 'wauto columns-1 gap-5 ani-show md:columns-2' : 'wauto flex flex-col ani-show'
   const ref = useRef('')
 
   const fetchFeeds = useCallback(
@@ -107,7 +109,7 @@ export function FeedsPage() {
             </div>
           </div>
           <Waiting for={status === 'idle'}>
-            <div className='wauto flex flex-col ani-show'>
+            <div className={feedListClass}>
               {feeds[listState].data.map(feedItem => {
                 const { id, ...feed } = feedItem
                 return <FeedCard key={id} id={`${id}`} {...feed} />

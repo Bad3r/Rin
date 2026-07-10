@@ -46,12 +46,15 @@ jobs:
       # Save build metadata for deploy workflow
       - name: Save build metadata
         run: |
+          DEPLOY_SCRIPT_HASH=$(cat ./scripts/deploy-cf.ts ./scripts/db-fix-top-field.ts ./scripts/migration-utils.ts | sha256sum | awk '{print $1}')
           mkdir -p ./build-meta
           echo "${{ github.event_name }}" > ./build-meta/event_name
           echo "${{ github.ref }}" > ./build-meta/ref
+          echo "${{ github.repository }}" > ./build-meta/repository
           echo "${{ github.event.number || '0' }}" > ./build-meta/pr_number
           echo "${{ github.sha }}" > ./build-meta/sha
           echo "${{ github.event.pull_request.head.sha || github.sha }}" > ./build-meta/head_sha
+          echo "$DEPLOY_SCRIPT_HASH" > ./build-meta/deploy_script_hash
 
       # Build client (no env vars needed, config is fetched from server at runtime)
       # Note: vite.config.ts builds directly to ../dist/client
@@ -81,4 +84,5 @@ jobs:
           path: |
             ./dist
             ./build-meta
+            ./server/sql
           retention-days: 1
