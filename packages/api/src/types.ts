@@ -173,16 +173,23 @@ export interface Comment {
   content: string
   createdAt: IsoDateTimeString
   updatedAt: IsoDateTimeString
+  // null for guest comments; guestEmail is intentionally never returned by the API.
   user: {
     id: number
     username: string
     avatar: string | null
     permission: number | null
-  }
+  } | null
+  guestName?: string
+  guestWebsite?: string
+  approved?: number
 }
 
 export interface CreateCommentRequest {
   content: string
+  guestName?: string
+  guestEmail?: string
+  guestWebsite?: string
 }
 
 // ============================================================================

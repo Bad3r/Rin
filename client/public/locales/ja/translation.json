@@ -42,7 +42,12 @@
   "clear": "クリア",
   "close": "閉じる",
   "comment": {
+    "anonymous": "匿名",
     "empty": "コメント内容は空にできません",
+    "guest_email_placeholder": "メール（任意）",
+    "guest_name_placeholder": "お名前（必須）",
+    "guest_name_required": "お名前は必須です",
+    "guest_website_placeholder": "ウェブサイト（任意）",
     "placeholder": {
       "title": "何か言ってください..."
     },

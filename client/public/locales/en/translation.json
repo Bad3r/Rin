@@ -42,7 +42,12 @@
   "clear": "Clear",
   "close": "Close",
   "comment": {
+    "anonymous": "Anonymous",
     "empty": "Comment cannot be empty",
+    "guest_email_placeholder": "Email (optional)",
+    "guest_name_placeholder": "Name (required)",
+    "guest_name_required": "Guest name is required",
+    "guest_website_placeholder": "Website (optional)",
     "placeholder": {
       "title": "Say something..."
     },

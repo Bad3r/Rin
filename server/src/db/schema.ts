@@ -91,10 +91,13 @@ export const comments = sqliteTable('comments', {
   feedId: integer('feed_id')
     .references(() => feeds.id, { onDelete: 'cascade' })
     .notNull(),
-  userId: integer('user_id')
-    .references(() => users.id, { onDelete: 'cascade' })
-    .notNull(),
+  // Nullable since server/sql/0010.sql: guest comments carry no user reference.
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
   content: text('content').notNull(),
+  guestName: text('guest_name').default(''),
+  guestEmail: text('guest_email').default(''),
+  guestWebsite: text('guest_website').default(''),
+  approved: integer('approved').default(1).notNull(),
   createdAt: created_at,
   updatedAt: updated_at,
 })

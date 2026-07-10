@@ -8,6 +8,7 @@ export const defaultClientConfig = new Map(
     'counter.enabled': true,
     friend_apply_enable: true,
     'comment.enabled': true,
+    'comment.guest.enabled': true,
     'login.enabled': true,
     // Site configuration defaults
     'site.name': 'Rin',

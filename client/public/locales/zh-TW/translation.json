@@ -42,7 +42,12 @@
   "clear": "清除",
   "close": "關閉",
   "comment": {
+    "anonymous": "匿名",
     "empty": "留言內容不能為空",
+    "guest_email_placeholder": "信箱（可選）",
+    "guest_name_placeholder": "暱稱（必填）",
+    "guest_name_required": "訪客暱稱不能為空",
+    "guest_website_placeholder": "網站（可選）",
     "placeholder": {
       "title": "說點什麼吧"
     },
