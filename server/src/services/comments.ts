@@ -7,6 +7,16 @@ import { comments, feeds, users } from '../db/schema'
 import { Config } from '../utils/config'
 import { notify } from '../utils/webhook'
 
+// The guest website is stored for public display as a link; only http(s) may reach an href.
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 export function CommentService(router: Router): void {
   router.group('/comment', group => {
     group.get('/:feed', async (ctx: Context) => {
@@ -81,13 +91,19 @@ export function CommentService(router: Router): void {
             return 'Guest name is required'
           }
 
+          const trimmedGuestWebsite = typeof guestWebsite === 'string' ? guestWebsite.trim() : ''
+          if (trimmedGuestWebsite && !isHttpUrl(trimmedGuestWebsite)) {
+            set.status = 400
+            return 'Guest website must be an http(s) URL'
+          }
+
           await db.insert(comments).values({
             feedId,
             userId: null,
             content,
             guestName: trimmedGuestName,
             guestEmail: typeof guestEmail === 'string' ? guestEmail.trim() : '',
-            guestWebsite: typeof guestWebsite === 'string' ? guestWebsite.trim() : '',
+            guestWebsite: trimmedGuestWebsite,
             approved: 1,
           })
           notifyLine = `游客 ${trimmedGuestName} 评论了: ${exist.title}`

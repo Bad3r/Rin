@@ -335,6 +335,15 @@ export function TOCHeader({ TOC }: { TOC: () => JSX.Element }) {
   )
 }
 
+function safeHttpUrl(raw: string): string {
+  try {
+    const url = new URL(raw)
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : ''
+  } catch {
+    return ''
+  }
+}
+
 function CommentInput({ id, onRefresh }: { id: string; onRefresh: () => void }) {
   const { t } = useTranslation()
   const [content, setContent] = useState('')
@@ -507,15 +516,17 @@ function CommentItem({ comment, onRefresh }: { comment: ApiComment; onRefresh: (
     })
   }
   const commenterName = comment.user?.username || comment.guestName || t('comment.anonymous')
+  // Defense in depth with the server-side check: only http(s) URLs may reach an href.
+  const guestWebsite = !comment.user && comment.guestWebsite ? safeHttpUrl(comment.guestWebsite) : ''
   return (
     <div className='flex flex-row items-start rounded-xl mt-2'>
       <img src={comment.user?.avatar || ''} alt={commenterName} className='w-8 h-8 rounded-full mt-4' />
       <div className='flex flex-col flex-1 w-0 ml-2 bg-w rounded-xl p-4'>
         <div className='flex flex-row items-center'>
           <span className='t-primary text-base font-bold'>{commenterName}</span>
-          {!comment.user && comment.guestWebsite && (
+          {guestWebsite && (
             <a
-              href={comment.guestWebsite}
+              href={guestWebsite}
               target='_blank'
               rel='noopener noreferrer nofollow'
               className='ml-1'

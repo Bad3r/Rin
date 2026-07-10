@@ -239,5 +239,9 @@ Remaining:
    via the fixTopField code path, nullable, and misses it entirely when the info table pre-exists),
    and the Workers-runtime test infrastructure.
 4. Review elkjs (EPL-2.0, via mermaid) for AGPL-3.0 compliance.
-5. Steady state: merge bot PRs as they arrive; run the quarterly intake pass over
+5. PR #66 review follow-up (medium): the blurhash canvas can stay blank when a mounted feed card's
+   image src changes without a remount (`client/src/components/feed_card.tsx`,
+   `client/src/components/markdown.tsx`); draw via a callback ref instead of an effect keyed on
+   blurhash.
+6. Steady state: merge bot PRs as they arrive; run the quarterly intake pass over
    `git log upstream/main`; checkpoint remains 2026-10-01 for the sprint being merged to main.

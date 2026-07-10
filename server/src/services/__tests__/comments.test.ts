@@ -207,6 +207,22 @@ describe('CommentService', () => {
       expect(result.error?.value).toBe('Guest name is required')
     })
 
+    it('should reject non-http guest website schemes', async () => {
+      for (const guestWebsite of ['javascript:alert(1)', 'data:text/html,x', 'ftp://example.com', 'not a url']) {
+        const result = await api.comment.create(1, {
+          content: 'Guest comment',
+          guestName: 'Visitor',
+          guestWebsite,
+        })
+
+        expect(result.error?.status).toBe(400)
+        expect(result.error?.value).toBe('Guest website must be an http(s) URL')
+      }
+
+      const rows = await queryAll(sqlite, `SELECT * FROM comments WHERE feed_id = 1 AND user_id IS NULL`)
+      expect(rows.length).toBe(0)
+    })
+
     it('should require content', async () => {
       const result = await api.comment.create(
         1,

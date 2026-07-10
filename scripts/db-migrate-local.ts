@@ -1,8 +1,18 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { $ } from 'bun'
-import { fixTopField, getMigrationVersion, isInfoExist, updateMigrationVersion } from './db-fix-top-field'
-import { isKnownTopColumnCatchUpCase } from './migration-utils'
+import {
+  fixTopField,
+  getMigrationVersion,
+  hasCommentsGuestColumn,
+  isInfoExist,
+  updateMigrationVersion,
+} from './db-fix-top-field'
+import {
+  OLD_NUMBERING_ABORT_MESSAGE,
+  isIncompatibleOldNumberingState,
+  isKnownTopColumnCatchUpCase,
+} from './migration-utils'
 
 const DB_NAME = 'rin'
 const SQL_DIR = path.join(__dirname, '..', 'server', 'sql')
@@ -44,6 +54,13 @@ process.chdir(SQL_DIR)
 const typ = 'local'
 const migrationVersion = await getMigrationVersion(typ, DB_NAME)
 const isInfoExistResult = await isInfoExist(typ, DB_NAME)
+if (migrationVersion >= 9 && migrationVersion < 13) {
+  const guestColumn = await hasCommentsGuestColumn(typ, DB_NAME)
+  if (isIncompatibleOldNumberingState(migrationVersion, guestColumn)) {
+    console.error(`migration_version ${migrationVersion}: ${OLD_NUMBERING_ABORT_MESSAGE}`)
+    process.exit(1)
+  }
+}
 // List all SQL files and sort them
 const sqlFiles = fs
   .readdirSync(SQL_DIR, { withFileTypes: true })
