@@ -52,7 +52,9 @@ function Footer() {
       return
     }
 
-    mountedScriptNodesRef.current.forEach(script => script.remove())
+    mountedScriptNodesRef.current.forEach(script => {
+      script.remove()
+    })
     mountedScriptNodesRef.current = []
     container.replaceChildren()
 
@@ -64,7 +66,9 @@ function Footer() {
     template.innerHTML = footerHtml
 
     const scripts = Array.from(template.content.querySelectorAll('script'))
-    scripts.forEach(script => script.remove())
+    scripts.forEach(script => {
+      script.remove()
+    })
 
     container.appendChild(template.content.cloneNode(true))
 
@@ -81,7 +85,9 @@ function Footer() {
     })
 
     return () => {
-      mountedScriptNodesRef.current.forEach(script => script.remove())
+      mountedScriptNodesRef.current.forEach(script => {
+        script.remove()
+      })
       mountedScriptNodesRef.current = []
     }
   }, [footerHtml])

@@ -28,6 +28,7 @@ export function Menu({ profile }: { profile?: Profile | null }) {
     }
   }, [isOpen])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(location): the menu must close on every route change
   useEffect(() => {
     setOpen(false)
   }, [location])
