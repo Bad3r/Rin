@@ -350,8 +350,9 @@ mode = ${toTomlString('smart')}
   async function putSecret(name: string, value?: string) {
     if (value) {
       console.log(`Put ${name}`)
+      // Bun >= 1.3 rejects a plain string for stdin (ERR_INVALID_ARG_TYPE); pass bytes.
       const process = Bun.spawn(['bunx', 'wrangler', 'secret', 'put', name], {
-        stdin: value,
+        stdin: Buffer.from(value),
         stdout: 'inherit',
         stderr: 'inherit',
       })
