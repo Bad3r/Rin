@@ -1,4 +1,4 @@
-const TOP_COLUMN_CATCH_UP_MIGRATION_FILE = '0009.sql'
+const TOP_COLUMN_CATCH_UP_MIGRATION_FILE = '0011.sql'
 const DUPLICATE_TOP_COLUMN_PATTERN = /duplicate column name\s*:?\s*top\b/
 
 export function isKnownTopColumnCatchUpCase(file: string, output: string): boolean {
