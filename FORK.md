@@ -221,10 +221,13 @@ restored, PR #15 payload dropped (CHANGELOG corrected), migrations realigned to 
 guest comments (upstream #515) plus the v0.3.0/June fix wave ported, docs and hygiene refreshed.
 Remaining:
 
-1. Rebuild the production D1 from the realigned migration sequence. The DB carries no real content
-   (deployment not yet in use); still export first: `wrangler d1 export rin --remote`, then recreate
-   the database (or drop all tables plus `info`) and let the deploy migration path apply 0000-0013.
-   Local dev DBs (`.wrangler` state) should simply be deleted and re-migrated.
+1. DONE 2026-07-10: production D1 realignment executed without a rebuild. Both `rin` and
+   `rin-preview` were verified empty (0 rows in every content table, `migration_version` 11 with
+   old fork semantics) and reset to `migration_version` 8, the last number both numbering schemes
+   share. The next deploy applies the realigned 0009 (AI summary columns), 0010 (comments rebuild),
+   0011 (top; skipped via the duplicate-column catch-up since the column exists), 0012 (About seed,
+   NOT EXISTS guarded), 0013 (unique index, IF NOT EXISTS) and lands at version 13. Local dev DBs
+   (`.wrangler` state) should simply be deleted and re-migrated.
 2. Quarterly upstream intake candidates, rough value order: customizable webhook settings plus the
    webhook config resolver (upstream d56ed6b, 4393230, c83a091, 63693f8), markdown editor toolbar
    (3b16c2b), public cache gating inside CacheImpl (4921279), admin login access when the login
